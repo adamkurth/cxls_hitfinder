@@ -38,8 +38,14 @@ def process_directory(directory_path, background_path):
 def main():
     base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     processed_images_path = os.path.join(base_path, 'sim', 'water_images')
-    temp_path = os.path.join(base_path, 'images', 'test_images_from_sim')
+    print(processed_images_path)
+    
+    temp_path = os.path.join(base_path, 'images', 'preprocessed_images')
+    print(temp_path)
+
     water_background_path = os.path.join(base_path, 'sim/water_background.h5')
+    print(water_background_path)    
+    
     
     # image_path = input("Enter the directory path containing the HDF5 files: ")
     # image_path = os.path.expanduser(directory) # Expand ~ to the user's home directory

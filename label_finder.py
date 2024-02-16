@@ -338,4 +338,4 @@ if __name__ == "__main__":
     labeled_array = generate_labeled_image(image_data, confirmed_common_peaks, neighborhood_size=5)
     save_labeled_h5(labeled_array)
     
-    visualize(confirmed_common_peaks, confirmed_unique_manual, confirmed_unique_script, image_data)
+    # visualize(confirmed_common_peaks, confirmed_unique_manual, confirmed_unique_script, image_data)
