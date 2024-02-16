@@ -1,0 +1,152 @@
+You didn't specify a gradient calculation method, so I'm using the 'mosaic' method, which is fastest.
+Simulation parameters:
+                  Photon energy: 7000.00 eV (wavelength 1.77120 A)
+              Number of photons: 300000000 (0.00 mJ)
+                Beam divergence: not simulated
+                    Beam radius: 5.00 microns
+                     Background: 0.00 photons
+                 X-ray spectrum: top hat, width 1.00000 %
+                   Crystal size: random, between 10000.00 and 10000.00 nm along each of a, b and c
+               Full intensities: from 1IC6.pdb.hkl (symmetry 4/mmm)
+Orientation is -0.696 -0.244 -0.157 -0.657
+Particle size = 1494 x 1494 x 2450 ( = 9994.86 x 9994.86 x 9996.00 nm)
+Wavelength: 1.777869e-10 m, weight = 0.14286
+Wavelength: 1.775641e-10 m, weight = 0.14286
+Wavelength: 1.773419e-10 m, weight = 0.14286
+Wavelength: 1.771202e-10 m, weight = 0.14286
+Wavelength: 1.768991e-10 m, weight = 0.14286
+Wavelength: 1.766785e-10 m, weight = 0.14286
+Wavelength: 1.764585e-10 m, weight = 0.14286
+Fluence = 3.00e+08 photons, Energy density = 0.000 kJ/cm^2, Total energy = 0.336 microJ
+Max 2theta = 48.30 deg, min d = 0.22 nm
+Halve the d values to get the voxel size for a synthesis.
+Orientation is 0.327 -0.604 0.004 0.727
+Particle size = 1494 x 1494 x 2450 ( = 9994.86 x 9994.86 x 9996.00 nm)
+Wavelength: 1.777869e-10 m, weight = 0.14286
+Wavelength: 1.775641e-10 m, weight = 0.14286
+Wavelength: 1.773419e-10 m, weight = 0.14286
+Wavelength: 1.771202e-10 m, weight = 0.14286
+Wavelength: 1.768991e-10 m, weight = 0.14286
+Wavelength: 1.766785e-10 m, weight = 0.14286
+Wavelength: 1.764585e-10 m, weight = 0.14286
+Fluence = 3.00e+08 photons, Energy density = 0.000 kJ/cm^2, Total energy = 0.336 microJ
+Max 2theta = 48.30 deg, min d = 0.22 nm
+Halve the d values to get the voxel size for a synthesis.
+Orientation is -0.706 0.503 0.203 -0.455
+Particle size = 1494 x 1494 x 2450 ( = 9994.86 x 9994.86 x 9996.00 nm)
+Wavelength: 1.777869e-10 m, weight = 0.14286
+Wavelength: 1.775641e-10 m, weight = 0.14286
+Wavelength: 1.773419e-10 m, weight = 0.14286
+Wavelength: 1.771202e-10 m, weight = 0.14286
+Wavelength: 1.768991e-10 m, weight = 0.14286
+Wavelength: 1.766785e-10 m, weight = 0.14286
+Wavelength: 1.764585e-10 m, weight = 0.14286
+Fluence = 3.00e+08 photons, Energy density = 0.000 kJ/cm^2, Total energy = 0.336 microJ
+Max 2theta = 48.30 deg, min d = 0.22 nm
+Halve the d values to get the voxel size for a synthesis.
+Orientation is 0.478 0.802 0.149 -0.326
+Particle size = 1494 x 1494 x 2450 ( = 9994.86 x 9994.86 x 9996.00 nm)
+Wavelength: 1.777869e-10 m, weight = 0.14286
+Wavelength: 1.775641e-10 m, weight = 0.14286
+Wavelength: 1.773419e-10 m, weight = 0.14286
+Wavelength: 1.771202e-10 m, weight = 0.14286
+Wavelength: 1.768991e-10 m, weight = 0.14286
+Wavelength: 1.766785e-10 m, weight = 0.14286
+Wavelength: 1.764585e-10 m, weight = 0.14286
+Fluence = 3.00e+08 photons, Energy density = 0.000 kJ/cm^2, Total energy = 0.336 microJ
+Max 2theta = 48.30 deg, min d = 0.22 nm
+Halve the d values to get the voxel size for a synthesis.
+Orientation is 0.149 -0.981 -0.074 -0.103
+Particle size = 1494 x 1494 x 2450 ( = 9994.86 x 9994.86 x 9996.00 nm)
+Wavelength: 1.777869e-10 m, weight = 0.14286
+Wavelength: 1.775641e-10 m, weight = 0.14286
+Wavelength: 1.773419e-10 m, weight = 0.14286
+Wavelength: 1.771202e-10 m, weight = 0.14286
+Wavelength: 1.768991e-10 m, weight = 0.14286
+Wavelength: 1.766785e-10 m, weight = 0.14286
+Wavelength: 1.764585e-10 m, weight = 0.14286
+Fluence = 3.00e+08 photons, Energy density = 0.000 kJ/cm^2, Total energy = 0.336 microJ
+Max 2theta = 48.30 deg, min d = 0.22 nm
+Halve the d values to get the voxel size for a synthesis.
+Orientation is -0.629 -0.739 -0.130 0.204
+Particle size = 1494 x 1494 x 2450 ( = 9994.86 x 9994.86 x 9996.00 nm)
+Wavelength: 1.777869e-10 m, weight = 0.14286
+Wavelength: 1.775641e-10 m, weight = 0.14286
+Wavelength: 1.773419e-10 m, weight = 0.14286
+Wavelength: 1.771202e-10 m, weight = 0.14286
+Wavelength: 1.768991e-10 m, weight = 0.14286
+Wavelength: 1.766785e-10 m, weight = 0.14286
+Wavelength: 1.764585e-10 m, weight = 0.14286
+Fluence = 3.00e+08 photons, Energy density = 0.000 kJ/cm^2, Total energy = 0.336 microJ
+Max 2theta = 48.30 deg, min d = 0.22 nm
+Halve the d values to get the voxel size for a synthesis.
+Orientation is 0.412 0.696 0.587 -0.036
+Particle size = 1494 x 1494 x 2450 ( = 9994.86 x 9994.86 x 9996.00 nm)
+Wavelength: 1.777869e-10 m, weight = 0.14286
+Wavelength: 1.775641e-10 m, weight = 0.14286
+Wavelength: 1.773419e-10 m, weight = 0.14286
+Wavelength: 1.771202e-10 m, weight = 0.14286
+Wavelength: 1.768991e-10 m, weight = 0.14286
+Wavelength: 1.766785e-10 m, weight = 0.14286
+Wavelength: 1.764585e-10 m, weight = 0.14286
+Fluence = 3.00e+08 photons, Energy density = 0.000 kJ/cm^2, Total energy = 0.336 microJ
+Max 2theta = 48.30 deg, min d = 0.22 nm
+Halve the d values to get the voxel size for a synthesis.
+Orientation is -0.841 -0.125 -0.060 -0.522
+Particle size = 1494 x 1494 x 2450 ( = 9994.86 x 9994.86 x 9996.00 nm)
+Wavelength: 1.777869e-10 m, weight = 0.14286
+Wavelength: 1.775641e-10 m, weight = 0.14286
+Wavelength: 1.773419e-10 m, weight = 0.14286
+Wavelength: 1.771202e-10 m, weight = 0.14286
+Wavelength: 1.768991e-10 m, weight = 0.14286
+Wavelength: 1.766785e-10 m, weight = 0.14286
+Wavelength: 1.764585e-10 m, weight = 0.14286
+Fluence = 3.00e+08 photons, Energy density = 0.000 kJ/cm^2, Total energy = 0.336 microJ
+Max 2theta = 48.30 deg, min d = 0.22 nm
+Halve the d values to get the voxel size for a synthesis.
+Orientation is 0.482 -0.850 0.032 -0.210
+Particle size = 1494 x 1494 x 2450 ( = 9994.86 x 9994.86 x 9996.00 nm)
+Wavelength: 1.777869e-10 m, weight = 0.14286
+Wavelength: 1.775641e-10 m, weight = 0.14286
+Wavelength: 1.773419e-10 m, weight = 0.14286
+Wavelength: 1.771202e-10 m, weight = 0.14286
+Wavelength: 1.768991e-10 m, weight = 0.14286
+Wavelength: 1.766785e-10 m, weight = 0.14286
+Wavelength: 1.764585e-10 m, weight = 0.14286
+Fluence = 3.00e+08 photons, Energy density = 0.000 kJ/cm^2, Total energy = 0.336 microJ
+Max 2theta = 48.30 deg, min d = 0.22 nm
+Halve the d values to get the voxel size for a synthesis.
+Orientation is -0.718 0.666 -0.039 0.196
+Particle size = 1494 x 1494 x 2450 ( = 9994.86 x 9994.86 x 9996.00 nm)
+Wavelength: 1.777869e-10 m, weight = 0.14286
+Wavelength: 1.775641e-10 m, weight = 0.14286
+Wavelength: 1.773419e-10 m, weight = 0.14286
+Wavelength: 1.771202e-10 m, weight = 0.14286
+Wavelength: 1.768991e-10 m, weight = 0.14286
+Wavelength: 1.766785e-10 m, weight = 0.14286
+Wavelength: 1.764585e-10 m, weight = 0.14286
+Fluence = 3.00e+08 photons, Energy density = 0.000 kJ/cm^2, Total energy = 0.336 microJ
+Max 2theta = 48.30 deg, min d = 0.22 nm
+Halve the d values to get the voxel size for a synthesis.
+Orientation is 0.332 -0.217 -0.290 0.871
+Particle size = 1494 x 1494 x 2450 ( = 9994.86 x 9994.86 x 9996.00 nm)
+Wavelength: 1.777869e-10 m, weight = 0.14286
+Wavelength: 1.775641e-10 m, weight = 0.14286
+Wavelength: 1.773419e-10 m, weight = 0.14286
+Wavelength: 1.771202e-10 m, weight = 0.14286
+Wavelength: 1.768991e-10 m, weight = 0.14286
+Wavelength: 1.766785e-10 m, weight = 0.14286
+Wavelength: 1.764585e-10 m, weight = 0.14286
+Fluence = 3.00e+08 photons, Energy density = 0.000 kJ/cm^2, Total energy = 0.336 microJ
+Max 2theta = 48.30 deg, min d = 0.22 nm
+Halve the d values to get the voxel size for a synthesis.
+Orientation is 0.298 -0.521 -0.422 -0.680
+Particle size = 1494 x 1494 x 2450 ( = 9994.86 x 9994.86 x 9996.00 nm)
+Wavelength: 1.777869e-10 m, weight = 0.14286
+Wavelength: 1.775641e-10 m, weight = 0.14286
+Wavelength: 1.773419e-10 m, weight = 0.14286
+Wavelength: 1.771202e-10 m, weight = 0.14286
+Wavelength: 1.768991e-10 m, weight = 0.14286
+Wavelength: 1.766785e-10 m, weight = 0.14286
+Wavelength: 1.764585e-10 m, weight = 0.14286
+slurmstepd: error: *** JOB 24684477 ON cg21-4 CANCELLED AT 2024-02-15T20:10:02 DUE TO TIME LIMIT ***
