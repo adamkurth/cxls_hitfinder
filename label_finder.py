@@ -2,32 +2,40 @@ import os
 import numpy as np
 import h5py as h5
 import matplotlib.pyplot as plt
-import glob
-import h5py 
-from scipy.signal import find_peaks
+from matplotlib.ticker import FormatStrFormatter
+from collections import namedtuple
+from scipy.signal import find_peaks, peak_prominences
+from skimage.feature import peak_local_max
 
 class PeakThresholdProcessor: 
     def __init__(self, image_array, threshold_value=0):
+        """ 
+        Class to process images for peak detection, specifically crystallography images.
+        """
         self.image_array = image_array
         self.threshold_value = threshold_value
     
-    def set_threshold_value(self, new_threshold_value):
+    def __set_threshold__(self, new_threshold_value):
         self.threshold_value = new_threshold_value
     
-    def get_coordinates_above_threshold(self):  
+    def __get_coord_above_threshold__(self):  
         coordinates = np.argwhere(self.image_array > self.threshold_value)
         return coordinates
     
-    def get_local_maxima(self):
-        image_1d = self.image_array.flatten()
-        peaks, _ = find_peaks(image_1d, height=self.threshold_value)
-        coordinates = [self.flat_to_2d(idx) for idx in peaks]
+    def __get_local_max__(self, min_distance=5, threshold_abs=None, num_peaks=np.inf):
+        if threshold_abs is None:
+            threshold_abs = self.threshold_value
+            
+        # utilize skimage.feature.peak_local_max
+        coordinates = peak_local_max(self.image_array, min_distance=min_distance,
+                                     threshold_abs=threshold_abs, num_peaks=num_peaks)
         return coordinates
-        
-    def flat_to_2d(self, index):
-        shape = self.image_array.shape
-        rows, cols = shape
-        return (index // cols, index % cols) 
+    
+    def generate_labeled_image(self, coordinates):
+        labeled_image = np.zeros_like(self.image_array)
+        for y, x in coordinates: # peak_local_max returns (y, x) coordinates
+            labeled_image[y, x] = 1
+        return labeled_image
     
 class ArrayRegion:
     def __init__(self, array):
@@ -36,48 +44,33 @@ class ArrayRegion:
         self.y_center = 0
         self.region_size = 0
     
-    def set_peak_coordinate(self, x, y):
+    def __set_peak_coordinates__(self, x, y):
         self.x_center = x
         self.y_center = y
     
-    def set_region_size(self, size):
+    def __set_region_size__(self, size):
         #limit that is printable in terminal
         self.region_size = size
         max_printable_region = min(self.array.shape[0], self.array.shape[1]) //2
         self.region_size = min(size, max_printable_region)
     
-    def get_region(self):
+    def __get_region__(self):
         x_range = slice(self.x_center - self.region_size, self.x_center + self.region_size+1)
         y_range = slice(self.y_center - self.region_size, self.y_center + self.region_size+1)
         region = self.array[x_range, y_range]
         return region
 
     def extract_region(self, x_center, y_center, region_size):
-            self.set_peak_coordinate(x_center, y_center)
-            self.set_region_size(region_size)
-            region = self.get_region()
+        self.__set_peak_coordinates__(x_center, y_center)
+        self.__set_region_size__(region_size)
+        region = self.__get_region__()
+        # Set print options for better readability
+        np.set_printoptions(precision=8, suppress=True, linewidth=120, edgeitems=7)
+        return region
 
-            # Set print options for better readability
-            np.set_printoptions(precision=8, suppress=True, linewidth=120, edgeitems=7)
-            return region
-    
-def load_data():
-    base_directory = os.path.dirname(os.path.abspath(__file__))
-    # images_directory = os.path.join(base_directory, 'images')
-    # test_image_path = os.path.join(images_directory, '9_18_23_high_intensity_3e8keV-2.h5')
-    # file_path = test_image_path
-
-    # for water background image
-    file_path = os.path.join(base_directory, 'sim', 'water_images', 'processed_submit_7keV_clen01-2.h5')
-    try:
-        with h5.File(file_path, 'r') as f:
-            data = f['entry/data/data'][:]
-        return data, file_path
-    except Exception as e:
-        raise OSError(f"Failed to read {file_path}: {e}")
-    
-def load_file_h5(file_path):
-    """Load an HDF5 file and return the data as a numpy array.
+def load_h5_data():
+    """
+    Load an HDF5 file and return the data as a numpy array.
 
     Args:
         file_path (string): path to the HDF5 file.
@@ -85,11 +78,17 @@ def load_file_h5(file_path):
     Returns:
         numpy array: loads data from entry/data/data
     """
+    # base directory is cxls_hitfinder
+    base_directory = os.path.dirname(os.path.abspath(__file__))
+
+    # for water background image
+    file_path = os.path.join(base_directory, 'sim', 'water_images', 'processed_submit_7keV_clen01-2.h5')
+    
     try:
         with h5.File(file_path, "r") as f:
             data = np.array(f["entry/data/data"][()])
             print(f"File loaded successfully: \n {file_path}")
-            return data
+            return data, file_path
     except FileNotFoundError:
         print(f"File not found: {file_path}")
     except Exception as e:
@@ -108,13 +107,18 @@ def display_peak_regions(image_array, coordinates):
     """
     plt.figure(figsize=(10, 10))
     plt.imshow(image_array, cmap='viridis')
-    # plt.title("Intensity")
-    for i, (x, y) in enumerate(coordinates, 1):
-        plt.scatter(y, x, marker='x', color='red')
-        plt.text(y, x, f'{i+1}', color='white', ha='right')    
-
+    plt.scatter(coordinates[:, 1], coordinates[:, 0], marker='x', color='red')
     plt.title(f"Peak Regions (size={image_array.shape})")
+    plt.ticklabel_format(style='sci', axis='both', scilimits=(0,0), useMathText=True)
     plt.show()
+   
+    # # plt.title("Intensity")
+    # for i, (x, y) in enumerate(coordinates, 1):
+    #     plt.scatter(y, x, marker='x', color='red')
+    #     plt.text(y, x, f'{i+1}', color='white', ha='right')    
+
+    # plt.title(f"Peak Regions (size={image_array.shape})")
+    # plt.show()
 
 def is_peak(image_data, coordinate, neighborhood_size=3):
     """
@@ -129,7 +133,7 @@ def is_peak(image_data, coordinate, neighborhood_size=3):
         is_peak = neighborhood[center] == np.max(neighborhood) and neighborhood[center] > 0
     else: 
         is_peak = neighborhood[center] == np.max(neighborhood)
-    # print(f'Peak found at {coordinate}' if is_peak else f'No peak found at {coordinate}')
+    print(f'Peak found at {coordinate}' if is_peak else f'No peak found at {coordinate}')
     return is_peak
 
 def validate(manual, script, image_array):
@@ -192,24 +196,27 @@ def view_neighborhood(coordinates, image_data):
         if ans.lower() == "q":
             print("Exiting")
             break
+        
+        if not ans.isdigit() or not 0 < int(ans) <= len(coordinates):
+            print("Invalid choice. Please enter a number from the list or 'q' to quit.")
+            continue
 
         try:
             ans = int(ans) - 1  # Convert to 0-based index
             if 0 <= ans < len(coordinates):
-                coordinate = coordinates[ans]
+                idx = int(ans) - 1
+                coordinate = coordinates[idx]
                 x, y = coordinate
                 
                 region = ArrayRegion(image_data)
                 neighborhood = region.extract_region(x_center=x, y_center=y, region_size=3)
-                                
-                # Determine if the coordinate is a peak
-                center = neighborhood.shape[0] // 2, neighborhood.shape[1] // 2
-                is_peak = neighborhood[center] == np.max(neighborhood)
-                
+                        
+                # Format and print the neighborhood with specified precision
+                formatted_neighborhood = np.array2string(neighborhood, precision=8, suppress_small=True, formatter={'float_kind':'{:0.8f}'.format})
                 print(f'Neighborhood for ({x}, {y}):')
-                print(neighborhood)
+                print(formatted_neighborhood)
                 
-                if is_peak:
+                if is_peak(image_data, (x, y)):
                     print("This is a peak.")
                 else:
                     print("This is not a peak.")
@@ -231,16 +238,16 @@ def view_neighborhood(coordinates, image_data):
         except Exception as e:
             print(f"An error occurred: {str(e)}")
             
-def generate_labeled_image(image_data, peak_coordinates, neighborhood_size):
-    """
-    Generate a labeled image based on detected peaks.
-    """
-    labeled_image = np.zeros_like(image_data)
-    for (x, y) in peak_coordinates:
-        if is_peak(image_data, (x, y), neighborhood_size):
-            labeled_image[x, y] = 1 # label as peak
-    print('Generated labeled image.')
-    return labeled_image
+# def generate_labeled_image(image_data, peak_coordinates, neighborhood_size):
+#     """
+#     Generate a labeled image based on detected peaks.
+#     """
+#     labeled_image = np.zeros_like(image_data)
+#     for (x, y) in peak_coordinates:
+#         if is_peak(image_data, (x, y), neighborhood_size):
+#             labeled_image[x, y] = 1 # label as peak
+#     print('Generated labeled image.')
+#     return labeled_image
 
 def save_labeled_h5(labeled_array):
     """
@@ -249,7 +256,7 @@ def save_labeled_h5(labeled_array):
     generate_image = input("Do you want to generate a new .h5 image? (yes/no): ")
     if generate_image.lower() == "yes":
         file_name = input("Enter the file name for the new .h5 image: ")
-        with h5py.File(file_name, "w") as f:
+        with h5.File(file_name, "w") as f:
             entry = f.create_group("entry/data/data")
             entry.create_dataset("labeled_array", data=labeled_array)
             # path for image is: entry/data/data/labeled_array
@@ -300,42 +307,60 @@ def visualize(conf_common, conf_unique_manual, conf_unique_script, image_array):
     plt.legend()
     plt.show()
 
-def main(file_path, threshold_value, display=True):
+def main(threshold_value, display=True):
     """
     Main function to process an image file and display detected peaks.
+    
+    Parameters:
+    threshold_value (float): The threshold value for peak detection.
+    display (bool, optional): Whether to display the detected peaks. Defaults to True.
+    
+    Returns:
+    namedtuple: Contains the coordinates of the detected peaks, the image array, 
+                the file path, and the threshold_processor instance.
     """
-    image_array = load_file_h5(file_path) # load_file_h5
+    # Define a named tuple to hold the output
+    Output = namedtuple('Output', ['coordinates', 'image_array', 'file_path', 'threshold_processor'])
+    
+    image_array, file_path = load_h5_data() # loads data from entry/data/data for test image
     threshold_processor = PeakThresholdProcessor(image_array, threshold_value)
-    coordinates = threshold_processor.get_coordinates_above_threshold()
-    # display    
+    coordinates = threshold_processor.__get_coord_above_threshold__()
+    coordinates = [tuple(coord) for coord in coordinates] # converts to list
+    
+    # display logic
     print(f'Found {len(coordinates)} peaks above threshold {threshold_value}')
     if display:
-            display_peak_regions(image_array, coordinates)
-    return coordinates
+        display_peak_regions(image_array, coordinates)
+
+    return Output(coordinates, image_array, file_path, threshold_processor)
+
 
 if __name__ == "__main__":
-    image_data, file_path = load_data() # searches in images/
     threshold = 1000
-    coordinates = main(file_path, threshold, display=True)
-
-    # converts to list
-    coordinates = [tuple(coord) for coord in coordinates]   
+    Output = main(threshold, display=False) # set display to True to view peak regions
+    
+    # ensures we retrieve the same instance variables from main()
+    coordinates, image_array, file_path, threshold_processor = Output
+    
     # print results
     print('\n', f'threshold: {threshold} \n')
     print('\n', f'manually found coordinates {coordinates}\n')
 
-    threshold_processor = PeakThresholdProcessor(image_data, threshold)
-    peaks = threshold_processor.get_local_maxima()
+    # threshold_processor = PeakThresholdProcessor(image_array, threshold)
+    peaks = threshold_processor.__get_local_max__()
+    peaks = [tuple(coord) for coord in peaks] # converts to list
     
     # validates that peaks in script are the same as manually found peaks
-    confirmed_common_peaks, confirmed_unique_manual, confirmed_unique_script = validate(coordinates, peaks, image_data) # manually found and script found
+    confirmed_common_peaks, confirmed_unique_manual, confirmed_unique_script = validate(coordinates, peaks, image_array) # manually found and script found
     confirmed_common_peaks = list(confirmed_common_peaks)
     
     # prints menu to view neighborhood
-    view_neighborhood(confirmed_common_peaks, image_data)
+    view_neighborhood(confirmed_common_peaks, image_array)
     
     # return labeled array for training
-    labeled_array = generate_labeled_image(image_data, confirmed_common_peaks, neighborhood_size=5)
-    save_labeled_h5(labeled_array)
+    label_array = threshold_processor.generate_labeled_image(confirmed_common_peaks)
+
+    # labeled_array = generate_labeled_image(image_array, confirmed_common_peaks, neighborhood_size=5)
+    save_labeled_h5(label_array)
     
     # visualize(confirmed_common_peaks, confirmed_unique_manual, confirmed_unique_script, image_data)
