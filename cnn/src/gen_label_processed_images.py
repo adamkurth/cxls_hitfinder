@@ -28,11 +28,15 @@ class ImageProcessor:
 
         return Output(coordinates, labeled_array)
     
-    def process_directory(self, peak_images_dir_path, output_path, threshold_value):
+    def process_directory(self, paths, threshold_value):
         """Process all HDF5 images in a directory."""
-        for file in os.listdir(peak_images_dir_path):
+        
+        # unpack paths
+        peak_images_path, processed_images_path, label_output_path = paths
+    
+        for file in os.listdir(peak_images_path):
             if file.endswith('.h5') and file != 'water_background.h5':
-                full_path = os.path.join(peak_images_dir_path, file)
+                full_path = os.path.join(peak_images_path, file)
                 print(f"Processing {file}...")
                 image = self.load_h5_image(full_path)
                 processed_image = self.apply_water_background(image)
@@ -41,8 +45,8 @@ class ImageProcessor:
                 labeled_image = Out.labeled_array
                 coordinates = Out.coordinates
                 
-                processed_save_path = os.path.join(output_path, f"processed_{file}")
-                labeled_save_path = os.path.join(output_path, f"labeled_{file}")
+                processed_save_path = os.path.join(processed_images_path, f"processed_{file}")
+                labeled_save_path = os.path.join(label_output_path, f"labeled_{file}")
             
             with h5.File(processed_save_path, 'w') as pf:
                 pf.create_dataset('entry/data/data', data=processed_image)
@@ -55,18 +59,22 @@ class ImageProcessor:
 def main():
     # given generate_label_h5.py is in src, this is the root path of the repo
     root_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    output_path = os.path.join(root_path, 'images' , 'processed_images')
     background_h5_path = os.path.join(root_path, 'sim', 'water_background.h5')
-    peak_images_path = os.path.join(root_path, 'sim', 'peak_images')
-
+    # repo specific (below)
+    peak_images_path = os.path.join(root_path, 'images', 'peaks')
+    processed_images_path = os.path.join(root_path, 'images', 'data')
+    label_output_path = os.path.join(root_path, 'images', 'labels')
+    
+    # Paths = namedtuple('Paths', ['peak_images_path', 'processed_images_path', 'label_output_path'])
+    paths = (peak_images_path, processed_images_path, label_output_path)
     threshold_value = 1000  # Adjust as needed
 
     water_background = ImageProcessor.load_h5_image(background_h5_path)
     processor = ImageProcessor(water_background)
 
-    conf = input(f"Are you sure you want to process ... \n\n the directory {peak_images_path} \n\n ...  and apply {background_h5_path} \n\n ... and output them here: {output_path} \n\n (y/n): ")
+    conf = input(f"Are you sure you want to process ... \n\n the peak images: {peak_images_path} \n\n ...  and apply (water_background.h5) {background_h5_path} \n\n ... and output prorcesed: {processed_images_path}, \n\n ... and output labels: {label_output_path} \n\n (y/n): ")
     if conf.lower() == 'y':
-        processor.process_directory(peak_images_path, output_path, threshold_value)
+        processor.process_directory(paths, threshold_value)
     else:
         print("Operation cancelled.")
 
