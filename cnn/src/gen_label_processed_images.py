@@ -6,20 +6,61 @@ from collections import namedtuple
 
 class ImageProcessor:
     def __init__(self, water_background_array):
+        """
+        Initialize the ImageProcessor class.
+
+        Parameters:
+        - water_background_array: numpy array
+            The water background array to be applied to the image.
+        """
         self.water_background_array = water_background_array
     
     @staticmethod
     def load_h5_image(file_path):
-        """Load an HDF5 image."""
+        """
+        Load an HDF5 image.
+
+        Parameters:
+        - file_path: str
+            The path to the HDF5 image file.
+
+        Returns:
+        - numpy array
+            The loaded image as a numpy array.
+        """
         with h5.File(file_path, 'r') as f:
             return np.array(f['entry/data/data'])
         
     def apply_water_background(self, peak_image_array):
-        """Apply the water background to the image."""
+        """
+        Apply the water background to the image.
+
+        Parameters:
+        - peak_image_array: numpy array
+            The image array to which the water background will be applied.
+
+        Returns:
+        - numpy array
+            The image array with the water background applied.
+        """
         return peak_image_array + self.water_background_array
     
     def find_peaks_and_label(self, peak_image_array, threshold_value=0, min_distance=3):
-        """Find peaks in the image and generate a labeled image."""
+        """
+        Find peaks in the image and generate a labeled image.
+
+        Parameters:
+        - peak_image_array: numpy array
+            The image array in which peaks will be found.
+        - threshold_value: int, optional
+            The threshold value for peak detection. Default is 0.
+        - min_distance: int, optional
+            The minimum distance between peaks. Default is 3.
+
+        Returns:
+        - namedtuple
+            A named tuple containing the coordinates of the peaks and the labeled image array.
+        """
         Output = namedtuple('Out', ['coordinates', 'labeled_array'])
         coordinates = peak_local_max(peak_image_array, min_distance=min_distance, threshold_abs=threshold_value)
         labeled_array = np.zeros(peak_image_array.shape)
@@ -29,8 +70,18 @@ class ImageProcessor:
         return Output(coordinates, labeled_array)
     
     def process_directory(self, paths, threshold_value): 
-        """Process all HDF5 images in a directory."""
-        
+        """
+        Process all HDF5 images in a directory.
+
+        Parameters:
+        - paths: tuple
+            A tuple containing the paths to the peak images directory, processed images directory, and label output directory.
+        - threshold_value: int
+            The threshold value for peak detection.
+
+        Returns:
+        None
+        """
         # unpack paths
         peak_images_path, processed_images_path, label_output_path = paths
     
@@ -57,6 +108,9 @@ class ImageProcessor:
             print(f'Saved labeled image to {labeled_save_path}')
     
 def main():
+    """
+    The main function of the script.
+    """
     # given generate_label_h5.py is in src, this is the root path of the repo
     root_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     background_h5_path = os.path.join(root_path, 'sim', 'water_background.h5')
