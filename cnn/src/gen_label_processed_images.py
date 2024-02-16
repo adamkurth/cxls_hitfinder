@@ -28,7 +28,7 @@ class ImageProcessor:
 
         return Output(coordinates, labeled_array)
     
-    def process_directory(self, paths, threshold_value):
+    def process_directory(self, paths, threshold_value): 
         """Process all HDF5 images in a directory."""
         
         # unpack paths
