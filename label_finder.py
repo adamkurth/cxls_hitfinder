@@ -240,13 +240,14 @@ def main(file_path, threshold_value, display=True):
     return coordinates
 
 if __name__ == "__main__":
-    image_data, file_path = load_data(False) # from test.py in peakfinder_ml
+    image_data, file_path = load_data() # searches in images/
     threshold = 1000
     coordinates = main(file_path, threshold, display=True)
 
     # converts to list
-    coordinates = [tuple(coord) for coord in coordinates]
-    
+    coordinates = [tuple(coord) for coord in coordinates]   
+    # print results
+    print('\n', f'threshold: {threshold} \n')
     print('\n', f'manually found coordinates {coordinates}\n')
 
     threshold_processor = PeakThresholdProcessor(image_data, threshold)
