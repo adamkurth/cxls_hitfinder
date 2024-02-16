@@ -61,7 +61,7 @@ class ArrayRegion:
             np.set_printoptions(precision=8, suppress=True, linewidth=120, edgeitems=7)
             return region
     
-def load_data(choice):
+def load_data():
     base_directory = os.path.dirname(os.path.abspath(__file__))
     images_directory = os.path.join(base_directory, 'images')
     test_image_path = os.path.join(images_directory, '9_18_23_high_intensity_3e8keV-2.h5')
