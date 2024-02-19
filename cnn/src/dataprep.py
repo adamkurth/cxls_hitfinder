@@ -110,19 +110,19 @@ class Paths:
                     
                     # checks to ensure that the file is not already in the sim_specs directory
                     if not os.path.exists(dest_path):
-                        print(f"Moving {source_path} to {dest_path}")
+                        print(f"Moving {source_path} to {dest_path}\n")
                         shutil.move(source_path, dest_path)
                         
                         # copy the .sh file to the sim directory
                         if file_type == '.sh':
                             sh_copy_path = os.path.join(self.sim_dir, f)
-                            print(f"Copying {dest_path} to {sh_copy_path}")
+                            print(f"Copying {dest_path} to {sh_copy_path}\n")
                             shutil.copy(dest_path, sh_copy_path)
                         
                         files_moved = True
                         
         if not files_moved:
-            print("clean_sim did not move any files")
+            print("clean_sim did not move any files\n\n")
             
         
         
@@ -256,30 +256,23 @@ def sim_parameters(Paths):
 # print(combined_params) 
 
 paths = Paths()
-paths.clean_sim()
+paths.clean_sim() # moves all .err, .out, .sh files sim_specs 
 all_paths = paths.__get_all_paths__()
 print(all_paths, "\n\n")
 
-path = paths.__get_path__('root_dir')
-print('root path', path, "\n\n")
-
-sim_path = paths.__get_path__('sim_dir')
-print('sim path', sim_path, "\n\n")
+# testing
+root = paths.__get_path__('root_dir')
+sim = paths.__get_path__('sim_dir')
 
 peak_images_paths = paths.__get_peak_images_paths__()
-print("Peak Images Paths:", peak_images_paths, "\n\n")
 
 processed_images_paths = paths.__get_processed_images_paths__()
-print("Processed Images Paths:", processed_images_paths, "\n\n")
 
 label_images_paths = paths.__get_label_images_paths__()
-print("Label Images Paths:", label_images_paths, "\n\n")
 
 pdb_path = paths.__get_pdb_path__('1ic6.pdb')
-print("PDB Path:", pdb_path, "\n\n")
 
 sh_path = paths.__get_sh_path__('submit_7keV_clen01.sh')
-print("SH Path:", sh_path, "\n\n")
 
 
 
