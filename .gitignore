@@ -2,5 +2,6 @@ images/data/*
 images/labels/*
 images/preprocessed/*
 images/processed/*
+cnn/src/__pycache__
 
-
+__pycache__
