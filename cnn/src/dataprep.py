@@ -11,22 +11,21 @@ from torchvision import transforms
 from sklearn.model_selection import train_test_split
 from collections import namedtuple
 
-class PeakImageDataset(torch.utils.data.Dataset):
-    # QUESTION: 
-    # 1. What would the best augmentation function be? tilt 10 degrees, rotate 90 degrees, flip? 
-    # 2. What possible experimental conditions should the protein in the simulated data accomadate for?
-    # 3. Can the protein move and is it fixed with all degrees of freedom (macroscale)?
-    # 4. From protein to protein, how can these vary from experiment to experiment?
-    
+class PeakImageDataset(Dataset):
+
     def __init__(self, peak_image_paths, water_image_paths, transform=None, augment=False):
+        assert len(peak_image_paths) == len(water_image_paths), "The number of peak images must match the number of water images."
         self.peak_image_paths = peak_image_paths
         self.water_image_paths = water_image_paths
         self.transform = transform or self.default_transform()
         self.augment = augment
         
     def __len__(self):
-        return len(self.peak_image_paths)
-    
+        # returns number of images in the dataset
+        num_peaks = len(self.peak_image_paths)
+        num_waters = len(self.water_image_paths)
+        return (num_peaks, num_waters) # returns a tuple of the number of peak and water images
+
     def __get_item__(self, idx):
         # gets peak/water image and returns numpy array and applies transform
         peak_image = self.__load_h5__(self.peak_image_paths[idx])
@@ -39,11 +38,11 @@ class PeakImageDataset(torch.utils.data.Dataset):
         if self.transform:
             peak_image = self.transform(peak_image)
             water_image = self.transform(water_image)
+    
+        return peak_image, water_image 
         
-        return peak_image, water_image
-        
-    def __load_h5__(self):
-        with h5py.File(self.image_path, 'r') as f:
+    def __load_h5__(self, image_path):
+        with h5py.File(image_path, 'r') as f:
             image = np.array(f['entry/data/data'])
         return image
 
@@ -61,12 +60,14 @@ class PeakImageDataset(torch.utils.data.Dataset):
     
     def __preview__(self, idx, image_type='peak'):
         image_path = self.peak_image_paths[idx] if image_type == 'peak' else self.water_image_paths[idx]
-        image = self.load_h5(image_path)
-        plt.imshow(image, cmap='gray')
+        image = self.__load_h5__(image_path)
+        # visualize outliers 
+        plt.imshow(image, cmap='viridis')
+        plt.colorbar()
         plt.title(f'{image_type.capitalize()} Image at Index {idx}')
         plt.axis('off')
         plt.show()
-    
+        
 class PathManager:
     def __init__(self):
         # grabs peaks and processed images from images directory /
@@ -283,11 +284,24 @@ def sim_parameters(paths):
     combined_params = {**essential_sh_params, **unitcell_params_dict}
     return combined_params
 
-# instances
-paths = PathManager()
-data_preparation = DataPreparation(paths, batch_size=32)
-paths.clean_sim() # moves all .err, .out, .sh files sim_specs 
-train_loader, test_loader = data_preparation.prep_data()
+def main():
+    # instances
+    paths = PathManager()
+    peak_paths = paths.__get_peak_images_paths__()
+    water_paths = paths.__get_peak_images_paths__()
+    dataset = PeakImageDataset(peak_image_paths=peak_paths, water_image_paths=water_paths, transform=transforms.ToTensor(), augment=False)
+    item = dataset.__get_item__(0) 
+    print(item.__len__())
+    # dataset.__preview__(2, image_type='peak')
+    # dataset.__preview__(2, image_type='water')
 
-sim_dict = sim_parameters(paths)
-print(sim_dict)
+
+    data_preparation = DataPreparation(paths, batch_size=32)
+    paths.clean_sim() # moves all .err, .out, .sh files sim_specs 
+    train_loader, test_loader = data_preparation.prep_data()
+
+    sim_dict = sim_parameters(paths)
+    print(sim_dict)
+
+if __name__ == "__main__":
+    main()

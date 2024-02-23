@@ -21,6 +21,7 @@ from dataprep import PeakImageDataset, PathManager, DataPreparation, sim_paramet
 # RESNET-50
 class CustomResNet50(nn.Module):
     def __init__(self, num_proteins=3, num_camlengths=3):
+        # num_classes = num_proteins, num_camlengths
         super(CustomResNet50, self).__init__()
         # load the pre-trained model
         self.resnet = models.resnet50(pretrained=True)
@@ -33,6 +34,10 @@ class CustomResNet50(nn.Module):
 
 # instances
 paths = PathManager()
+peak_paths = paths.__get_peak_images_paths__()
+water_paths = paths.__get_water_images_paths__()
+
+dataset = PeakImageDataset(peak_image_paths=peak_paths, water_image_paths=water_paths, transform=transforms.ToTensor(), augment=False)
 data_preparation = DataPreparation(paths, batch_size=32)
 paths.clean_sim() # moves all .err, .out, .sh files sim_specs 
 
@@ -40,27 +45,31 @@ paths.clean_sim() # moves all .err, .out, .sh files sim_specs
 train_loader, test_loader = data_preparation.prep_data()
 
 # model
-model = CustomResNet50(num_classes=10, num_lengths=3)
-print(model)
+model = CustomResNet50(num_proteins=10, num_camlengths=3)
 
-# loss and optimizer
-criteron = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+dataset.__load__(peak_paths, water_paths)
+dataset.__len__()
+dataset.__get_item__(0)
+dataset.__preview__(0)
 
-# train 
-num_epochs = 10
+# # loss and optimizer
+# criteron = nn.CrossEntropyLoss()
+# optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-for epoch in range(num_epochs):
-    model.train()
-    running_loss = 0.0
-    for images, labels in train_loader:
-        optimizer.zero_grad()
-        outputs = model(images)
-        loss = criteron(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        running_loss += loss.item()
-    print(f"Epoch {epoch+1}, Loss: {running_loss/len(train_loader)}")
+# # train 
+# num_epochs = 10
+
+# for epoch in range(num_epochs):
+#     model.train()
+#     running_loss = 0.0
+#     for images, labels in train_loader:
+#         optimizer.zero_grad()
+#         outputs = model(images)
+#         loss = criteron(outputs, labels)
+#         loss.backward()
+#         optimizer.step()
+#         running_loss += loss.item()
+#     print(f"Epoch {epoch+1}, Loss: {running_loss/len(train_loader)}")
     
 
 
