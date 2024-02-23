@@ -70,9 +70,9 @@ class PeakImageDataset(torch.utils.data.Dataset):
 class PathManager:
     def __init__(self):
         # grabs peaks and processed images from images directory /
-        self.root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        self.images_dir = os.path.join(self.root_dir, 'images') #/images
-        self.sim_dir = os.path.join(self.root_dir, 'sim')  #/sim
+        self.root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        self.images_dir = os.path.join(self.root, 'images') #/images
+        self.sim_dir = os.path.join(self.root, 'sim')  #/sim
         self.sim_specs_dir = os.path.join(self.sim_dir, 'sim_specs') # sim/sim_specs
         # KEY
         self.peak_images_dir = os.path.join(self.images_dir, 'peaks') # images/peaks
@@ -89,7 +89,7 @@ class PathManager:
     def __get_path__(self, path_name):
         # returns the path of the path_name
         paths_dict = {
-            'root_dir': self.root_dir,
+            'root': self.root,
             'images_dir': self.images_dir,
             'sim_dir': self.sim_dir,
             'sim_specs_dir': self.sim_specs_dir,
@@ -106,8 +106,8 @@ class PathManager:
 
     def __get_all_paths__(self):
         # returns a namedtuple of all paths for easier access
-        PathsOutput = namedtuple('PathsOutput', ['root_dir', 'images_dir', 'sim_dir', 'peak_images_dir', 'water_images_dir', 'processed_images_dir', 'label_images_dir', 'pdb_dir', 'sh_dir', 'water_background_h5'])
-        return PathsOutput(self.root_dir, self.images_dir, self.sim_dir, self.peak_images_dir, self.processed_images_dir, self.label_images_dir, self.pdb_dir, self.sh_dir, self.water_background_h5)
+        PathsOutput = namedtuple('PathsOutput', ['root', 'images_dir', 'sim_dir', 'peak_images_dir', 'water_images_dir', 'processed_images_dir', 'label_images_dir', 'pdb_dir', 'sh_dir', 'water_background_h5'])
+        return PathsOutput(self.root, self.images_dir, self.sim_dir, self.peak_images_dir, self.processed_images_dir, self.label_images_dir, self.pdb_dir, self.sh_dir, self.water_background_h5)
     
     def __get_peak_images_paths__(self):
         # searches the peak images directory for .h5 files and returns a list of paths
@@ -186,7 +186,7 @@ class DataPreparation:
     
         train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
         test_loader = DataLoader(test_dataset, batch_size=self.batch_size, shuffle=True)
-        print("Data prepared")
+        print("Data prepared.")
         return train_loader, test_loader
 
 
@@ -285,8 +285,9 @@ def sim_parameters(paths):
 
 # instances
 paths = PathManager()
-data_preparation = DataPreparation(paths)
+data_preparation = DataPreparation(paths, batch_size=32)
 paths.clean_sim() # moves all .err, .out, .sh files sim_specs 
 train_loader, test_loader = data_preparation.prep_data()
 
-
+sim_dict = sim_parameters(paths)
+print(sim_dict)
