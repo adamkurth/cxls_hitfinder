@@ -3,50 +3,82 @@ import numpy as np
 import h5py
 import torch
 import shutil
+import re
+import matplotlib.pyplot as plt
+
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from sklearn.model_selection import train_test_split
 from collections import namedtuple
 
-# import sys
-# sys.path.append('/Users/adamkurth/Documents/vscode/CXFEL_Image_Analysis/CXFEL/pdb_rcsb_api_scripts')
-# import pdb_rcsb_api_scripts as pdb_api
-
-class PeakImageDataset(Dataset):
-    def __init__(self, peak_image_paths, water_image_paths, transform=None):
+class PeakImageDataset(torch.utils.data.Dataset):
+    # QUESTION: 
+    # 1. What would the best augmentation function be? tilt 10 degrees, rotate 90 degrees, flip? 
+    # 2. What possible experimental conditions should the protein in the simulated data accomadate for?
+    # 3. Can the protein move and is it fixed with all degrees of freedom (macroscale)?
+    # 4. From protein to protein, how can these vary from experiment to experiment?
+    
+    def __init__(self, peak_image_paths, water_image_paths, transform=None, augment=False):
         self.peak_image_paths = peak_image_paths
         self.water_image_paths = water_image_paths
-        self.transform = transform
+        self.transform = transform or self.default_transform()
+        self.augment = augment
         
     def __len__(self):
         return len(self.peak_image_paths)
     
-    def __getitem__(self, idx):
-        h5_path = 'entry/data/data'
-        with h5py.File(self.image_paths[idx], 'r') as f:
-            peak_image = np.array(f[h5_path])
-        with h5py.File(self.label_paths[idx], 'r') as f:
-            water_image = np.array(f[h5_path])
-                
+    def __get_item__(self, idx):
+        # gets peak/water image and returns numpy array and applies transform
+        peak_image = self.__load_h5__(self.peak_image_paths[idx])
+        water_image = self.__load_h5__(self.water_image_paths[idx])
+        
+        if self.augment:
+            peak_image = self.augment_image(peak_image)
+            water_image = self.augment_image(water_image)
+        
         if self.transform:
             peak_image = self.transform(peak_image)
             water_image = self.transform(water_image)
-                    
+        
         return peak_image, water_image
+        
+    def __load_h5__(self):
+        with h5py.File(self.image_path, 'r') as f:
+            image = np.array(f['entry/data/data'])
+        return image
+
+    def augment_image(self, image):
+        pil_image = transforms.ToPILImage()(image)
+        rotated_image = pil_image.rotate(90)
+        return transforms.ToTensor()(rotated_image)
     
-    def augment(self, peak_images, water_images, label_images):
-        pass
+    def default_transform(self):
+        return transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Lambda(lambda x: x.float()), #ensure float type
+            transforms.Normalize(mean=[0.5], std=[0.5]) #normalize to [-1, 1]
+        ])
     
+    def __preview__(self, idx, image_type='peak'):
+        image_path = self.peak_image_paths[idx] if image_type == 'peak' else self.water_image_paths[idx]
+        image = self.load_h5(image_path)
+        plt.imshow(image, cmap='gray')
+        plt.title(f'{image_type.capitalize()} Image at Index {idx}')
+        plt.axis('off')
+        plt.show()
     
-class Paths:
+class PathManager:
     def __init__(self):
         # grabs peaks and processed images from images directory /
         self.root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         self.images_dir = os.path.join(self.root_dir, 'images') #/images
         self.sim_dir = os.path.join(self.root_dir, 'sim')  #/sim
         self.sim_specs_dir = os.path.join(self.sim_dir, 'sim_specs') # sim/sim_specs
+        # KEY
         self.peak_images_dir = os.path.join(self.images_dir, 'peaks') # images/peaks
         self.water_images_dir = os.path.join(self.images_dir, 'data') # images/data
+        # 
+        # built just in case further development is needed
         self.processed_images_dir = os.path.join(self.images_dir, 'processed_images') # images/processed_images
         self.preprocessed_images_dir = os.path.join(self.images_dir, 'preprocessed_images') # images/preprocessed_images
         self.label_images_dir = os.path.join(self.images_dir, 'labels') # images/labels
@@ -70,16 +102,20 @@ class Paths:
             'sh_dir': self.sh_dir,
             'water_background_h5': self.water_background_h5,
         }
-        return paths_dict.get(path_name)
-        
+        return paths_dict.get(path_name, None)
+
     def __get_all_paths__(self):
         # returns a namedtuple of all paths for easier access
-        PathsOutput = namedtuple('PathsOutput', ['root_dir', 'images_dir', 'sim_dir', 'peak_images_dir', 'processed_images_dir', 'label_images_dir', 'pdb_dir', 'sh_dir', 'water_background_h5'])
+        PathsOutput = namedtuple('PathsOutput', ['root_dir', 'images_dir', 'sim_dir', 'peak_images_dir', 'water_images_dir', 'processed_images_dir', 'label_images_dir', 'pdb_dir', 'sh_dir', 'water_background_h5'])
         return PathsOutput(self.root_dir, self.images_dir, self.sim_dir, self.peak_images_dir, self.processed_images_dir, self.label_images_dir, self.pdb_dir, self.sh_dir, self.water_background_h5)
     
     def __get_peak_images_paths__(self):
         # searches the peak images directory for .h5 files and returns a list of paths
         return [os.path.join(self.peak_images_dir, f) for f in os.listdir(self.peak_images_dir) if f.endswith('.h5')]    
+    
+    def __get_water_images_paths__(self):
+        # searches the water images directory (images/data)for .h5 files and returns a list of paths
+        return [os.path.join(self.water_images_dir, f) for f in os.listdir(self.water_images_dir) if f.endswith('.h5')]
     
     def __get_processed_images_paths__(self):
         # searches the processed images directory for .h5 files and returns a list of paths
@@ -124,50 +160,60 @@ class Paths:
         if not files_moved:
             print("clean_sim did not move any files\n\n")
             
-        
-        
-        
-def prep_data(peak_image_paths, water_image_path):
-    found_peak_image_paths = [os.path.join(peak_image_paths, f) for f in os.listdir(peak_image_paths) if f.endswith('.h5')] 
-    found_water_image_paths = [os.path.join(water_image_path, f) for f in os.listdir(water_image_path) if f.startswith('processed')]
-    
-    # print(found_peak_image_paths)
-    # print(found_water_image_path)
-    
-    # ensure matching number of paths of peak and water images 
-    assert len(found_peak_image_paths) == len(found_water_image_paths), "Mismatch in the number of peak and water images."
-    
-    # join the data with water/peak images, then split 80/20
-    train_peak_images, test_peak_images, train_water_images, test_water_images = train_test_split(found_peak_image_paths, found_water_image_paths, test_size=0.2, random_state=42)
-    
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Lambda(lambda x: x.float()), #ensure float type
-        transforms.Normalize((0.5,), (0.5,)) #normalize to [-1, 1]
-    ])
-    
-    train_dataset = PeakImageDataset(train_peak_images, train_water_images, transform=transform)
-    test_dataset = PeakImageDataset(test_peak_images, test_water_images, transform=transform)
-    
-    # print(len(train_dataset), len(test_dataset))
-    
-    return train_dataset, test_dataset
-    
-def get_relative_paths():
-    # want to be universal, repo specific not local specific
-    root_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    background_h5_path = os.path.join(root_path, 'sim', 'water_background.h5')
-    peak_images_path = os.path.join(root_path, 'images', 'peaks')
-    processed_images_path = os.path.join(root_path, 'images', 'data')
-    label_output_path = os.path.join(root_path, 'images', 'labels')
-    # namedtuple 
-    Paths = namedtuple('Paths', ['peak_images', 'processed_images', 'label_output', 'background_h5', 'root'])
-    Paths = Paths(peak_images_path, processed_images_path, label_output_path, background_h5_path, root_path)
-    
-    return Paths
 
-def sim_parameters(Paths):
-    import re
+class DataPreparation:
+    def __init__(self, paths, batch_size=32):
+        self.paths = paths
+        self.batch_size = batch_size
+        
+    def prep_data(self):
+        peak_image_paths = self.paths.__get_peak_images_paths__()
+        water_images_paths = self.paths.__get_water_images_paths__()
+        
+        # ensure matching number of paths of peak and water images         
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Lambda(lambda x: x.float()), #ensure float type
+            transforms.Normalize(mean=[0.5], std=[0.5]) #normalize to [-1, 1]
+        ])
+        
+        dataset = PeakImageDataset(peak_image_paths, water_images_paths, transform=transform)
+        num_items = len(dataset)
+        num_train = int(0.8 * num_items)
+        num_test = num_items - num_train
+        
+        train_dataset, test_dataset = torch.utils.data.random_split(dataset, [num_train, num_test])
+    
+        train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
+        test_loader = DataLoader(test_dataset, batch_size=self.batch_size, shuffle=True)
+        print("Data prepared")
+        return train_loader, test_loader
+
+
+def sim_parameters(paths):
+    """
+    Reads the .pdb and .sh files and returns a dictionary of simulation parameters.
+
+    Parameters:
+    - Paths: An instance of the Paths class that contains the paths to the .pdb and .sh files.
+
+    Returns:
+    - combined_params: A dictionary containing the simulation parameters extracted from the .pdb and .sh files.
+        The dictionary includes the following keys:
+        - geom: The geometry parameter from the .sh file.
+        - cell: The cell parameter from the .sh file.
+        - number: The number parameter from the .sh file.
+        - output_name: The output_name parameter from the .sh file.
+        - photon_energy: The photon_energy parameter from the .sh file.
+        - nphotons: The nphotons parameter from the .sh file.
+        - a: The 'a' parameter from the .pdb file.
+        - b: The 'b' parameter from the .pdb file.
+        - c: The 'c' parameter from the .pdb file.
+        - alpha: The 'alpha' parameter from the .pdb file.
+        - beta: The 'beta' parameter from the .pdb file.
+        - gamma: The 'gamma' parameter from the .pdb file.
+        - spacegroup: The spacegroup parameter from the .pdb file.
+    """
     def read_pdb(path):
         UnitcellParams = namedtuple('UnitcellParams', ['a', 'b', 'c', 'alpha', 'beta', 'gamma', 'spacegroup'])
         with open(path, 'r') as f:
@@ -225,8 +271,8 @@ def sim_parameters(Paths):
 
         return ShParams(**params)._asdict()        
     
-    pdb_path = os.path.join(Paths.root, 'sim', 'pdb', '1ic6.pdb') # hardcoded for now
-    sh_path = os.path.join(Paths.root, 'sim', 'submit_7keV_clen01.sh') # hardcode for now
+    pdb_path = os.path.join(paths.root, 'sim', 'pdb', '1ic6.pdb') # hardcoded for now
+    sh_path = os.path.join(paths.root, 'sim', 'submit_7keV_clen01.sh') # hardcode for now
     
     unitcell_params_dict = read_pdb(pdb_path)
     sh_params_dict = read_sh(sh_path)
@@ -236,46 +282,11 @@ def sim_parameters(Paths):
     
     combined_params = {**essential_sh_params, **unitcell_params_dict}
     return combined_params
-    
 
-
-# # def main_dataprep():
-# Paths = get_relative_paths()
-# peak_images_path = Paths.peak_images
-# water_images_path = Paths.processed_images
-# label_images_path = Paths.label_output
-# background_h5_path = Paths.background_h5
-# root_path = Paths.root
-
-# sim_parameters(Paths)
-# train_dataset, test_dataset = prep_data(peak_images_path, water_images_path)
-
-# grabs .pdb and .sh files and returns a dictionary of parameters
-# combined_params = sim_parameters(Paths) 
-# outputs dict of geom, cell, number, output_name, photon_energy, nphotons, a, b, c, alpha, beta, gamma, spacegroup
-# print(combined_params) 
-
-paths = Paths()
+# instances
+paths = PathManager()
+data_preparation = DataPreparation(paths)
 paths.clean_sim() # moves all .err, .out, .sh files sim_specs 
-all_paths = paths.__get_all_paths__()
-print(all_paths, "\n\n")
-
-# testing
-root = paths.__get_path__('root_dir')
-sim = paths.__get_path__('sim_dir')
-
-peak_images_paths = paths.__get_peak_images_paths__()
-
-processed_images_paths = paths.__get_processed_images_paths__()
-
-label_images_paths = paths.__get_label_images_paths__()
-
-pdb_path = paths.__get_pdb_path__('1ic6.pdb')
-
-sh_path = paths.__get_sh_path__('submit_7keV_clen01.sh')
+train_loader, test_loader = data_preparation.prep_data()
 
 
-
-# if __name__ == '__main__':
-#     main_dataprep()
-    
