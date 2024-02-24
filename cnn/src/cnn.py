@@ -1,53 +1,33 @@
-import os
-import torch 
-import numpy as np
-import h5py as h5
+
+import classes as cl 
+import functions as fn
+import models as md
+import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, Dataset
-from torchvision import transforms, models
-from sklearn.model_selection import train_test_split
-from collections import namedtuple
-from dataprep import PeakImageDataset, PathManager, DataPreparation, sim_parameters
+from torchvision import transforms
 
-# MODEL: 
-#   1. RESNET -> RESNET + + Attention Mechanisms 
-#   2. TRANSFORMER BASED MODEL FOR VISION (VIT) -> VIT + Attention Mechanisms ?? 
-# FURTHER DEVELOPMENT: multi-task learning model predicts clen and pdb at the same time
-
-# to detect the subleties in the data, the deeper the model like ResNet-50 or -101 would be ideal. 
-# 50 and 101 models balance between depth and computational efficiency, and are widely used in practice.
-
-# RESNET-50
-class CustomResNet50(nn.Module):
-    def __init__(self, num_proteins=3, num_camlengths=3):
-        # num_classes = num_proteins, num_camlengths
-        super(CustomResNet50, self).__init__()
-        # load the pre-trained model
-        self.resnet = models.resnet50(pretrained=True)
-        num_ftrs = self.resnet.fc.in_features
-        # replace the final fully connected layer
-        self.resnet.fc = nn.Linear(num_ftrs, num_proteins + num_camlengths) # proteins + camlengths
-        
-    def forward(self, x):
-        return self.resnet(x)
-
-# instances
-paths = PathManager()
-peak_paths = paths.__get_peak_images_paths__()
-water_paths = paths.__get_water_images_paths__()
-
-dataset = PeakImageDataset(peak_image_paths=peak_paths, water_image_paths=water_paths, transform=transforms.ToTensor(), augment=False)
-data_preparation = DataPreparation(paths, batch_size=32)
+"""instances"""
+paths = cl.PathManager()
 paths.clean_sim() # moves all .err, .out, .sh files sim_specs 
 
-# train and test data
-train_loader, test_loader = data_preparation.prep_data()
+dataset = cl.PeakImageDataset(paths=paths, transform=transforms.ToTensor(), augment=False)
+prep = cl.DataPreparation(paths, batch_size=32)
 
-# model
-model = CustomResNet50(num_proteins=10, num_camlengths=3)
+"""checks"""
+peak_paths = paths.__get_peak_images_paths__()
+water_paths = paths.__get_water_images_paths__()
+print('Number of Peak Images: ', len(peak_paths), 'Number of Water Images', len(water_paths))    
 
-dataset.__load__(peak_paths, water_paths)
+
+"""train and test data loaders"""
+train_loader, test_loader = prep.prep_data()
+
+"""model"""
+model_res50 = md.CustomResNet50(num_proteins=10, num_camlengths=3)
+
+water_background = dataset.__load_h5__(paths.__get_path__('water_background_h5'))
+
 dataset.__len__()
 dataset.__get_item__(0)
 dataset.__preview__(0)

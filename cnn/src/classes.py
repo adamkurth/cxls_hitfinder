@@ -1,6 +1,6 @@
 import os
 import numpy as np
-import h5py
+import h5py as h5
 import torch
 import shutil
 import re
@@ -134,10 +134,13 @@ class PeakImageDataset(Dataset):
         return peak_image, water_image 
         
     def __load_h5__(self, image_path):
-        with h5py.File(image_path, 'r') as f:
-            image = np.array(f['entry/data/data'])
-        return image
+        with H5h5.File(image_path, 'r') as f:
+            return np.array(f['entry/data/data'])
 
+    def __to_pil__(self, image):
+        image = self.__load_h5__(image)
+        return transforms.ToPILImage()(image)
+    
     def augment_image(self, image):
         pil_image = transforms.ToPILImage()(image)
         rotated_image = pil_image.rotate(90)
@@ -147,7 +150,7 @@ class PeakImageDataset(Dataset):
         return transforms.Compose([
             transforms.ToTensor(),
             transforms.Lambda(lambda x: x.float()), #ensure float type
-            transforms.Normalize(mean=[0.5], std=[0.5]) #normalize to [-1, 1]
+            # transforms.Normalize(mean=[0.5], std=[0.5]) #normalize to [-1, 1]
         ])
     
     def __preview__(self, idx, image_type='peak'):

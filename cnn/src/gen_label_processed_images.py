@@ -4,7 +4,8 @@ import h5py as h5
 from skimage.feature import peak_local_max
 from collections import namedtuple
 import classes as cl
-    
+import functions as fn
+
 def main():
     """
     reads the water_background.h5 file and processes the peak images in the peak_images_dir
