@@ -1,10 +1,10 @@
 import os
-import numpy as np
+import re
 import h5py as h5
 import torch
 import shutil
-import re
 import h5py as h5
+import numpy as np
 import matplotlib.pyplot as plt
 
 from torch.utils.data import DataLoader, Dataset
@@ -113,16 +113,32 @@ class PeakImageDataset(Dataset):
         assert len(self.peak_image_paths) == len(self.water_image_paths), "The number of peak images must match the number of water images."
         self.transform = transform or self.default_transform()
         self.augment = augment
+        self.labels = [self._extract_labels(path) for path in self.peak_image_paths]
         
     def __len__(self):
         # returns number of images in the dataset
         return len(self.peak_image_paths)
 
-    def __get_item__(self, idx):
-        # gets peak/water image and returns numpy array and applies transform
+    def _extract_labels(self, filepath):
+        try: 
+            match = re.search(r'clen(\d+)', filepath)
+            if match:
+                camera_length_label = int(match.group(1)) - 1  # Convert '01', '02', '03', to 0, 1, 2, etc.
+                camera_length = float(f"0.{match.group(1)}")
+                
+                protein = 0 # PLACEHOLDER
+                
+                return (protein, camera_length, camera_length_label)ß
+        except Exception as e:
+            print(f"Error extracting labels from filename {filepath}: {e}")
+            
+        return (0, 0, 0)  # Default label if pattern doesn't match or an error occurs 
+           
+    def __getitem__(self, idx):
+        # gets peak/water image and returns numpy array and applies transform        
         peak_image = self.__load_h5__(self.peak_image_paths[idx])
         water_image = self.__load_h5__(self.water_image_paths[idx])
-        
+
         if self.augment:
             peak_image = self.augment_image(peak_image)
             water_image = self.augment_image(water_image)
@@ -131,10 +147,10 @@ class PeakImageDataset(Dataset):
             peak_image = self.transform(peak_image)
             water_image = self.transform(water_image)
     
-        return peak_image, water_image 
+        return peak_image, water_image
         
     def __load_h5__(self, image_path):
-        with H5h5.File(image_path, 'r') as f:
+        with h5.File(image_path, 'r') as f:
             return np.array(f['entry/data/data'])
 
     def __to_pil__(self, image):
@@ -149,8 +165,7 @@ class PeakImageDataset(Dataset):
     def default_transform(self):
         return transforms.Compose([
             transforms.ToTensor(),
-            transforms.Lambda(lambda x: x.float()), #ensure float type
-            # transforms.Normalize(mean=[0.5], std=[0.5]) #normalize to [-1, 1]
+            transforms.Lambda(lambda x: x.float()) #ensure float type
         ])
     
     def __preview__(self, idx, image_type='peak'):
@@ -173,16 +188,16 @@ class DataPreparation:
         transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Lambda(lambda x: x.float()), # Ensure float type
-            transforms.Normalize(mean=[0.5], std=[0.5]) # Normalize to [-1, 1]
+            # transforms.Normalize(mean=[0.5], std=[0.5]) # Normalize to [-1, 1]
         ])     
            
-        dataset = PeakImageDataset(self.paths, transform=transform)
+        dataset = PeakImageDataset(self.paths, transform=transform, augment=True)
         num_items = len(dataset)
         num_train = int(0.8 * num_items)
         num_test = num_items - num_train     
            
         train_dataset, test_dataset = torch.utils.data.random_split(dataset, [num_train, num_test])
-            
+
         train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
         test_loader = DataLoader(test_dataset, batch_size=self.batch_size, shuffle=True)
         print("Data prepared.")
@@ -191,8 +206,9 @@ class DataPreparation:
         print(f"Batch size: {self.batch_size}")
         print(f"Number of batches: {len(train_loader)}")
         
-        return train_loader, test_loader
+        return train_loader, test_loader # returns train/test tensor data loaders
 
+ 
 class ImageProcessor:
     def __init__(self, water_background_array):
         """

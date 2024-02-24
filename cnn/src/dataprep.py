@@ -19,15 +19,15 @@ import functions as fn
 def main():
     # instances
     paths = cl.PathManager()
-    dataset = cl.PeakImageDataset(paths, transform=transforms.ToTensor(), augment=False)
+    dataset = cl.PeakImageDataset(paths, transform=transforms.ToTensor(), augment=True)
     
     print(type(dataset), dataset)
     num_items = len(dataset)
     
-    data_preparation = cl.DataPreparation(paths, batch_size=1)
+    data_preparation = cl.DataPreparation(paths, batch_size=5)
     paths.clean_sim() # moves all .err, .out, .sh files sim_specs 
     train_loader, test_loader = data_preparation.prep_data()
-
+    
     sim_dict = fn.sim_parameters(paths)
     print(sim_dict)
 
