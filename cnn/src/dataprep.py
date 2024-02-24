@@ -20,18 +20,20 @@ from pkg import functions as f
 
 def main():
     # instances
-    paths = cl.PathManager()
-    dataset = cl.PeakImageDataset(paths, transform=transforms.ToTensor(), augment=True)
+    paths = c.PathManager()
+    dataset = c.PeakImageDataset(paths, transform=transforms.ToTensor(), augment=True)
     
     print(type(dataset), dataset)
     num_items = len(dataset)
     
-    data_preparation = cl.DataPreparation(paths, batch_size=5)
+    data_preparation = c.DataPreparation(paths, batch_size=10)
     paths.clean_sim() # moves all .err, .out, .sh files sim_specs 
     train_loader, test_loader = data_preparation.prep_data()
 
-    sim_dict = fn.sim_parameters(paths)
+    sim_dict = f.sim_parameters(paths)
     print(sim_dict)
+    
+    
 
 if __name__ == "__main__":
     main()

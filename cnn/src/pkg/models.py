@@ -20,14 +20,20 @@ from collections import namedtuple
 
 # RESNET-50
 class CustomResNet50(nn.Module):
+    # single channel ResNet-50
     def __init__(self, num_proteins=3, num_camlengths=3):
         # num_classes = num_proteins, num_camlengths
         super(CustomResNet50, self).__init__()
         # load the pre-trained model
         self.resnet = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
+        
+        # modify the final layer to accept 1 channel instead of 3
+        self.resnet.conv1 = nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+        
+        # Adjust the final fully connected layer to match the number of outputs you need
         num_ftrs = self.resnet.fc.in_features
         # replace the final fully connected layer
-        self.resnet.fc = nn.Linear(num_ftrs, num_proteins + num_camlengths) # proteins + camlengths
-        
+        self.resnet.fc = nn.Linear(num_ftrs, num_proteins + num_camlengths)
+                
     def forward(self, x):
         return self.resnet(x)
