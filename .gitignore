@@ -3,5 +3,6 @@ images/labels/*
 images/peaks/*
 images/preprocessed/*
 images/processed/*
+images/processed_images/*
 cnn/src/__pycache__
 __pycache__
