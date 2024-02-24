@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Mainly for use in AGAVE, 
+# this script renames files in a directory based on their extension
+# .h5 files are renamed with a prefix and a count
+# .sh, .err, and .out files are renamed with a prefix and a count for each extension
+
+
 # Function to reformat filenames within a given directory based on their extension
 reformat_filenames() {
   local directory=$1
