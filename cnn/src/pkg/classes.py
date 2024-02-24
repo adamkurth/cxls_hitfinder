@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from collections import namedtuple
 from skimage.feature import peak_local_max
+from PIL import Image
 
 class PathManager:
     def __init__(self):
@@ -122,12 +123,15 @@ class PeakImageDataset(Dataset):
         self.transform = transform or self.default_transform()
         self.augment = augment
         self.labels = [self._extract_labels(path) for path in self.peak_image_paths]
-        
+                
     def __len__(self):
         # returns number of images in the dataset
         return len(self.peak_image_paths)
 
     def _extract_labels(self, filepath):
+        
+        # FIX THIS 
+        
         try: 
             match = re.search(r'clen(\d+)', filepath)
             if match:
@@ -148,32 +152,34 @@ class PeakImageDataset(Dataset):
         water_image = self.__load_h5__(self.water_image_paths[idx])
 
         if self.augment:
-            peak_image = self.augment_image(peak_image)
-            water_image = self.augment_image(water_image)
+            peak_image = self.augment_image(peak_image, convert_to_tensor=False)
+            water_image = self.augment_image(water_image, convert_to_tensor=False)
         
         if self.transform:
             peak_image = self.transform(peak_image)
             water_image = self.transform(water_image)
-    
+            
         return peak_image, water_image
         
     def __load_h5__(self, image_path):
         with h5.File(image_path, 'r') as f:
             return np.array(f['entry/data/data'])
-
-    def __to_pil__(self, image):
-        image = self.__load_h5__(image)
-        return transforms.ToPILImage()(image)
     
-    def augment_image(self, image):
-        pil_image = transforms.ToPILImage()(image)
+    def augment_image(self, image, convert_to_tensor=False):
+        if image.dtype == np.float64:
+            image = image.astype(np.float32)
+        pil_image = transforms.ToPILImage()(image) if not isinstance(image, Image.Image) else image
         rotated_image = pil_image.rotate(90)
-        return transforms.ToTensor()(rotated_image)
-    
+        if convert_to_tensor:
+        # Ensure output type is consistent with self.transform expectations
+            return transforms.ToTensor()(rotated_image)
+        else:
+            return rotated_image
+
     def default_transform(self):
         return transforms.Compose([
+            transforms.ToPILImage(),
             transforms.ToTensor(),
-            transforms.Lambda(lambda x: x.float()) #ensure float type
         ])
     
     def __preview__(self, idx, image_type='peak'):
@@ -212,7 +218,7 @@ class DataPreparation:
         print(f"Train size: {len(train_dataset)}")
         print(f"Test size: {len(test_dataset)}")
         print(f"Batch size: {self.batch_size}")
-        print(f"Number of batches: {len(train_loader)}")
+        print(f"Number of batches: {len(train_loader)} \n\n" )
         
         return train_loader, test_loader # returns train/test tensor data loaders
  
@@ -261,7 +267,7 @@ class ImageProcessor:
                 with h5.File(labeled_save_path, 'w') as lf:
                     lf.create_dataset('entry/data/data', data=labeled_image) 
 
-                print(f"Processed and labeled images saved: {processed_save_path}, {labeled_save_path}")
+                print(f"Processed and labeled images saved:\n {processed_save_path} --> {labeled_save_path}")
 
         except Exception as e:
             print(f"Error processing directory: {e}")
