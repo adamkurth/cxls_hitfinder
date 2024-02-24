@@ -1,18 +1,19 @@
 
-import classes as cl 
-import functions as fn
-import models as md
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import transforms
 
+from pkg import models as m
+from pkg import classes as c
+from pkg import functions as f
+
 """instances"""
-paths = cl.PathManager()
+paths = c.PathManager()
 paths.clean_sim() # moves all .err, .out, .sh files sim_specs 
 
-dataset = cl.PeakImageDataset(paths=paths, transform=transforms.ToTensor(), augment=False)
-prep = cl.DataPreparation(paths=paths, batch_size=32)
+dataset = c.PeakImageDataset(paths=paths, transform=transforms.ToTensor(), augment=False)
+prep = c.DataPreparation(paths=paths, batch_size=32)
 
 """checks"""
 peak_paths = paths.__get_peak_images_paths__()
@@ -24,7 +25,7 @@ print('Number of Peak Images: ', len(peak_paths), 'Number of Water Images', len(
 train_loader, test_loader = prep.prep_data()
 
 """model"""
-model_res50 = md.CustomResNet50(num_proteins=10, num_camlengths=3)
+model_res50 = m.CustomResNet50(num_proteins=10, num_camlengths=3)
 
 water_background = dataset.__load_h5__(paths.__get_path__('water_background_h5'))
 

@@ -9,14 +9,14 @@ import matplotlib.pyplot as plt
 
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
-from sklearn.model_selection import train_test_split
 from collections import namedtuple
 from skimage.feature import peak_local_max
 
 class PathManager:
     def __init__(self):
-        # grabs peaks and processed images from images directory /
-        self.root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        # grabs peaks and processed images from images directory
+        self.current_path = os.path.abspath(__file__)
+        self.root = self.__re_root__(self.current_path)
         self.images_dir = os.path.join(self.root, 'images') #/images
         self.sim_dir = os.path.join(self.root, 'sim')  #/sim
         self.sim_specs_dir = os.path.join(self.sim_dir, 'sim_specs') # sim/sim_specs
@@ -31,6 +31,14 @@ class PathManager:
         self.pdb_dir = os.path.join(self.sim_dir, 'pdb') # /sim/pdb
         self.sh_dir = os.path.join(self.sim_dir, 'sh') # /sim/sh
         self.water_background_h5 = os.path.join(self.sim_dir, 'water_background.h5') # /sim/water_background.h5
+    
+    def __re_root__(self, current_path):
+        match = re.search("cxls_hitfinder", current_path)
+        if match:
+            root = current_path[:match.end()]
+            return root
+        else:
+            raise Exception("Could not find the root directory. (cxls_hitfinder)\n", "Current working dir:", self.current_path)
     
     def __get_path__(self, path_name):
         # returns the path of the path_name
@@ -128,7 +136,7 @@ class PeakImageDataset(Dataset):
                 
                 protein = 0 # PLACEHOLDER
                 
-                return (protein, camera_length, camera_length_label)ß
+                return (protein, camera_length, camera_length_label)
         except Exception as e:
             print(f"Error extracting labels from filename {filepath}: {e}")
             
@@ -207,65 +215,20 @@ class DataPreparation:
         print(f"Number of batches: {len(train_loader)}")
         
         return train_loader, test_loader # returns train/test tensor data loaders
-
  
 class ImageProcessor:
     def __init__(self, water_background_array):
-        """
-        Initialize the ImageProcessor class.
-
-        Parameters:
-        - water_background_array: numpy array
-            The water background array to be applied to the image.
-        """
         self.water_background_array = water_background_array
     
     @staticmethod
     def load_h5_image(file_path):
-        """
-        Load an HDF5 image.
-
-        Parameters:
-        - file_path: str
-            The path to the HDF5 image file.
-
-        Returns:
-        - numpy array
-            The loaded image as a numpy array.
-        """
         with h5.File(file_path, 'r') as f:
             return np.array(f['entry/data/data'])
         
     def apply_water_background(self, peak_image_array):
-        """
-        Apply the water background to the image.
-
-        Parameters:
-        - peak_image_array: numpy array
-            The image array to which the water background will be applied.
-
-        Returns:
-        - numpy array
-            The image array with the water background applied.
-        """
         return peak_image_array + self.water_background_array
     
     def find_peaks_and_label(self, peak_image_array, threshold_value=0, min_distance=3):
-        """
-        Find peaks in the image and generate a labeled image.
-
-        Parameters:
-        - peak_image_array: numpy array
-            The image array in which peaks will be found.
-        - threshold_value: int, optional
-            The threshold value for peak detection. Default is 0.
-        - min_distance: int, optional
-            The minimum distance between peaks. Default is 3.
-
-        Returns:
-        - namedtuple
-            A named tuple containing the coordinates of the peaks and the labeled image array.
-        """
         Output = namedtuple('Out', ['coordinates', 'labeled_array'])
         coordinates = peak_local_max(peak_image_array, min_distance=min_distance, threshold_abs=threshold_value)
         labeled_array = np.zeros(peak_image_array.shape)
@@ -275,40 +238,31 @@ class ImageProcessor:
         return Output(coordinates, labeled_array)
     
     def process_directory(self, paths, threshold_value): 
-        """
-        Process all HDF5 images in a directory.
+        try: 
+            peaks_path = paths.__get_path__('peak_images_dir')
+            processed_out_path = paths.__get_path__('processed_images_dir')
+            label_out_path = paths.__get_path__('label_images_dir')
+        
+            for file in os.listdir(peaks_path):
+                if file.endswith('.h5') and file != 'water_background.h5':
+                    full_path = os.path.join(peaks_path, file)
+                    image = self.load_h5_image(full_path)
+                    processed_image = self.apply_water_background(image)
+                    
+                    Out = self.find_peaks_and_label(processed_image, threshold_value)
+                    labeled_image = Out.labeled_array
+                    coordinates = Out.coordinates
+                    
+                    processed_save_path = os.path.join(processed_out_path, f"processed_{file}")
+                    labeled_save_path = os.path.join(label_out_path, f"labeled_{file}")
+                
+                with h5.File(processed_save_path, 'w') as pf:
+                    pf.create_dataset('entry/data/data', data=processed_image)
+                with h5.File(labeled_save_path, 'w') as lf:
+                    lf.create_dataset('entry/data/data', data=labeled_image) 
 
-        Parameters:
-        - paths: tuple
-            A tuple containing the paths to the peak images directory, processed images directory, and label output directory.
-        - threshold_value: int
-            The threshold value for peak detection.
+                print(f"Processed and labeled images saved: {processed_save_path}, {labeled_save_path}")
 
-        Returns:
-        None
-        """
-        # unpack paths
-        peak_images_path, processed_images_path, label_output_path = paths
-    
-        for file in os.listdir(peak_images_path):
-            if file.endswith('.h5') and file != 'water_background.h5':
-                full_path = os.path.join(peak_images_path, file)
-                print(f"Processing {file}...")
-                image = self.load_h5_image(full_path)
-                processed_image = self.apply_water_background(image)
-                
-                Out = self.find_peaks_and_label(processed_image, threshold_value)
-                labeled_image = Out.labeled_array
-                coordinates = Out.coordinates
-                
-                processed_save_path = os.path.join(processed_images_path, f"processed_{file}")
-                labeled_save_path = os.path.join(label_output_path, f"labeled_{file}")
-            
-            with h5.File(processed_save_path, 'w') as pf:
-                pf.create_dataset('entry/data/data', data=processed_image)
-            with h5.File(labeled_save_path, 'w') as lf:
-                lf.create_dataset('entry/data/data', data=labeled_image)
-                
-            print(f'Saved processed image to {processed_save_path}')
-            print(f'Saved labeled image to {labeled_save_path}')
-    
+        except Exception as e:
+            print(f"Error processing directory: {e}")
+
