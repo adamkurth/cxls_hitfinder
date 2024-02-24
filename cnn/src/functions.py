@@ -95,3 +95,4 @@ def sim_parameters(paths):
     
     combined_params = {**essential_sh_params, **unitcell_params_dict}
     return combined_params
+
