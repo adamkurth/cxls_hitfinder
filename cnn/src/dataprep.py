@@ -16,24 +16,27 @@ from pkg import classes as c
 from pkg import functions as f
 
 # this python file is for testing the classes and functions in the classes.py and functions.py files
-# supposed to load the data in preparation for the CNN model  
+# supposed to load the data in preparation for the CNN model
+
+
+# ZED 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
 
 def main():
     # instances
     paths = c.PathManager()
     dataset = c.PeakImageDataset(paths, transform=transforms.ToTensor(), augment=True)
-    
+
     print(type(dataset), dataset)
     num_items = len(dataset)
-    
+
     data_preparation = c.DataPreparation(paths, batch_size=10)
-    paths.clean_sim() # moves all .err, .out, .sh files sim_specs 
+    paths.clean_sim() # moves all .err, .out, .sh files sim_specs
     train_loader, test_loader = data_preparation.prep_data()
 
     sim_dict = f.sim_parameters(paths)
     print(sim_dict)
-    
-    
+
+
 
 if __name__ == "__main__":
     main()
