@@ -12,7 +12,7 @@ paths = c.PathManager()
 paths.clean_sim() # moves all .err, .out, .sh files sim_specs
 
 
-dataset = c.PeakImageDataset(paths=paths, transform=transforms.ToTensor(), augment=True)
+dataset = c.PeakImageDataset(paths=paths, transform=None, augment=True)
 prep = c.DataPreparation(paths=paths, batch_size=5)
 
 """checks"""
@@ -45,10 +45,17 @@ for epoch in range(num_epochs):
     running_loss = 0.0
     for (peak_images, water_images), labels in train_loader:
         for label in labels:
-            print("Label structure:", label)
-
-        labels_protein = torch.tensor([protein_to_idx[label['protein']] for label in labels], dtype=torch.long).to(peak_images.device)
-        labels_cam_len = torch.tensor([label['cam_length_label'] for label in labels], dtype=torch.long).to(peak_images.device)
+            print(f"Label structure: {label} {type(label)}\n\n")
+        # Extract the protein identifiers assuming they are always the first element in the label tuple
+        protein_identifiers = labels[0] # gives tuple ('1IC6', '1IC6', '1IC6', '1IC6', '1IC6')
+        try:
+            labels_protein = torch.tensor([protein_to_idx[protein] for protein in protein_identifiers], dtype=torch.long).to(peak_images.device)
+            labels_cam_len = labels[2].to(dtype=torch.long).to(peak_images.device)
+        except KeyError as e:
+            print(f"KeyError with label: {e}")
+            print(labels[:5])
+            continue
+        print(f'Beginning training:\n\n Current Epoch: {epoch} with {len(labels_protein), len(labels_cam_len)} labels')
         optimizer.zero_grad()
 
         # multi-task learning
