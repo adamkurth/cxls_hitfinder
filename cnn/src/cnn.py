@@ -55,7 +55,7 @@ for epoch in range(num_epochs):
             print(f"KeyError with label: {e}")
             print(labels[:5])
             continue
-        print(f'Beginning training:\n\n Current Epoch: {epoch} with {len(labels_protein), len(labels_cam_len)} labels')
+        print(f'Beginning training:\n Current Epoch: {epoch} with {len(labels_protein), len(labels_cam_len)} labels')
         optimizer.zero_grad()
 
         # multi-task learning
