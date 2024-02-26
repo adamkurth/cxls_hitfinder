@@ -18,9 +18,6 @@ from pkg import functions as f
 # this python file is for testing the classes and functions in the classes.py and functions.py files
 # supposed to load the data in preparation for the CNN model
 
-
-# ZED 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
-
 def main():
     # instances
     paths = c.PathManager()
