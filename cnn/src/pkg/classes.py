@@ -121,7 +121,7 @@ class PeakImageDataset(Dataset):
         self.peak_image_paths = paths.__get_peak_images_paths__()
         self.water_image_paths = paths.__get_water_images_paths__()
         assert len(self.peak_image_paths) == len(self.water_image_paths), "The number of peak images must match the number of water images."
-        self.transform = transform or self.default_transform()
+        self.transform = TransformToTensor() if transform is None else transform
         self.augment = augment
         self.labels = [self._extract_labels(path) for path in self.peak_image_paths]
 
@@ -153,18 +153,48 @@ class PeakImageDataset(Dataset):
         water_image = self.__load_h5__(water_image_path)
 
         # Ensure image is in the correct format for the transformations
-        peak_image = transforms.ToPILImage()(peak_image)
-        water_image = transforms.ToPILImage()(water_image)
 
-        if peak_image.ndim == 3 and peak_image.shape[1] == 1:  # Check if in [H, C, W] format
-            peak_image = peak_image.permute(1, 0, 2)  # Adjust to [C, H, W]
-        if water_image.ndim == 3 and water_image.shape[1] == 1:
-            water_image = water_image.permute(1, 0, 2)  # Adjust to [C, H, W]
+class PeakImageDataset(Dataset):
+    def __init__(self, paths, transform=None, augment=False):
+        self.peak_image_paths = paths.__get_peak_images_paths__()
+        self.water_image_paths = paths.__get_water_images_paths__()
+        assert len(self.peak_image_paths) == len(self.water_image_paths), "The number of peak images must match the number of water images."
+        self.transform = TransformToTensor() if transform is None else transform
+        self.augment = augment
+        self.labels = [self._extract_labels(path) for path in self.peak_image_paths]
+
+    def __len__(self):
+        # returns number of images in the dataset
+        return len(self.peak_image_paths)
+
+    def _extract_labels(self, filepath):
+        default_protein = '1IC6'
+        default_camera_len = 0.1 # in mm
+        default_camera_len_label = 0
+
+        match = re.search(r'(processed_)?img_7keV_clen(\d{2})_\d+\.h5', filepath)
+        if match:
+            camera_length_label = int(match.group(2)) - 1  # Convert '01', '02', '03', to 0, 1, 2, etc.
+            camera_length = float(f"0.{match.group(2)}")
+            protein = default_protein
+            return (protein, camera_length, camera_length_label)
+        else:
+            print(f'Warning: Filename does not match expected pattern: {filepath}')
+        return ('default', 0.0, -1)
+
+    def __getitem__(self, idx):
+        # gets peak/water image and returns numpy array and applies transform
+        peak_image_path = self.peak_image_paths[idx]
+        water_image_path = self.water_image_paths[idx]
+
+        peak_image = self.__load_h5__(peak_image_path)
+        water_image = self.__load_h5__(water_image_path)
+
+        # Ensure image is in the correct format for the transformations
+        peak_image = self.transform(peak_image)
+        water_image = self.transform(water_image)
 
         labels = self._extract_labels(peak_image_path)
-
-        if self.transform:
-            peak_image, water_image = self.transform(peak_image), self.transform(water_image)
 
         print(f"Peak Image Shape: {peak_image.shape}, Water Image Shape: {water_image.shape}")
         print(f"Protein: {labels[0]}, Camera Length: {labels[1]}, Label Camera Length: {labels[2]}")
@@ -179,7 +209,9 @@ class PeakImageDataset(Dataset):
                 image = np.expand_dims(image, axis=-1)  # Add channel dimension at the last axis
             return image
 
-    def augment_image(self, image, convert_to_tensor=False):
+    def augment_image(self, image, to_tensor=False):
+        # FIXME: This is a temporary implementation. Need to replace with albumentations
+        #
         # assuming image is np.array and needs to be converted to PIL for augmentation
         if image.ndim == 3 and image.shape[0] in [1,3,4]: #check if CxHxW
             image = image.squeeze(0)
@@ -188,18 +220,17 @@ class PeakImageDataset(Dataset):
         else:
             raise ValueError(f'Unexpected image shape: {image.shape}')
 
-        pil_image = transforms.ToPILImage()(image) if not isinstance(image, Image.Image) else image
+        pil_image = Image.fromarray(image)
         rotated_image = pil_image.rotate(90)
 
-        if convert_to_tensor:
-            return transforms.ToTensor()(rotated_image)
+        if to_tensor:
+            return self.default_transform()(rotated_image)
         else:
             return rotated_image
 
     def default_transform(self):
         return transforms.Compose([
-            transforms.ToPILImage(),
-            NormalizeAndToTensor(),
+            TransformToTensor(),
         ])
 
     def __preview__(self, idx, image_type='peak'):
@@ -212,16 +243,31 @@ class PeakImageDataset(Dataset):
         plt.axis('off')
         plt.show()
 
-class NormalizeAndToTensor:
+class TransformToTensor:
     def __call__(self, image):
-        # Assuming pic is a numpy array with high dynamic range
-        # Normalize based on the specific range of your crystallography images
-        pic = pic.astype(np.float32)
-        max_val = np.max(pic)
-        min_val = np.min(pic)
-        pic = (pic - min_val) / (max_val - min_val)  # Normalize to [0.0, 1.0]
-        return F.to_tensor(pic)
+        """
+        Converts a numpy array to a PyTorch tensor while ensuring:
+        - The output is in C x H x W format.
+        - The tensor is of dtype float32.
+        - For grayscale images, a dummy channel is added to ensure compatibility.
 
+        Args:
+            pic (numpy.ndarray): The input image.
+
+        Returns:
+            torch.Tensor: The transformed image tensor.
+        """
+        # convert the np.array to float32 without changing its range
+        pic = image.astype(np.float32)
+
+        # ensure input is HWC format for compatibility without F.to_tensor
+        if pic.ndim == 2: # If grayscale, add a dummy channel
+            pic = np.expand_dims(pic, axis=-1)
+
+        # Convert the numpy array (HWC) to a PyTorch tensor (CHW)
+        # Note: F.to_tensor automatically scales the input based on its dtype
+        tensor = F.to_tensor(pic)
+        return tensor
 
 class DataPreparation:
     def __init__(self, paths, batch_size=32):
@@ -231,7 +277,7 @@ class DataPreparation:
     def prep_data(self):
         # ensure matching number of paths of peak and water images
         transform = transforms.Compose([
-            transforms.ToTensor(),
+            TransformToTensor(),
         ])
 
         dataset = PeakImageDataset(self.paths, transform=transform, augment=True)
