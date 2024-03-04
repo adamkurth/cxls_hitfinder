@@ -11,9 +11,11 @@ from torchvision import transforms
 from sklearn.model_selection import train_test_split
 from collections import namedtuple
 
-from pkg import models as m
-from pkg import classes as c
-from pkg import functions as f
+import pkg
+
+# from pkg import models as m
+# from pkg import classes as c
+# from pkg import functions as f
 
 # this python file is for testing the classes and functions in the classes.py and functions.py files
 # supposed to load the data in preparation for the CNN model

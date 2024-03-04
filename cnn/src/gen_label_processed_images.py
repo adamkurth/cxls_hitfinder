@@ -4,9 +4,7 @@ import h5py as h5
 from skimage.feature import peak_local_max
 from collections import namedtuple
 
-from pkg import models as m
-from pkg import classes as c
-from pkg import functions as f
+from pkg import c, m, f
 
 def main():
     """

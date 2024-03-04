@@ -3,9 +3,12 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision import transforms
 
-from pkg import models as m
-from pkg import classes as c
-from pkg import functions as f
+# from pkg import models as m
+# from pkg import classes as c
+# from pkg import functions as f
+
+from pkg import c, m, f
+
 
 """instances"""
 paths = c.PathManager()
