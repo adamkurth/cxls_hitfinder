@@ -5,3 +5,5 @@ matplotlib
 h5py
 scikit-learn
 torchvision
+scikit-image
+scipy
