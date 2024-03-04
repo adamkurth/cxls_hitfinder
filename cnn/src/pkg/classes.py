@@ -3,7 +3,6 @@ import re
 import h5py as h5
 import torch
 import shutil
-import h5py as h5
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -302,14 +301,26 @@ class ImageProcessor:
         self.water_background_array = water_background_array
 
     @staticmethod
-    def load_h5_image(file_path):
-        with h5.File(file_path, 'r') as f:
-            return np.array(f['entry/data/data'])
+    def load_h5_image(file_path):        
+        if not os.path.exists(file_path):
+            print(f"File not found: {file_path}")
+            raise FileNotFoundError(f"File not found: {file_path}")
+        try:
+            with h5.File(file_path, 'r') as f:
+                data = f['entry/data/data']
+                return np.array(data) 
+        except KeyError:
+            raise ValueError(f"Dataset 'entry/data/data' not found in file: {file_path}")
+        except IOError as e:
+            if 'unable to open file' in str(e).lower():
+                raise IOError(f"File cannot be opened, might be corrupt or not an HDF5 file: {file_path}")
+            else:
+                raise IOError(f"Failed to read the file {file_path}: {e}")
 
     def apply_water_background(self, peak_image_array):
         return peak_image_array + self.water_background_array
 
-    def find_peaks_and_label(self, peak_image_array, threshold_value=0, min_distance=3):
+    def find_peaks_and_label(self, peak_image_array, threshold_value=0, min_distance=5):
         Output = namedtuple('Out', ['coordinates', 'labeled_array'])
         coordinates = peak_local_max(peak_image_array, min_distance=min_distance, threshold_abs=threshold_value)
         labeled_array = np.zeros(peak_image_array.shape)
@@ -320,29 +331,33 @@ class ImageProcessor:
 
     def process_directory(self, paths, threshold_value):
         try:
+            # peaks_path = paths.__get_peak_images_paths__()
             peaks_path = paths.__get_path__('peak_images_dir')
             processed_out_path = paths.__get_path__('processed_images_dir')
             label_out_path = paths.__get_path__('label_images_dir')
 
-            for file in os.listdir(peaks_path):
-                if file.endswith('.h5') and file != 'water_background.h5':
-                    full_path = os.path.join(peaks_path, file)
-                    image = self.load_h5_image(full_path)
+            for f in os.listdir(peaks_path):
+                if f.endswith('.h5') and f != 'water_background.h5':
+                    full_path = os.path.join(peaks_path, f)
+                    
+                    # load image and label
+                    image = self.load_h5_image(full_path)     
+                    Out = self.find_peaks_and_label(image, threshold_value)
+                    
+                    # apply water background
                     processed_image = self.apply_water_background(image)
-
-                    Out = self.find_peaks_and_label(processed_image, threshold_value)
                     labeled_image = Out.labeled_array
-                    coordinates = Out.coordinates
 
-                    processed_save_path = os.path.join(processed_out_path, f"processed_{file}")
-                    labeled_save_path = os.path.join(label_out_path, f"labeled_{file}")
+                    #paths for saving
+                    processed_save_path = os.path.join(processed_out_path, f"processed_{f}")
+                    labeled_save_path = os.path.join(label_out_path, f"labeled_{f}")
 
-                with h5.File(processed_save_path, 'w') as pf:
-                    pf.create_dataset('entry/data/data', data=processed_image)
-                with h5.File(labeled_save_path, 'w') as lf:
-                    lf.create_dataset('entry/data/data', data=labeled_image)
+                    with h5.File(processed_save_path, 'w') as pf:
+                        pf.create_dataset('entry/data/data', data=processed_image)
+                    with h5.File(labeled_save_path, 'w') as lf:
+                        lf.create_dataset('entry/data/data', data=labeled_image)
 
-                print(f"Processed and labeled images saved:\n {processed_save_path} --> {labeled_save_path}")
-
+                    print(f"Processed images saved:\n {processed_save_path}")
+            
         except Exception as e:
             print(f"Error processing directory: {e}")
