@@ -3,9 +3,8 @@ import re
 import h5py as h5
 import numpy as np
 import matplotlib.pyplot as plt
-
 from collections import namedtuple
-
+    
 
 def sim_parameters(paths):
     """
@@ -113,10 +112,4 @@ def sim_parameters(paths):
 #         print(e)
 #         print(f'Error: Could not load the image at {image_path}')
 
-def get_protein_map():
-    # returns a dictionary of the protein labels
-    protein_to_idx = {
-        '1IC6': 0,
-        # To be developed
-    }
-    return protein_to_idx
+

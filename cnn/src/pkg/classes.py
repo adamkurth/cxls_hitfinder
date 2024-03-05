@@ -197,8 +197,8 @@ class PeakImageDataset(Dataset):
         labels = self._extract_labels(peak_image_path)
         
         # check for shape
-        print(f"Peak Image Shape: {peak_image.shape}, Water Image Shape: {water_image.shape}")
-        print(f"Protein: {labels[0]}, Camera Length: {labels[1]}, Label Camera Length: {labels[2]}")
+        # print(f"Peak Image Shape: {peak_image.shape}, Water Image Shape: {water_image.shape}")
+        # print(f"Protein: {labels[0]}, Camera Length: {labels[1]}, Label Camera Length: {labels[2]}")
 
         return (peak_image, water_image), labels
 
