@@ -134,6 +134,7 @@ class PeakImageDataset(Dataset):
         default_camera_len_label = 0
 
         match = re.search(r'(processed_)?img_7keV_clen(\d{2})_\d+\.h5', filepath)
+        # needs the specific name pattern to extract the protein and camera length
         if match:
             camera_length_label = int(match.group(2)) - 1  # Convert '01', '02', '03', to 0, 1, 2, etc.
             camera_length = float(f"0.{match.group(2)}")
@@ -194,9 +195,10 @@ class PeakImageDataset(Dataset):
         water_image = self.transform(water_image)
 
         labels = self._extract_labels(peak_image_path)
-
-        print(f"Peak Image Shape: {peak_image.shape}, Water Image Shape: {water_image.shape}")
-        print(f"Protein: {labels[0]}, Camera Length: {labels[1]}, Label Camera Length: {labels[2]}")
+        
+        # check for shape
+        # print(f"Peak Image Shape: {peak_image.shape}, Water Image Shape: {water_image.shape}")
+        # print(f"Protein: {labels[0]}, Camera Length: {labels[1]}, Label Camera Length: {labels[2]}")
 
         return (peak_image, water_image), labels
 
@@ -210,7 +212,6 @@ class PeakImageDataset(Dataset):
 
     def augment_image(self, image, to_tensor=False):
         # FIXME: This is a temporary implementation. Need to replace with albumentations
-        #
         # assuming image is np.array and needs to be converted to PIL for augmentation
         if image.ndim == 3 and image.shape[0] in [1,3,4]: #check if CxHxW
             image = image.squeeze(0)
@@ -288,11 +289,12 @@ class DataPreparation:
 
         train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
         test_loader = DataLoader(test_dataset, batch_size=self.batch_size, shuffle=True)
+        
         print("Data prepared.")
         print(f"Train size: {len(train_dataset)}")
         print(f"Test size: {len(test_dataset)}")
         print(f"Batch size: {self.batch_size}")
-        print(f"Number of batches: {len(train_loader)} \n\n" )
+        print(f"Number of batches: {len(train_loader)} \n\n")
 
         return train_loader, test_loader # returns train/test tensor data loaders
 

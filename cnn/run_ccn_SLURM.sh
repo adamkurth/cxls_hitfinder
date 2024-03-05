@@ -1,8 +1,8 @@
 #!/bin/bash
 
 
-# This script is used to submit a job to a SLURM cluster for running the ccn_test program.
-# It specifies the job name, partition, number of nodes, number of tasks per node, memory requirement,
+# This script is used to submit a job to a SLURM cluster for running the cnn/src/cnn.py.
+# It specifies the job name (1) number of tasks (2), partition (3), quality of service (4), hours (5), path (6) and tag (7).
 # time limit, and output log file.
 
 RUN=$1
