@@ -3,10 +3,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision import transforms
 
-# from pkg import models as m
-# from pkg import classes as c
-# from pkg import functions as f
-
 from pkg import c, m, f
 
 
@@ -38,7 +34,7 @@ model_res50 = m.CustomResNet50(num_proteins=3, num_camlengths=3)
 """loss and optimizer"""
 criteron_protein = nn.CrossEntropyLoss()
 criteron_camlength = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model_res50.parameters(), lr=0.001)
+optimizer = optim.Adam(model_res50.parameters(), lr=0.00001)
 
 """train"""
 num_epochs = 10
