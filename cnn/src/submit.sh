@@ -5,7 +5,7 @@
 # time limit, and output log file. Then, it runs a Python script for a CNN model and captures any errors.
 
 submit_job() {
-  local run="$1$7" # Concatenate run identifier and tag
+  local run="$1"
   local tasks="$2"
   local partition="$3"
   local qos="$4"
@@ -36,15 +36,15 @@ main() {
   local qos="$4"
   local hours="$5"
   local path="$6"
-  local tag="$7"
+#   local tag="$7"
 
   # Check for mandatory arguments
-  if [[ -z "$run" || -z "$tasks" || -z "$partition" || -z "$qos" || -z "$hours" || -z "$path" || -z "$tag" ]]; then
-    printf "Usage: %s RUN TASKS PARTITION QOS HOURS PATH TAG\n" "$0" >&2
+  if [[ -z "$run" || -z "$tasks" || -z "$partition" || -z "$qos" || -z "$hours" || -z "$path" ]]; then
+    printf "Usage: %s RUN TASKS PARTITION QOS HOURS PATH\n" "$0" >&2
     return 1
   fi
 
-  submit_job "$run" "$tasks" "$partition" "$qos" "$hours" "$path" "$tag"
+  submit_job "$run" "$tasks" "$partition" "$qos" "$hours" "$path"
 }
 
 main "$@"
