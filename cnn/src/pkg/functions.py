@@ -100,18 +100,18 @@ def sim_parameters(paths):
     combined_params = {**essential_sh_params, **unitcell_params_dict}
     return combined_params
 
-def __preview__(self, image_path):
-    try:
-        image = self.__load_h5__(image_path)
-        # visualize outliers 
-        plt.imshow(image, cmap='viridis')
-        plt.colorbar()
-        plt.title(f'{image_type.capitalize()} Image at Index {idx}')
-        plt.axis('off')
-        plt.show()
-    except Exception as e:
-        print(e)
-        print(f'Error: Could not load the image at {image_path}')
+# def __preview__(self, image_path):
+#     try:
+#         image = self.__load_h5__(image_path)
+#         # visualize outliers 
+#         plt.imshow(image, cmap='viridis')
+#         plt.colorbar()
+#         plt.title(f'{image_type.capitalize()} Image at Index {idx}')
+#         plt.axis('off')
+#         plt.show()
+#     except Exception as e:
+#         print(e)
+#         print(f'Error: Could not load the image at {image_path}')
 
 def get_protein_map():
     # returns a dictionary of the protein labels

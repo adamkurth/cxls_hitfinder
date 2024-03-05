@@ -154,14 +154,6 @@ class PeakImageDataset(Dataset):
 
         # Ensure image is in the correct format for the transformations
 
-    def get_protein_map(self):
-        # returns a dictionary of the protein labels
-        protein_to_idx = {
-            '1IC6': 0,
-            # To be developed
-        }
-        return protein_to_idx
-    
 class PeakImageDataset(Dataset):
     def __init__(self, paths, transform=None, augment=False):
         self.peak_image_paths = paths.__get_peak_images_paths__()
@@ -297,11 +289,12 @@ class DataPreparation:
 
         train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
         test_loader = DataLoader(test_dataset, batch_size=self.batch_size, shuffle=True)
+        
         print("Data prepared.")
         print(f"Train size: {len(train_dataset)}")
         print(f"Test size: {len(test_dataset)}")
         print(f"Batch size: {self.batch_size}")
-        print(f"Number of batches: {len(train_loader)} \n\n" )
+        print(f"Number of batches: {len(train_loader)} \n\n")
 
         return train_loader, test_loader # returns train/test tensor data loaders
 
