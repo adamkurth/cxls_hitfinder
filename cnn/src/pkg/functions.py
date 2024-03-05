@@ -112,3 +112,11 @@ def __preview__(self, image_path):
     except Exception as e:
         print(e)
         print(f'Error: Could not load the image at {image_path}')
+
+def get_protein_map():
+    # returns a dictionary of the protein labels
+    protein_to_idx = {
+        '1IC6': 0,
+        # To be developed
+    }
+    return protein_to_idx

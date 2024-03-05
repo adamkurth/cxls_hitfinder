@@ -134,6 +134,7 @@ class PeakImageDataset(Dataset):
         default_camera_len_label = 0
 
         match = re.search(r'(processed_)?img_7keV_clen(\d{2})_\d+\.h5', filepath)
+        # needs the specific name pattern to extract the protein and camera length
         if match:
             camera_length_label = int(match.group(2)) - 1  # Convert '01', '02', '03', to 0, 1, 2, etc.
             camera_length = float(f"0.{match.group(2)}")
@@ -153,6 +154,14 @@ class PeakImageDataset(Dataset):
 
         # Ensure image is in the correct format for the transformations
 
+    def get_protein_map(self):
+        # returns a dictionary of the protein labels
+        protein_to_idx = {
+            '1IC6': 0,
+            # To be developed
+        }
+        return protein_to_idx
+    
 class PeakImageDataset(Dataset):
     def __init__(self, paths, transform=None, augment=False):
         self.peak_image_paths = paths.__get_peak_images_paths__()
@@ -194,7 +203,8 @@ class PeakImageDataset(Dataset):
         water_image = self.transform(water_image)
 
         labels = self._extract_labels(peak_image_path)
-
+        
+        # check for shape
         print(f"Peak Image Shape: {peak_image.shape}, Water Image Shape: {water_image.shape}")
         print(f"Protein: {labels[0]}, Camera Length: {labels[1]}, Label Camera Length: {labels[2]}")
 
@@ -210,7 +220,6 @@ class PeakImageDataset(Dataset):
 
     def augment_image(self, image, to_tensor=False):
         # FIXME: This is a temporary implementation. Need to replace with albumentations
-        #
         # assuming image is np.array and needs to be converted to PIL for augmentation
         if image.ndim == 3 and image.shape[0] in [1,3,4]: #check if CxHxW
             image = image.squeeze(0)
