@@ -6,43 +6,47 @@ import logging
 
 from pkg import c, m, f
 
-
-"""instances"""
+"""Instances"""
 paths = c.PathManager()
-paths.clean_sim() # moves all .err, .out, .sh files sim_specs
-
-
 dataset = c.PeakImageDataset(paths=paths, transform=None, augment=True)
 prep = c.DataPreparation(paths=paths, batch_size=5)
+
+"""Clean sim/ directory"""
+paths.clean_sim() # moves all .err, .out, .sh files sim_specs
 
 """checks"""
 peak_paths = paths.__get_peak_images_paths__()
 water_paths = paths.__get_water_images_paths__()
 print('Number of Peak Images: ', len(peak_paths), 'Number of Water Images', len(water_paths))
 
-"""train and test data loaders"""
+print("Peak images path:", paths.peak_images_dir)
+print("Water images path:", paths.water_images_dir)
+
+"""Train/Test Data Loaders"""
 train_loader, test_loader = prep.prep_data()
 
-"""protein mapping"""
+"""Protein Mapping"""
 protein_to_idx = {
     '1IC6': 0,
     # To be developed
 }
 
-"""model"""
+"""Models"""
 model_res50 = m.CustomResNet50(num_proteins=3, num_camlengths=3)
 
-"""loss and optimizer"""
-criteron_protein = nn.CrossEntropyLoss()
-criteron_camlength = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model_res50.parameters(), lr=0.00001)
+"""Loss/Optimizer"""
+criterion_protein, criterion_camlength = torch.nn.CrossEntropyLoss(), torch.nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model_res50.parameters(), lr=0.001)
 
-"""train"""
-num_epochs = 10
+print("Criterion: ", criterion_protein, criterion_camlength)
+print("Optimizer: \n", optimizer)
+print("Learning rate: ", optimizer.param_groups[0]['lr'])
 
+"""Training"""
 # Setup basic configuration for logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logging.info('Staring training...')
+num_epochs = 1
 
 for epoch in range(num_epochs):
     model_res50.train()
@@ -67,14 +71,14 @@ for epoch in range(num_epochs):
             print(labels[:5])
             continue
 
-        print(f'Beginning training:\n Current Epoch: {epoch} with {len(labels_protein), len(labels_cam_len)} labels')
+        # print(f'Beginning training:\n Current Epoch: {epoch} with {len(labels_protein), len(labels_cam_len)} labels')
         optimizer.zero_grad()
 
         # multi-task learning: predicting protein and camlength
         protein_pred, camlength_pred = model_res50((peak_images, water_images))
 
-        protein_loss = criteron_protein(protein_pred, labels_protein.long())
-        camlength_loss = criteron_camlength(camlength_pred, labels_cam_len.long())
+        protein_loss = criterion_protein(protein_pred, labels_protein.long())
+        camlength_loss = criterion_camlength(camlength_pred, labels_cam_len.long())
 
         loss = protein_loss + camlength_loss
         loss.backward()
@@ -82,9 +86,10 @@ for epoch in range(num_epochs):
 
         running_loss += loss.item()
         batch_counter += 1
-        if batch_index % 5 == 0:    
-            logging.info(f"Epoch {epoch+1}/{num_epochs}, Batch {batch_index}/{len(train_loader)}, Running Loss: {running_loss / batch_counter}")
+
+        if batch_index == 1 or batch_index % 10 == 0:
+            logging.info(f'Epoch: {epoch+1}, Batch: {batch_index}, Running Loss: {running_loss / batch_index}')
+    
     # epoch summary
-    avg_epoch_loss = running_loss / len(train_loader)
-    logging.info(f"Epoch {epoch+1} Completed, Avg Loss: {avg_epoch_loss:.6f}")
-    # print(f"Epoch {epoch+1}, Loss: {running_loss/len(train_loader)}")
+    avg_loss = running_loss / len(train_loader)
+    logging.info(f'Epoch {epoch+1} completed, Average Loss: {avg_loss:.4f}')
