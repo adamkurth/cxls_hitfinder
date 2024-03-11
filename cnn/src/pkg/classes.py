@@ -11,6 +11,8 @@ from torchvision.transforms import functional as F
 from torchvision import transforms
 from collections import namedtuple
 from skimage.feature import peak_local_max
+from scipy.signal import find_peaks
+from torchvision.transforms.functional import to_pil_image, to_tensor
 from PIL import Image
 
 class PathManager:
@@ -172,6 +174,8 @@ class PeakImageDataset(Dataset):
         default_camera_len = 0.1 # in mm
         default_camera_len_label = 0
 
+        # retrieve 
+
         match = re.search(r'(processed_)?img_7keV_clen(\d{2})_\d+\.h5', filepath)
         if match:
             camera_length_label = int(match.group(2)) - 1  # Convert '01', '02', '03', to 0, 1, 2, etc.
@@ -297,29 +301,39 @@ class DataPreparation:
         print(f"Number of batches: {len(train_loader)} \n\n")
 
         return train_loader, test_loader # returns train/test tensor data loaders
-        
-    def prep_labels_heatmap(peak_coords, heatmap_size=(2163, 2069)):
-        """
-        Generate a heatmap label tensor based on peak coordinates.
 
-        Parameters:
-        - peak_coords: A list of tuples, each representing the (x, y) coordinates of a peak.
-        - output_size: A tuple (height, width) representing the size of the output heatmap.
+    def generate_heatmaps(self, batch_images, processor):
+        batch_heatmaps = []
+        for image_tensor in batch_images:
+            peak_coords = processor._process_image(image_tensor)  # Process each image
+            heatmap = np.zeros(image_tensor.squeeze().shape)
+            for y, x in peak_coords:
+                heatmap[y, x] = 1  # Set peak positions to 1
+            heatmap_tensor = torch.tensor(heatmap).unsqueeze(0)  # Convert to tensor and adjust shape
+            batch_heatmaps.append(heatmap_tensor)
+        return torch.stack(batch_heatmaps) # return batch of heatmaps
+    
+class PeakThresholdProcessor: 
+    def __init__(self, threshold_value=0):
+        self.threshold_value = threshold_value
 
-        Returns:
-        - A torch.Tensor of shape (1, height, width) representing the binary heatmap.
-        """
-        # Initialize an empty heatmap
-        heatmap = torch.zeros((1, heatmap_size[0], heatmap_size[1]), dtype=torch.float32)
+    def _set_threshold_value(self, new):
+        self.threshold_value = new
+    
+    def _get_local_maxima(self):
+        image_1d = self.image.flatten()
+        peaks, _ = find_peaks(image_1d, height=self.threshold_value)
+        coordinates = [self.flat_to_2d(idx) for idx in peaks]
+        return coordinates
         
-        # Mark the peak positions on the heatmap
-        for x, y in peak_coords:
-            if x < heatmap_size[0] and y < heatmap_size[1]:
-                heatmap[0, x, y] = 1.0
-        
-        return heatmap
-        
-
+    def _flat_to_2d(self, index, shape):
+        rows, cols = shape
+        return (index // cols, index % cols) 
+    
+    def _process_image(self, image_tensor):
+        image_np = image_tensor.squeeze().cpu().numpy()
+        return np.argwhere(image_np > self.threshold_value  )
+    
 class ImageProcessor:
     def __init__(self, water_background_array):
         self.water_background_array = water_background_array
