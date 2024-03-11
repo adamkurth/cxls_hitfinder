@@ -115,44 +115,44 @@ class PathManager:
         if not files_moved:
             print("clean_sim did not move any files\n\n")
 
-class PeakImageDataset(Dataset):
-    def __init__(self, paths, transform=None, augment=False):
-        self.peak_image_paths = paths.__get_peak_images_paths__()
-        self.water_image_paths = paths.__get_water_images_paths__()
-        assert len(self.peak_image_paths) == len(self.water_image_paths), "The number of peak images must match the number of water images."
-        self.transform = TransformToTensor() if transform is None else transform
-        self.augment = augment
-        self.labels = [self._extract_labels(path) for path in self.peak_image_paths]
+# class PeakImageDataset(Dataset):
+#     def __init__(self, paths, transform=None, augment=False):
+#         self.peak_image_paths = paths.__get_peak_images_paths__()
+#         self.water_image_paths = paths.__get_water_images_paths__()
+#         assert len(self.peak_image_paths) == len(self.water_image_paths), "The number of peak images must match the number of water images."
+#         self.transform = TransformToTensor() if transform is None else transform
+#         self.augment = augment
+#         self.labels = [self._extract_labels(path) for path in self.peak_image_paths]
 
-    def __len__(self):
-        # returns number of images in the dataset
-        return len(self.peak_image_paths)
+#     def __len__(self):
+#         # returns number of images in the dataset
+#         return len(self.peak_image_paths)
 
-    def _extract_labels(self, filepath):
-        default_protein = '1IC6'
-        default_camera_len = 0.1 # in mm
-        default_camera_len_label = 0
+#     def _extract_labels(self, filepath):
+#         default_protein = '1IC6'
+#         default_camera_len = 0.1 # in mm
+#         default_camera_len_label = 0
 
-        match = re.search(r'(processed_)?img_7keV_clen(\d{2})_\d+\.h5', filepath)
-        # needs the specific name pattern to extract the protein and camera length
-        if match:
-            camera_length_label = int(match.group(2)) - 1  # Convert '01', '02', '03', to 0, 1, 2, etc.
-            camera_length = float(f"0.{match.group(2)}")
-            protein = default_protein
-            return (protein, camera_length, camera_length_label)
-        else:
-            print(f'Warning: Filename does not match expected pattern: {filepath}')
-        return ('default', 0.0, -1)
+#         match = re.search(r'(processed_)?img_7keV_clen(\d{2})_\d+\.h5', filepath)
+#         # needs the specific name pattern to extract the protein and camera length
+#         if match:
+#             camera_length_label = int(match.group(2)) - 1  # Convert '01', '02', '03', to 0, 1, 2, etc.
+#             camera_length = float(f"0.{match.group(2)}")
+#             protein = default_protein
+#             return (protein, camera_length, camera_length_label)
+#         else:
+#             print(f'Warning: Filename does not match expected pattern: {filepath}')
+#         return ('default', 0.0, -1)
 
-    def __getitem__(self, idx):
-        # gets peak/water image and returns numpy array and applies transform
-        peak_image_path = self.peak_image_paths[idx]
-        water_image_path = self.water_image_paths[idx]
+#     def __getitem__(self, idx):
+#         # gets peak/water image and returns numpy array and applies transform
+#         peak_image_path = self.peak_image_paths[idx]
+#         water_image_path = self.water_image_paths[idx]
 
-        peak_image = self.__load_h5__(peak_image_path)
-        water_image = self.__load_h5__(water_image_path)
+#         peak_image = self.__load_h5__(peak_image_path)
+#         water_image = self.__load_h5__(water_image_path)
 
-        # Ensure image is in the correct format for the transformations
+#         # Ensure image is in the correct format for the transformations
 
 class PeakImageDataset(Dataset):
     def __init__(self, paths, transform=None, augment=False):
@@ -297,6 +297,28 @@ class DataPreparation:
         print(f"Number of batches: {len(train_loader)} \n\n")
 
         return train_loader, test_loader # returns train/test tensor data loaders
+        
+    def prep_labels_heatmap(peak_coords, heatmap_size=(2163, 2069)):
+        """
+        Generate a heatmap label tensor based on peak coordinates.
+
+        Parameters:
+        - peak_coords: A list of tuples, each representing the (x, y) coordinates of a peak.
+        - output_size: A tuple (height, width) representing the size of the output heatmap.
+
+        Returns:
+        - A torch.Tensor of shape (1, height, width) representing the binary heatmap.
+        """
+        # Initialize an empty heatmap
+        heatmap = torch.zeros((1, heatmap_size[0], heatmap_size[1]), dtype=torch.float32)
+        
+        # Mark the peak positions on the heatmap
+        for x, y in peak_coords:
+            if x < heatmap_size[0] and y < heatmap_size[1]:
+                heatmap[0, x, y] = 1.0
+        
+        return heatmap
+        
 
 class ImageProcessor:
     def __init__(self, water_background_array):
@@ -330,6 +352,7 @@ class ImageProcessor:
             labeled_array[y, x] = 1
 
         return Output(coordinates, labeled_array)
+
     def process_directory(self, paths, threshold_value):
         try:
             peaks_path = paths.__get_path__('peak_images_dir')

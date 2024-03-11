@@ -33,13 +33,13 @@ protein_to_idx = {
 }
 
 """Models"""
-model_res50 = m.CustomResNet50(num_proteins=3, num_camlengths=3)
+model_res50 = m.CustomResNet50(num_proteins=3, num_camlengths=3, output_size=(50,50))
 
 """Loss/Optimizer"""
-criterion_protein, criterion_camlength = torch.nn.CrossEntropyLoss(), torch.nn.CrossEntropyLoss()
+criterion_protein = criterion_camlength = criterion_peak = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model_res50.parameters(), lr=0.001)
 
-print("Criterion: ", criterion_protein, criterion_camlength)
+print("Criterion: ", criterion_protein, criterion_camlength, criterion_peak)
 print("Optimizer: \n", optimizer)
 print("Learning rate: ", optimizer.param_groups[0]['lr'])
 
@@ -67,8 +67,10 @@ for epoch in range(num_epochs):
         protein_identifiers = labels[0] # gives tuple ('1IC6', '1IC6', '1IC6', '1IC6', '1IC6')
 
         try:
-            labels_protein = torch.tensor([protein_to_idx[protein] for protein in protein_identifiers], dtype=torch.long).to(peak_images.device)
-            labels_cam_len = labels[2].to(dtype=torch.long).to(peak_images.device)
+            labels_protein = torch.tensor([protein_to_idx[label] for label in labels[0]], dtype=torch.long).to(peak_images.device)
+            labels_cam_len = labels[2].to(dtype=torch.long)
+            labels_heatmap = prep.prep_labels_heatmap(labels)
+            
         except KeyError as e:
             logging.error(f"KeyError with label: {e}")
             print(f"KeyError with label: {e}")
@@ -78,16 +80,17 @@ for epoch in range(num_epochs):
         optimizer.zero_grad()
 
         # multi-task learning: predicting protein and camlength
-        protein_pred, camlen_pred = model_res50((peak_images, water_images))
+        protein_pred, camlen_pred, peak_heatmap_pred = model_res50((peak_images, water_images))
 
         protein_loss = criterion_protein(protein_pred, labels_protein.long())
         camlength_loss = criterion_camlength(camlen_pred, labels_cam_len.long())
-
-        loss = protein_loss + camlength_loss
-        loss.backward()
+        peak_heatmap_loss = criterion_peak(peak_heatmap_pred, labels_heatmap.long())
+        
+        total_loss = protein_loss + camlength_loss + peak_heatmap_loss
+        total_loss.backward()
         optimizer.step()
 
-        running_loss += loss.item()
+        running_loss += total_loss.item()
         batch_counter += 1
 
         if (batch_index + 1) % 10 == 0:  # Log every 10 batches
