@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import logging
 import matplotlib.pyplot as plt
-
+from torchvision.transforms.functional import to_pil_image, to_tensor
 from  torchvision import transforms
 from pkg import c, m, f
 
@@ -11,11 +11,12 @@ from pkg import c, m, f
 paths = c.PathManager()
 dataset = c.PeakImageDataset(paths=paths, transform=None, augment=True)
 prep = c.DataPreparation(paths=paths, batch_size=5)
+p = c.PeakThresholdProcessor(threshold_value=100)
 
 """Clean sim/ directory"""
 paths.clean_sim() # moves all .err, .out, .sh files sim_specs
 
-"""checks"""
+"""Checks"""
 peak_paths = paths.__get_peak_images_paths__()
 water_paths = paths.__get_water_images_paths__()
 print('Number of Peak Images: ', len(peak_paths), 'Number of Water Images', len(water_paths))
@@ -33,7 +34,7 @@ protein_to_idx = {
 }
 
 """Models"""
-model_res50 = m.CustomResNet50(num_proteins=3, num_camlengths=3, output_size=(50,50))
+model_res50 = m.CustomResNet50(num_proteins=3, num_camlengths=3, heatmap_size=(2163,2069))
 
 """Loss/Optimizer"""
 criterion_protein = criterion_camlength = criterion_peak = torch.nn.CrossEntropyLoss()
@@ -63,13 +64,20 @@ for epoch in range(num_epochs):
         
         for label in labels:
             print(f"Label structure: {label} {type(label)}\n\n")
+            print(labels) # gives tuple of 3 tensors
+        
         # Extract the protein identifiers assuming they are always the first element in the label tuple
         protein_identifiers = labels[0] # gives tuple ('1IC6', '1IC6', '1IC6', '1IC6', '1IC6')
 
-        try:
-            labels_protein = torch.tensor([protein_to_idx[label] for label in labels[0]], dtype=torch.long).to(peak_images.device)
-            labels_cam_len = labels[2].to(dtype=torch.long)
-            labels_heatmap = prep.prep_labels_heatmap(labels)
+        try:            
+            # generate heatmaps for the batch
+            label_heatmaps = prep.generate_heatmaps(batch_images=peak_images, processor=p)
+            # peak_images[0].shape[1:] is the shape of the first image in the batch
+            label_heatmaps = label_heatmaps.to(peak_images.device) # ensure the heatmap tensor is on the correct device
+            
+            # protein/camlen 
+            label_protein = torch.tensor([protein_to_idx[label] for label in labels[0]], dtype=torch.long).to(peak_images.device)
+            label_cam_len = labels[2].to(dtype=torch.long)
             
         except KeyError as e:
             logging.error(f"KeyError with label: {e}")
@@ -81,10 +89,11 @@ for epoch in range(num_epochs):
 
         # multi-task learning: predicting protein and camlength
         protein_pred, camlen_pred, peak_heatmap_pred = model_res50((peak_images, water_images))
-
-        protein_loss = criterion_protein(protein_pred, labels_protein.long())
-        camlength_loss = criterion_camlength(camlen_pred, labels_cam_len.long())
-        peak_heatmap_loss = criterion_peak(peak_heatmap_pred, labels_heatmap.long())
+        
+        # losses
+        protein_loss = criterion_protein(protein_pred, label_protein.long())
+        camlength_loss = criterion_camlength(camlen_pred, label_cam_len.long())
+        peak_heatmap_loss = criterion_peak(peak_heatmap_pred, label_heatmaps.long())
         
         total_loss = protein_loss + camlength_loss + peak_heatmap_loss
         total_loss.backward()
