@@ -71,7 +71,9 @@ for epoch in range(num_epochs):
 
         try:            
             # generate heatmaps for the batch
-            label_heatmaps = prep.generate_heatmaps(batch_images=peak_images, processor=p)
+            # label_heatmaps = prep.generate_heatmaps(batch_images=peak_images, processor=p)
+            label_heatmaps = prep.generate_heatmaps(batch_images=peak_images, processor=p)            
+            
             # peak_images[0].shape[1:] is the shape of the first image in the batch
             label_heatmaps = label_heatmaps.to(peak_images.device) # ensure the heatmap tensor is on the correct device
             
@@ -93,7 +95,7 @@ for epoch in range(num_epochs):
         # losses
         protein_loss = criterion_protein(protein_pred, label_protein.long())
         camlength_loss = criterion_camlength(camlen_pred, label_cam_len.long())
-        peak_heatmap_loss = criterion_peak(peak_heatmap_pred, label_heatmaps.long())
+        peak_heatmap_loss = criterion_peak(peak_heatmap_pred, label_heatmaps)        
         
         total_loss = protein_loss + camlength_loss + peak_heatmap_loss
         total_loss.backward()
