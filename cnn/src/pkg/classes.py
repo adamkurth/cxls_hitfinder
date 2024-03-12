@@ -309,7 +309,7 @@ class DataPreparation:
             heatmap = np.zeros(image_tensor.squeeze().shape)
             for y, x in peak_coords:
                 heatmap[y, x] = 1  # Set peak positions to 1
-            heatmap_tensor = torch.tensor(heatmap).unsqueeze(0)  # Convert to tensor and adjust shape
+            heatmap_tensor = torch.tensor(heatmap).float().unsqueeze(0)  # Convert to tensor and adjust shape
             batch_heatmaps.append(heatmap_tensor)
         return torch.stack(batch_heatmaps) # return batch of heatmaps
     
