@@ -1,14 +1,10 @@
 import os
 import torch
-import numpy as np
-import h5py as h5
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, Dataset
-from torchvision import transforms, models
+from torchvision import models
 from torchvision.models.resnet import ResNet50_Weights
-from sklearn.model_selection import train_test_split
-from collections import namedtuple
+import torch.nn.functional as F
 
 # MODEL:
 #   1. RESNET -> RESNET + Attention Mechanisms
@@ -20,70 +16,124 @@ from collections import namedtuple
 
 # RESNET-50
 
-class CustomResNet50(nn.Module):
-    # Custom ResNet-50
-    #   increase heatmap_size to get increased accuracy for location of the peaks
-    #   predicting the number of proteins, and unknown camera length
+# class CustomResNet50(nn.Module):
+#     # Custom ResNet-50
+#     #   increase heatmap_size to get increased accuracy for location of the peaks
+#     #   predicting the number of proteins, and unknown camera length
     
-    def __init__(self, num_proteins=3, num_camlengths=3, heatmap_size=(2163,2069)):
-        # num_classes = num_proteins, num_camlengths
-        super(CustomResNet50, self).__init__()
-        self.heatmap_size = heatmap_size
+#     def __init__(self, num_proteins=3, num_camlengths=3, heatmap_size=(2163,2069)):
+#         # num_classes = num_proteins, num_camlengths
+#         super(CustomResNet50, self).__init__()
+#         self.heatmap_size = heatmap_size
         
-        # Assuming both peak and water images are grayscale, initialize two identical ResNet backbones
-        self.peak_resnet = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
-        self.water_resnet = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
+#         # Assuming both peak and water images are grayscale, initialize two identical ResNet backbones
+#         self.peak_resnet = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
+#         self.water_resnet = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
 
-        # Adjust the first convolutional layer of each ResNet to accept 1-channel input
-        self.peak_resnet.conv1 = nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
-        self.water_resnet.conv1 = nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+#         # Adjust the first convolutional layer of each ResNet to accept 1-channel input
+#         self.peak_resnet.conv1 = nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+#         self.water_resnet.conv1 = nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
 
-        # remove original final fully connected layer
-        num_ftrs = self.peak_resnet.fc.in_features
-        self.peak_resnet.fc = nn.Identity()  
-        self.water_resnet.fc = nn.Identity()
+#         # remove original final fully connected layer
+#         num_ftrs = self.peak_resnet.fc.in_features
+#         self.peak_resnet.fc = nn.Identity()  
+#         self.water_resnet.fc = nn.Identity()
         
-        # prediction heads for protein type, camera length, and peak coordinates heatmap
-        self.fc_proteins = nn.Linear(num_ftrs * 2, num_proteins)  # *2 for concatenated features
-        self.fc_camlengths = nn.Linear(num_ftrs * 2, num_camlengths)
+#         # prediction heads for protein type, camera length, and peak coordinates heatmap
+#         self.fc_proteins = nn.Linear(num_ftrs * 2, num_proteins)  # *2 for concatenated features
+#         self.fc_camlengths = nn.Linear(num_ftrs * 2, num_camlengths)
 
-        # additional layers for peak coordinate prediction 
-        self.fc_peak_heatmap = nn.Sequential(
-            nn.Linear(num_ftrs * 2, num_ftrs),
-            nn.ReLU(),
-            nn.Linear(num_ftrs, heatmap_size[0] * heatmap_size[1]), # predict flattened heatmap
-            nn.Sigmoid() # get values between 0 and 1 
-        )
+#         # additional layers for peak coordinate prediction 
+#         self.fc_peak_heatmap = nn.Sequential(
+#             nn.Linear(num_ftrs * 2, num_ftrs),
+#             nn.ReLU(),
+#             nn.Linear(num_ftrs, heatmap_size[0] * heatmap_size[1]), # predict flattened heatmap
+#             nn.Sigmoid() # get values between 0 and 1 
+#         )
         
+#     def forward(self, x):
+#         peak_images, water_images = x
+
+#         # Forward pass through each backbone
+#         peak_features = self.forward_backbone(self.peak_resnet, peak_images)
+#         water_features = self.forward_backbone(self.water_resnet, water_images)
+
+#         # Concatenate features
+#         combined_features = torch.cat((peak_features, water_features), dim=1)
+
+#         # Predictions for each task
+#         protein_preds = self.fc_proteins(combined_features)
+#         camlength_preds = self.fc_camlengths(combined_features)
+#         peak_heatmap_preds = self.fc_peak_heatmap(combined_features).view(-1,*self.heatmap_size) # reshape to 2D heatmap
+        
+#         return protein_preds, camlength_preds, peak_heatmap_preds
+
+#     def forward_backbone(self, backbone, x):
+#         x = backbone.conv1(x)
+#         x = backbone.bn1(x)
+#         x = backbone.relu(x)
+#         x = backbone.maxpool(x)
+
+#         x = backbone.layer1(x)
+#         x = backbone.layer2(x)
+#         x = backbone.layer3(x)
+#         x = backbone.layer4(x)
+
+#         x = backbone.avgpool(x)
+#         x = torch.flatten(x, 1)
+
+#         return x
+
+class ResNet50BraggPeak(nn.Module):
+    """
+    Simplified model for detecting Bragg peaks in crystallography images using ResNet.
+    This model focuses solely on the peak detection task.
+    """
+    def __init__(self, input_channels=1, output_channels=1, heatmap_size=(2163, 2069)):
+        super(ResNet50BraggPeak, self).__init__()
+        # use pretrained resnet50, but modify this to work with grayscale images (1 channel)
+        # and output the haetmap for Bragg peak locations
+        self.resnet = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
+        
+        # Adjust the first convolutional layer for 1-channel grayscale images
+        self.resnet.conv1 = nn.Conv2d(input_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        
+        # Use adaptive average pooling to reduce to a fixed size output while maintaining spatial dimensions
+        self.adaptive_pool = nn.AdaptiveAvgPool2d((heatmap_size[0] // 32, heatmap_size[1] // 32))
+        
+        # Remove fully connected layers
+        self.resnet.fc = nn.Identity()
+        
+        # Extra convolutional layer to generate heatmap with one channel
+        self.heatmap_conv = nn.Conv2d(2048, output_channels, kernel_size=1)
+        
+        # Upsampling layer to match the desired output size
+        self.upsample = nn.Upsample(size=heatmap_size, mode='bilinear', align_corners=True)
+            
     def forward(self, x):
-        peak_images, water_images = x
+        x = self.resnet.conv1(x)
+        x = self.resnet.bn1(x)
+        x = self.resnet.relu(x)
+        x = self.resnet.maxpool(x)
 
-        # Forward pass through each backbone
-        peak_features = self.forward_backbone(self.peak_resnet, peak_images)
-        water_features = self.forward_backbone(self.water_resnet, water_images)
+        x = self.resnet.layer1(x)
+        x = self.resnet.layer2(x)
+        x = self.resnet.layer3(x)
+        x = self.resnet.layer4(x)
 
-        # Concatenate features
-        combined_features = torch.cat((peak_features, water_features), dim=1)
-
-        # Predictions for each task
-        protein_preds = self.fc_proteins(combined_features)
-        camlength_preds = self.fc_camlengths(combined_features)
-        peak_heatmap_preds = self.fc_peak_heatmap(combined_features).view(-1,*self.heatmap_size) # reshape to 2D heatmap
-        
-        return protein_preds, camlength_preds, peak_heatmap_preds
-
-    def forward_backbone(self, backbone, x):
-        x = backbone.conv1(x)
-        x = backbone.bn1(x)
-        x = backbone.relu(x)
-        x = backbone.maxpool(x)
-
-        x = backbone.layer1(x)
-        x = backbone.layer2(x)
-        x = backbone.layer3(x)
-        x = backbone.layer4(x)
-
-        x = backbone.avgpool(x)
-        x = torch.flatten(x, 1)
+        x = self.adaptive_pool(x)  # Adaptive Pooling to reduce spatial size
+        x = self.heatmap_conv(x)  # Convolution to get heatmap
+        x = self.upsample(x)  # Upsample to original image size
 
         return x
+    
+if __name__ == "__main__":
+    model = ResNet50BraggPeak()
+    dummy_input = torch.randn(4, 1, 2163, 2069)
+    output = model(dummy_input)
+    print(output.size()) # torch.Size([4, 1, 2163, 2069]) -> 4 images, 1 channel, 2163x2069
+
+    
+    
+    
+    
