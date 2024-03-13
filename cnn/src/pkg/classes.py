@@ -161,7 +161,7 @@ class PeakImageDataset(Dataset):
         self.peak_image_paths = paths.__get_peak_images_paths__()
         self.water_image_paths = paths.__get_water_images_paths__()
         assert len(self.peak_image_paths) == len(self.water_image_paths), "The number of peak images must match the number of water images."
-        self.transform = TransformToTensor() if transform is None else transform
+        self.transform = TransformToTensor()
         self.augment = augment
         self.labels = [self._extract_labels(path) for path in self.peak_image_paths]
 
@@ -214,23 +214,23 @@ class PeakImageDataset(Dataset):
                 image = np.expand_dims(image, axis=-1)  # Add channel dimension at the last axis
             return image
 
-    def augment_image(self, image, to_tensor=False):
-        # FIXME: This is a temporary implementation. Need to replace with albumentations
-        # assuming image is np.array and needs to be converted to PIL for augmentation
-        if image.ndim == 3 and image.shape[0] in [1,3,4]: #check if CxHxW
-            image = image.squeeze(0)
-        elif image.ndim == 2: #HxW
-            pass
-        else:
-            raise ValueError(f'Unexpected image shape: {image.shape}')
+    # def augment_image(self, image, to_tensor=False):
+    #     # FIXME: This is a temporary implementation. Need to replace with albumentations
+    #     # assuming image is np.array and needs to be converted to PIL for augmentation
+    #     if image.ndim == 3 and image.shape[0] in [1,3,4]: #check if CxHxW
+    #         image = image.squeeze(0)
+    #     elif image.ndim == 2: #HxW
+    #         pass
+    #     else:
+    #         raise ValueError(f'Unexpected image shape: {image.shape}')
 
-        pil_image = Image.fromarray(image)
-        rotated_image = pil_image.rotate(90)
+    #     pil_image = Image.fromarray(image)
+    #     rotated_image = pil_image.rotate(90)
 
-        if to_tensor:
-            return self.default_transform()(rotated_image)
-        else:
-            return rotated_image
+    #     if to_tensor:
+    #         return self.default_transform()(rotated_image)
+    #     else:
+    #         return rotated_image
 
     def default_transform(self):
         return transforms.Compose([
@@ -248,10 +248,10 @@ class PeakImageDataset(Dataset):
         plt.show()
 
 class TransformToTensor:
-    def __call__(self, image):
+    def __call__(self, image, batch_size):
         """
         Converts a numpy array to a PyTorch tensor while ensuring:
-        - The output is in C x H x W format.
+        - The output is in B x C x H x W format.
         - The tensor is of dtype float32.
         - For grayscale images, a dummy channel is added to ensure compatibility.
 
@@ -262,16 +262,15 @@ class TransformToTensor:
             torch.Tensor: The transformed image tensor.
         """
         # convert the np.array to float32 without changing its range
-        pic = image.astype(np.float32)
+        img_np = image.astype(np.float32)
 
-        # ensure input is HWC format for compatibility without F.to_tensor
-        if pic.ndim == 2: # If grayscale, add a dummy channel
-            pic = np.expand_dims(pic, axis=-1)
-
-        # Convert the numpy array (HWC) to a PyTorch tensor (CHW)
-        # Note: F.to_tensor automatically scales the input based on its dtype
-        tensor = F.to_tensor(pic)
-        return tensor
+        # Add channel and batch dimensions
+        img_np_channel = np.expand_dims(img_np, axis=0) # channel dim
+        img_np_batch = np.expand_dims(img_np_channel, axis=0) # batch dim
+        img_np = np.repeat(img_np_batch, batch_size, axis=0) # 4D
+        
+        img_tensor = torch.tensor(img_np, dtype=torch.float32)
+        return img_tensor
 
 class DataPreparation:
     def __init__(self, paths, batch_size=32):

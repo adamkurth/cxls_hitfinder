@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -126,11 +127,20 @@ class ResNet50BraggPeak(nn.Module):
         x = self.upsample(x)  # Upsample to original image size
 
         return x
-    
+
 if __name__ == "__main__":
     model = ResNet50BraggPeak()
-    dummy_input = torch.randn(4, 1, 2163, 2069)
-    output = model(dummy_input)
+    img_np = np.random.rand(2163, 2069)
+    # add function in classes to handle this
+    batch_size = 4 
+    img_np_new = np.expand_dims(img_np, axis=0) # channel dim
+    img_np_new = np.expand_dims(img_np_new, axis=0) # batch dim
+    img_np_new = np.repeat(img_np_new, batch_size, axis=0) # 4D
+    
+    # convert to tensor
+    img_tensor = torch.tensor(img_np_new, dtype=torch.float32)
+    
+    output = model(img_tensor)
     print(output.size()) # torch.Size([4, 1, 2163, 2069]) -> 4 images, 1 channel, 2163x2069
 
     
