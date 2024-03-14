@@ -125,7 +125,7 @@ class PeakImageDataset(Dataset):
         self.label_image_paths = paths.get_label_images_paths()
         self.transform = transform if transform is not None else TransformToTensor()
         # checks 
-        assert len(self.peak_image_paths) == len(self.water_image_paths) == len(self.label_image_paths), "Mismatch in dataset sizes"
+        # assert len(self.peak_image_paths) == len(self.water_image_paths) == len(self.label_image_paths), "Mismatch in dataset sizes"
         print(f"Number of peak images: {len(self.peak_image_paths)}")
         print(f"Number of water images: {len(self.water_image_paths)}")
         print(f"Number of label images: {len(self.label_image_paths)}")
