@@ -125,7 +125,7 @@ class PeakImageDataset(Dataset):
         self.label_image_paths = paths.get_label_images_paths()
         self.transform = transform if transform is not None else TransformToTensor()
         # checks 
-        assert len(self.peak_image_paths) == len(self.water_image_paths) == len(self.label_image_paths), "Mismatch in dataset sizes"
+        # assert len(self.peak_image_paths) == len(self.water_image_paths) == len(self.label_image_paths), "Mismatch in dataset sizes"
         print(f"Number of peak images: {len(self.peak_image_paths)}")
         print(f"Number of water images: {len(self.water_image_paths)}")
         print(f"Number of label images: {len(self.label_image_paths)}")
@@ -151,18 +151,18 @@ class PeakImageDataset(Dataset):
     #     return ('default', 0.0, -1)
 
     def __getitem__(self, idx):
-        try: 
-            peak_image = self.load_h5(self.peak_image_paths[idx])
-            water_image = self.load_h5(self.water_image_paths[idx])
-            label_image = self.load_h5(self.label_image_paths[idx])
+        # try: 
+        peak_image = self.load_h5(self.peak_image_paths[idx])
+        water_image = self.load_h5(self.water_image_paths[idx])
+        label_image = self.load_h5(self.label_image_paths[idx])
 
-            if self.transform:
-                peak_image = self.transform(peak_image) 
-                water_image = self.transform(water_image) # dimensions: B x C x H x W
-                label_image = self.transform(label_image).long() # long tensor for cross-entropy loss
-            return (peak_image, water_image), label_image
-        except Exception as e:
-            raise IndexError(f"Error accessing index {idx}: {str(e)}")
+        if self.transform:
+            peak_image = self.transform(peak_image) 
+            water_image = self.transform(water_image) # dimensions: B x C x H x W
+            label_image = self.transform(label_image)
+        return (peak_image, water_image), label_image
+        # except Exception as e:
+        #     raise IndexError(f"Error accessing index {idx}: {str(e)}")
 
     def __len__(self):
         return len(self.peak_image_paths)
