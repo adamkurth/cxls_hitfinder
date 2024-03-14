@@ -85,13 +85,13 @@ import torch.nn.functional as F
 
 #         return x
 
-class ResNet50BraggPeak(nn.Module):
+class ResNet50BraggPeakClassifier(nn.Module):
     """
     Simplified model for detecting Bragg peaks in crystallography images using ResNet.
     This model focuses solely on the peak detection task.
     """
     def __init__(self, input_channels=1, output_channels=1, heatmap_size=(2163, 2069)):
-        super(ResNet50BraggPeak, self).__init__()
+        super(ResNet50BraggPeakClassifier, self).__init__()
         # use pretrained resnet50, but modify this to work with grayscale images (1 channel)
         # and output the haetmap for Bragg peak locations
         self.resnet = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
@@ -129,7 +129,7 @@ class ResNet50BraggPeak(nn.Module):
         return x
 
 if __name__ == "__main__":
-    model = ResNet50BraggPeak()
+    model = ResNet50BraggPeakClassifier()
     img_np = np.random.rand(2163, 2069)
     # add function in classes to handle this
     batch_size = 4 

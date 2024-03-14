@@ -27,11 +27,11 @@ print("Water images path:", paths.water_images_dir)
 """Train/Test Data Loaders"""
 train_loader, test_loader = prep.prep_data()
 
-"""Protein Mapping"""
-protein_to_idx = {
-    '1IC6': 0,
-    # To be developed
-}
+# """Protein Mapping"""
+# protein_to_idx = {
+#     '1IC6': 0,
+#     # To be developed
+# }
 
 """Models"""
 model_res50 = m.CustomResNet50(num_proteins=3, num_camlengths=3, heatmap_size=(2163,2069))
