@@ -2,6 +2,7 @@ images/data/*
 images/labels/*
 images/peaks/*
 images/preprocessed/*
+images/preprocessed_images/*
 images/processed/*
 images/processed_images/*
 cnn/src/__pycache__
