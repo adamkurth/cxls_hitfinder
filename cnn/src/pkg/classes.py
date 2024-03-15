@@ -159,7 +159,8 @@ class PeakImageDataset(Dataset):
             if self.transform:
                 peak_image = self.transform(peak_image) 
                 water_image = self.transform(water_image) # dimensions: B x C x H x W
-                label_image = self.transform(label_image).long() # long tensor for cross-entropy loss
+                ### Changed long to float 
+                label_image = self.transform(label_image).float() # long tensor for cross-entropy loss
             return (peak_image, water_image), label_image
         except Exception as e:
             raise IndexError(f"Error accessing index {idx}: {str(e)}")
