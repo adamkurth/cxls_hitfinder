@@ -142,8 +142,81 @@ if __name__ == "__main__":
     
     output = model(img_tensor)
     print(output.size()) # torch.Size([4, 1, 2163, 2069]) -> 4 images, 1 channel, 2163x2069
+    
+    
+class BasicCNN1(nn.Module):
+    """
+    A very basic CNN for detecting Bragg peaks in crystallography images.
+    This model simplifies the architecture to its core components.
+    """
+    def __init__(self, input_channels=1, output_channels=1, heatmap_size=(2163, 2069)):
+        super(BasicCNN1, self).__init__()
+        
+        # Define the heatmap size for upsampling
+        self.heatmap_size = heatmap_size
 
-    
-    
+        # Convolutional layer followed by pooling
+        self.conv1 = nn.Conv2d(input_channels, 16, kernel_size=5, stride=1, padding=2)
+        self.pool = nn.MaxPool2d(kernel_size=4, stride=4, padding=0)
+
+        # Convolutional layer to generate heatmap with one channel
+        self.heatmap_conv = nn.Conv2d(16, output_channels, kernel_size=3, stride=1, padding=1)
+
+        # Upsampling layer to match the desired output size
+        self.upsample = nn.Upsample(size=heatmap_size, mode='bilinear', align_corners=True)
+
+    def forward(self, x):
+        # Applying a convolution, activation function, and pooling
+        x = self.pool(F.relu(self.conv1(x)))
+
+        # Generating heatmap
+        x = self.heatmap_conv(x)
+
+        # Upsampling to match the input image size
+        x = self.upsample(x)
+
+        return x
+
+
+
+class BasicCNN2(nn.Module):
+    """
+    A basic CNN for detecting Bragg peaks in crystallography images.
+    This model is simplified and does not use a pre-trained architecture.
+    """
+    def __init__(self, input_channels=1, output_channels=1, heatmap_size=(2163, 2069)):
+        super(BasicCNN2, self).__init__()
+        
+        self.heatmap_size = heatmap_size
+
+        # Convolutional layers
+        self.conv1 = nn.Conv2d(input_channels, 32, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
+        self.conv4 = nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1)
+
+        # Pooling layer to reduce spatial dimensions
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+
+        # Convolutional layer to generate heatmap with one channel
+        self.heatmap_conv = nn.Conv2d(256, output_channels, kernel_size=3, stride=1, padding=1)
+
+        # Upsampling layer to match the desired output size
+        self.upsample = nn.Upsample(size=heatmap_size, mode='bilinear', align_corners=True)
+
+    def forward(self, x):
+        # Applying consecutive convolutions and pooling
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = self.pool(F.relu(self.conv3(x)))
+        x = self.pool(F.relu(self.conv4(x)))
+
+        # Generating heatmap
+        x = self.heatmap_conv(x)
+
+        # Upsampling to match the input image size
+        x = self.upsample(x)
+
+        return x
     
     
