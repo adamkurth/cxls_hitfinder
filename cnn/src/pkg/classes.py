@@ -4,16 +4,11 @@ import h5py as h5
 import torch
 import shutil
 import numpy as np
-import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, Dataset
 from torchvision.transforms.functional import to_pil_image, to_tensor
-from torchvision import transforms
 from skimage.feature import peak_local_max
 from functools import lru_cache
-from collections import namedtuple
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import concurrent
-from PIL import Image
+
 
 
 class PathManager:
@@ -160,7 +155,6 @@ class PeakImageDataset(Dataset):
             label_image = self.transform(label_image)
         return (peak_image, water_image), label_image
 
-
     def __len__(self):
         return len(self.peak_image_paths)
 
@@ -287,9 +281,13 @@ class ImageProcessor:
         """
         Updates an HDF5 file with the clen values.
         """
-        with h5.File(file_path, 'a') as f:  # Open in append mode
-            f.attrs['clen'] = clen
-            print(f"'clen' value updated for {file_path}")     
+        try:
+            with h5.File(file_path, 'a') as f:  # Open in append mode
+                f.attrs['clen'] = clen
+                print(f"\t'clen' value updated for {file_path}")     
+        except Exception as e:
+            print(f"Error updating 'clen' value for {file_path}: {e}")
+            raise e
                
     def apply_water_background(self, peak_image_array):
         return peak_image_array + self.water_background_array
@@ -323,7 +321,7 @@ class ImageProcessor:
             peaks_path = paths.get_path('peak_images_dir')
             processed_out_path = paths.get_path('processed_images_dir')
             label_out_path = paths.get_path('label_images_dir')
-            
+                    
             # process peak/water/heatmap images 
             for f in os.listdir(peaks_path):
                 if f.endswith('.h5') and f != 'water_background.h5':
@@ -339,56 +337,22 @@ class ImageProcessor:
                     # processed
                     with h5.File(processed_save_path, 'w') as pf:
                         pf.create_dataset('entry/data/data', data=processed_image)
-                        print(f"Processed images saved: {processed_save_path}\n")
+                        print(f"\tProcessed images saved: {processed_save_path}")
+                    
                     # heatmap
                     with h5.File(labeled_save_path, 'w') as lf:
                         lf.create_dataset('entry/data/data', data=heatmap_tensor.squeeze().cpu().numpy())
-                        print(f"Labeled images saved: {processed_save_path}\n")
+                        print(f"\tLabeled images saved: {processed_save_path}")
 
                     # update clen for peak/water/heatmap images
                     self.update_clen(processed_save_path, clen) # processed
                     self.update_clen(labeled_save_path, clen) # heatmap
                     self.update_clen(full_path, clen) # peak
                     
-                print(f"Processed and labeled images saved: {processed_save_path} --> {labeled_save_path}\n\n")            
+                print(f"Processed and labeled images saved:\n {processed_save_path} --> {labeled_save_path}\n\n")            
             print("Processing complete and 'clen' values updated.")
 
         except Exception as e:
             print(f"Error processing directory: {e}")
-    
-    # def process_single_image(self, file_path, processed_out_path, label_out_path, threshold_value, clen):
-    #     image = self.load_h5_image(file_path)
-    #     processed_image = self.apply_water_background(image)
-    #     heatmap_tensor, _ = self.heatmap(processed_image, threshold_value)
+            raise e
         
-    #     base_filename = os.path.basename(file_path)
-    #     processed_save_path = os.path.join(processed_out_path, f"processed_{base_filename}")
-    #     labeled_save_path = os.path.join(label_out_path, f"labeled_{base_filename}")
-        
-    #     # save processed images and update with clen values
-    #     with h5.File(processed_save_path, 'w') as pf:
-    #         pf.create_dataset('entry/data/data', data=processed_image)
-    #     with h5.File(labeled_save_path, 'w') as lf:
-    #         lf.create_dataset('entry/data/data', data=heatmap_tensor.squeeze().numpy()) # to numpy
-        
-    #     # Update clen for processed and heatmap images
-    #     self.update_clen(processed_save_path, clen)
-    #     self.update_clen(labeled_save_path, clen)
-
-    #     print(f"Processed and labeled images saved: {processed_save_path} --> {labeled_save_path}\n")
-        
-    # def process_directory(self, paths, threshold_value, clen):        
-    #     peaks_path = paths.get_path('peak_images_dir')
-    #     processed_out_path = paths.get_path('processed_images_dir')
-    #     label_out_path = paths.get_path('label_images_dir')
-        
-    #     for f in os.listdir(peaks_path):
-    #         if f.endswith('.h5') and f != 'water_background.h5':
-    #             self.process_single_image](os.path.join(peaks_path, f), processed_out_path, label_out_path, threshold_value)
-                    
-# if __name__ == "__main__":
-#     paths = PathManager()
-#     data = PeakImageDataset(paths)
-#     prep = DataPreparation(paths, data, batch_size=32)
-#     ip = ImageProcessor(paths.water_background_h5)
-#     ip.process_directory(paths, threshold_value=0)
