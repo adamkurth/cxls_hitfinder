@@ -156,7 +156,7 @@ def train_test_model(model, loader, criterion, optimizer, epochs, device, N, bat
         total_predictions = 0.0
         model.train()
         for inputs, labels in loader[0]:
-            peak_images, water_images = inputs
+            peak_images, _ = inputs
             peak_images = peak_images.to(device)
             labels = labels.to(device)
             
@@ -168,17 +168,22 @@ def train_test_model(model, loader, criterion, optimizer, epochs, device, N, bat
             optimizer.step()
             running_loss_train += loss.item()  # Convert to Python number with .item()
             predictions = (torch.sigmoid(score) > 0.5).long()  # Assuming 'score' is the output of your model
-            accuracy_train += (predictions == labels).float().sum()
+            accuracy_train += (predictions == labels).float().sum().item()
             total_predictions += np.prod(labels.shape)
     # test
         running_loss_test = 0.0
         accuracy_test = 0.0
         predicted = 0.0
         total = 0.0
+        
+        cm_test = np.zeros((classes,classes), dtype=int)
+        all_labels = []
+        all_predictions = []
+        
         model.eval()
         with torch.no_grad():
             for inputs, labels in loader[1]:
-                peak_images, water_images = inputs
+                peak_images, _ = inputs
                 peak_images = peak_images.to(device)
                 labels = labels.to(device)
                 
@@ -186,8 +191,13 @@ def train_test_model(model, loader, criterion, optimizer, epochs, device, N, bat
                 loss = criterion(score, labels)
                 running_loss_test += loss.item()  # Convert to Python number with .item()
                 predicted = (torch.sigmoid(score) > 0.5).long()  # Assuming 'score' is the output of your model
-                accuracy_test += (predicted == labels).float().sum()
+                accuracy_test += (predicted == labels).float().sum().item()
                 total += np.prod(labels.shape)
+                
+                # Extend the all_labels and all_predictions lists
+                # Convert tensors to CPU numpy arrays for sklearn compatibility
+                all_labels.extend(labels.cpu().numpy().flatten())  # Flatten in case it's not already 1D
+                all_predictions.extend(predictions.cpu().numpy().flatten())
 
     # statistics
 
@@ -219,27 +229,6 @@ def train_test_model(model, loader, criterion, optimizer, epochs, device, N, bat
     plt.show()
 
 
-    cm_test = np.zeros((classes,classes), dtype=int)
-    all_labels = []
-    all_predictions = []
-
-    with torch.no_grad():
-        for inputs, label in loader[1]:  # Assuming loader[1] is your DataLoader for test/validation set
-            peak_images, _ = inputs
-            peak_images = peak_images.to(device)
-            label = label.to(device)
-            
-            # Obtain model scores for the batch
-            score = model(peak_images).squeeze()
-            
-            # Convert scores to binary predictions
-            predictions = (torch.sigmoid(score) > 0.5).long()
-            
-            # Extend the all_labels and all_predictions lists
-            # Convert tensors to CPU numpy arrays for sklearn compatibility
-            all_labels.extend(label.cpu().numpy().flatten())  # Flatten in case it's not already 1D
-            all_predictions.extend(predictions.cpu().numpy().flatten())
-
     # Convert lists to numpy arrays
     all_labels = np.array(all_labels)
     all_predictions = np.array(all_predictions)
@@ -256,3 +245,4 @@ def train_test_model(model, loader, criterion, optimizer, epochs, device, N, bat
     plt.xlabel('Predicted label')
     plt.show()
 
+    torch.cuda.empty_cache()
