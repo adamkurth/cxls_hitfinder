@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision import models
 from torchvision.models.resnet import ResNet50_Weights
+from torchvision.models.densenet import DenseNet121_Weights
 import torch.nn.functional as F
 
 # MODEL:
@@ -220,3 +221,37 @@ class BasicCNN2(nn.Module):
         return x
     
     
+    
+class DenseNetBraggPeakClassifier(nn.Module):
+    """
+    Model for detecting Bragg peaks in crystallography images using DenseNet.
+    This model is adapted to focus on the peak detection task with input images being
+    grayscale and outputs being heatmaps for Bragg peak locations.
+    """
+    def __init__(self, input_channels=1, output_channels=1, heatmap_size=(2163, 2069)):
+        super(DenseNetBraggPeakClassifier, self).__init__()
+        # Load a pre-trained DenseNet model, modifying it for 1-channel grayscale input
+        # and to output a heatmap for Bragg peak locations.
+        self.densenet = models.densenet121(weights=DenseNet121_Weights.IMAGENET1K_V1)
+        
+        # Adjust the first convolutional layer for 1-channel grayscale images
+        self.densenet.features.conv0 = nn.Conv2d(input_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        
+        # Use adaptive average pooling to produce a fixed size output while maintaining spatial dimensions
+        self.adaptive_pool = nn.AdaptiveAvgPool2d((heatmap_size[0] // 32, heatmap_size[1] // 32))
+        
+        # Remove DenseNet's classification layer (fully connected layer)
+        self.densenet.classifier = nn.Identity()
+        
+        # Extra convolutional layer to transform the feature maps into a single-channel heatmap
+        self.heatmap_conv = nn.Conv2d(1024, output_channels, kernel_size=1)  # 1024 for DenseNet121
+        
+        # Upsampling layer to resize the heatmap to the desired output size
+        self.upsample = nn.Upsample(size=heatmap_size, mode='bilinear', align_corners=True)
+            
+    def forward(self, x):
+        x = self.densenet.features(x)
+        x = self.adaptive_pool(x)  # Reduce spatial size with adaptive pooling
+        x = self.heatmap_conv(x)  # Convolution to generate heatmap
+        x = self.upsample(x)  # Upsample to match desired heatmap size
+        return x
