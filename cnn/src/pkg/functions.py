@@ -201,8 +201,8 @@ def train_test_model(model, loader, criterion, optimizer, epochs, device, N, bat
         accuracy_test /= total
         plot_test_accuracy[epoch] = accuracy_test
 
-        print('loss (train, test): {:.4f}, {:.4f}'.format(loss_train,loss_test))
-        print('accuracy (train, test): {:.4f}, {:.4f}'.format(accuracy_train,accuracy_test))
+        print(f'loss (train, test): {loss_train}, {loss_train}')
+        print(f'accuracy (train, test): {accuracy_train}, {accuracy_test}')
 
 
   # plotting loss, accuracy, and confusion matrix
@@ -253,5 +253,3 @@ def train_test_model(model, loader, criterion, optimizer, epochs, device, N, bat
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
     plt.show()
-
-    torch.cuda.empty_cache()
