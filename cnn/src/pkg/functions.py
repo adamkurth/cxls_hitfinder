@@ -4,6 +4,11 @@ import h5py as h5
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import namedtuple
+
+import numpy as np
+from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
+import torch
     
 
 def sim_parameters(paths):
@@ -112,4 +117,142 @@ def sim_parameters(paths):
 #         print(e)
 #         print(f'Error: Could not load the image at {image_path}')
 
+
+def train_test_model(model, loader, criterion, optimizer, epochs, device, N, batch, classes):
+  
+    """
+    This function trains, test, and plots the loss, accuracy, and confusion matrix of a model.
+
+    Args:
+        model: PyTorch model
+        loader: list of torch.utils.data.DataLoader
+        criterion: PyTorch loss function
+        optimizer: PyTorch optimizer
+        epochs: int
+        device: torch.device
+        N: list of int
+        batch: list of int
+        classes: int
+
+    Returns:
+        None
+    """
+  
+    print(f'Model: {model.__class__.__name__}')
+
+    plot_train_accuracy = np.zeros(epochs)
+    plot_train_loss = np.zeros(epochs)
+    plot_test_accuracy = np.zeros(epochs)
+    plot_test_loss = np.zeros(epochs)
+
+    print('Training and testing the model...')
+
+    for epoch in range(epochs):
+        print('-- epoch '+str(epoch)) 
+        # train
+        running_loss_train = 0.0
+        accuracy_train = 0.0
+        predictions = 0.0
+        total_predictions = 0.0
+        model.train()
+        for inputs, labels in loader[0]:
+            peak_images, water_images = inputs
+            peak_images = peak_images.to(device)
+            labels = labels.to(device)
+            
+            optimizer.zero_grad()
+            score = model(peak_images)
+            loss = criterion(score, labels)
+            
+            loss.backward()
+            optimizer.step()
+            running_loss_train += loss.item()  # Convert to Python number with .item()
+            predictions = (torch.sigmoid(score) > 0.5).long()  # Assuming 'score' is the output of your model
+            accuracy_train += (predictions == labels).float().sum()
+            total_predictions += np.prod(labels.shape)
+    # test
+        running_loss_test = 0.0
+        accuracy_test = 0.0
+        predicted = 0.0
+        total = 0.0
+        model.eval()
+        with torch.no_grad():
+            for inputs, labels in loader[1]:
+                peak_images, water_images = inputs
+                peak_images = peak_images.to(device)
+                labels = labels.to(device)
+                
+                score = model(peak_images)
+                loss = criterion(score, labels)
+                running_loss_test += loss.item()  # Convert to Python number with .item()
+                predicted = (torch.sigmoid(score) > 0.5).long()  # Assuming 'score' is the output of your model
+                accuracy_test += (predicted == labels).float().sum()
+                total += np.prod(labels.shape)
+
+    # statistics
+
+        loss_train = running_loss_train/batch[0]
+        plot_train_loss[epoch] = loss_train
+
+        loss_test = running_loss_test/batch[1]
+        plot_test_loss[epoch] = loss_test
+
+        accuracy_train /= total_predictions
+        plot_train_accuracy[epoch] = accuracy_train
+
+        accuracy_test /= total
+        plot_test_accuracy[epoch] = accuracy_test
+
+        print('loss (train, test): {:.4f}, {:.4f}'.format(loss_train,loss_test))
+        print('accuracy (train, test): {:.4f}, {:.4f}'.format(accuracy_train,accuracy_test))
+
+
+  # plotting loss, accuracy, and confusion matrix
+    plt.plot(range(epochs), plot_train_accuracy,marker='o',color='red')
+    plt.plot(range(epochs), plot_test_accuracy ,marker='o',color='orange',linestyle='dashed')
+    plt.plot(range(epochs), plot_train_loss ,marker='o',color='blue')
+    plt.plot(range(epochs), plot_test_loss ,marker='o',color='teal',linestyle='dashed')
+    plt.grid()
+    plt.xlabel('epoch')
+    plt.ylabel('loss/accuracy')
+    plt.legend(['accuracy train','accuracy test','loss train','loss test'])
+    plt.show()
+
+
+    cm_test = np.zeros((classes,classes), dtype=int)
+    all_labels = []
+    all_predictions = []
+
+    with torch.no_grad():
+        for inputs, label in loader[1]:  # Assuming loader[1] is your DataLoader for test/validation set
+            peak_images, _ = inputs
+            peak_images = peak_images.to(device)
+            label = label.to(device)
+            
+            # Obtain model scores for the batch
+            score = model(peak_images).squeeze()
+            
+            # Convert scores to binary predictions
+            predictions = (torch.sigmoid(score) > 0.5).long()
+            
+            # Extend the all_labels and all_predictions lists
+            # Convert tensors to CPU numpy arrays for sklearn compatibility
+            all_labels.extend(label.cpu().numpy().flatten())  # Flatten in case it's not already 1D
+            all_predictions.extend(predictions.cpu().numpy().flatten())
+
+    # Convert lists to numpy arrays
+    all_labels = np.array(all_labels)
+    all_predictions = np.array(all_predictions)
+
+    # Calculate the confusion matrix
+    cm_test = confusion_matrix(all_labels, all_predictions)
+
+
+
+    plt.matshow(cm_test,cmap="Blues")
+    plt.title('Confusion matrix')
+    plt.colorbar()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    plt.show()
 
