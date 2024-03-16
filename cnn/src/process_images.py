@@ -27,8 +27,8 @@ def main():
     #     print("Invalid 'clen' value. Please enter a numeric value.")
     #     return
     
-    # confirm clen value
     ## DEBUG: remove this block
+    # confirm clen value
     # for i in range(1, 4):  # 3 confirmations
     #     confirm = input(f"Confirm 'clen' value {clen} mm (Attempt {i}/3, type 'y' to confirm): ")
     #     if confirm.lower() == 'y':
