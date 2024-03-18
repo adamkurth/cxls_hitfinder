@@ -41,7 +41,7 @@ class PathManager:
         else:
             raise Exception("Could not find the root directory. (cxls_hitfinder)\n", "Current working dir:", self.current_path)
 
-    def get_path(self, path_name):
+    def get_path(self, path_name:str):
         # returns the path of the path_name
         paths_dict = {
             'root': self.root,
