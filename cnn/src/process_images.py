@@ -13,6 +13,7 @@ def main():
     # from peaks images this is pure signal
     clen_values = {0.1, 0.2, 0.3} # in mm
 
+<<<<<<< HEAD
     # load water noise images
     water_background = f.load_h5(paths.get_path('water_background_h5'))
     # water_background = c.ImageProcessor().load_h5_image(paths.get_path('water_background_h5'))
@@ -43,6 +44,12 @@ def main():
     ip = c.ImageProcessor(water_background)
     
     conf = input(f"Are you sure you want to process the peak images in '{paths.get_path('peak_images_dir')}'\n\nand apply 'water_background.h5' from '{paths.get_path('water_background_h5')}'\n\noutput processed images to '{paths.get_path('processed_images_dir')}'\n\nand output labels to '{paths.get_path('label_images_dir')}'\n\nwith 'clen' value {clen} mm? (y/n): ")
+=======
+    water_background = c.ImageProcessor.load_h5_image(paths.get_path('water_background_h5'))
+    processor = c.ImageProcessor(water_background)
+
+    conf = input(f"Are you sure you want to process ... \n\n the peak images: {paths.get_path('peak_images_dir')} \n\n ...  and apply (water_background.h5) {paths.get_path('water_background_h5')} \n\n ... and output processed: {paths.get_path('processed_images_dir')}, \n\n ... and output labels: {paths.get_path('label_images_dir')} \n\n (y/n): ")
+>>>>>>> progress-Everett
     if conf.lower() == 'y':
         ip.process_directory(paths=paths, threshold_value=threshold_value, clen=clen)
     else:

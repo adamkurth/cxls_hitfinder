@@ -1,0 +1,14 @@
+name: hitfinder_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - numpy
+  - matplotlib
+  - pytorch
+  - torchvision
+  - scikit-learn
+  - scikit-image
+  - h5py
+
+     
