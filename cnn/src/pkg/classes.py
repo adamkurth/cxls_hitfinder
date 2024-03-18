@@ -38,8 +38,13 @@ class PathManager:
         else:
             raise Exception("Could not find the root directory. (cxls_hitfinder)\n", "Current working dir:", self.current_path)
 
+<<<<<<< HEAD
     @lru_cache(maxsize=32)
     def get_path(self, path_name:str) -> str:
+=======
+    def get_path(self, path_name:str):
+        # returns the path of the path_name
+>>>>>>> progress-Everett
         paths_dict = {
             'root': self.root,
             'images_dir': self.images_dir,
@@ -131,7 +136,37 @@ class PeakImageDataset(Dataset):
             label_image = self.transform(label_image)
         return (peak_image, water_image), label_image
 
+<<<<<<< HEAD
     def __len__(self) -> int:
+=======
+    #     # retrieve 
+    #     match = re.search(r'(processed_)?img_7keV_clen(\d{2})_\d+\.h5', filepath)
+    #     if match:
+    #         camera_length_label = int(match.group(2)) - 1  # Convert '01', '02', '03', to 0, 1, 2, etc.
+    #         camera_length = float(f"0.{match.group(2)}")
+    #         protein = default_protein
+    #         return (protein, camera_length, camera_length_label)
+    #     else:
+    #         print(f'Warning: Filename does not match expected pattern: {filepath}')
+    #     return ('default', 0.0, -1)
+
+    def __getitem__(self, idx):
+        try: 
+            peak_image = self.load_h5(self.peak_image_paths[idx])
+            water_image = self.load_h5(self.water_image_paths[idx])
+            label_image = self.load_h5(self.label_image_paths[idx])
+
+            if self.transform:
+                peak_image = self.transform(peak_image) 
+                water_image = self.transform(water_image) # dimensions: B x C x H x W
+                ### Changed long to float 
+                label_image = self.transform(label_image).float() # long tensor for cross-entropy loss
+            return (peak_image, water_image), label_image
+        except Exception as e:
+            raise IndexError(f"Error accessing index {idx}: {str(e)}")
+
+    def __len__(self):
+>>>>>>> progress-Everett
         return len(self.peak_image_paths)
 
     def load_h5(self, filepath:str) -> np.ndarray:
