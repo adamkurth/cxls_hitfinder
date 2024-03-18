@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision.transforms.functional import to_pil_image, to_tensor
 from skimage.feature import peak_local_max
 from functools import lru_cache
-
+from scipy.signal import find_peaks
 
 
 class PathManager:
@@ -17,7 +17,7 @@ class PathManager:
         self.root = self.re_root(self.current_path)
         self.setup_directories()
         
-    def setup_directories(self):
+    def setup_directories(self) -> None:
         self.images_dir = os.path.join(self.root, 'images')
         self.peak_images_dir = os.path.join(self.images_dir, 'peaks')
         self.water_images_dir = os.path.join(self.images_dir, 'data')
@@ -30,7 +30,7 @@ class PathManager:
         self.sh_dir = os.path.join(self.sim_dir, 'sh')
         self.water_background_h5 = os.path.join(self.sim_dir, 'water_background.h5')
         
-    def re_root(self, current_path):
+    def re_root(self, current_path: str) -> str:
         match = re.search("cxls_hitfinder", current_path)
         if match:
             root = current_path[:match.end()]
@@ -39,7 +39,7 @@ class PathManager:
             raise Exception("Could not find the root directory. (cxls_hitfinder)\n", "Current working dir:", self.current_path)
 
     @lru_cache(maxsize=32)
-    def get_path(self, path_name):
+    def get_path(self, path_name:str) -> str:
         paths_dict = {
             'root': self.root,
             'images_dir': self.images_dir,
@@ -57,19 +57,19 @@ class PathManager:
         return paths_dict.get(path_name, None)
 
     @lru_cache(maxsize=32)
-    def get_peak_image_paths(self):
+    def get_peak_image_paths(self) -> list:
         return [os.path.join(self.peak_images_dir, f) for f in os.listdir(self.peak_images_dir) if f.endswith('.h5')]
 
     @lru_cache(maxsize=32)
-    def get_water_image_paths(self):
+    def get_water_image_paths(self) -> list:
         return [os.path.join(self.water_images_dir, f) for f in os.listdir(self.water_images_dir) if f.endswith('.h5')]
 
     @lru_cache(maxsize=32)
-    def get_processed_images_paths(self):
+    def get_processed_images_paths(self) -> list:
         return [os.path.join(self.processed_images_dir, f) for f in os.listdir(self.processed_images_dir) if f.startswith('processed')]
 
     @lru_cache(maxsize=32)
-    def get_label_images_paths(self):
+    def get_label_images_paths(self) -> list:
         return [os.path.join(self.label_images_dir, f) for f in os.listdir(self.label_images_dir) if f.startswith('label')]
     
     # @lru_cache(maxsize=32)
@@ -82,7 +82,7 @@ class PathManager:
     #     return os.path.join(self.sh_dir, sh_file)
     
     @lru_cache(maxsize=32)
-    def clean_sim(self):
+    def clean_sim(self) -> None:
         file_types = ['.err', '.out', '.sh']
         files_moved = False  # flag to check if any files were moved
 
@@ -103,16 +103,12 @@ class PathManager:
                             sh_copy_path = os.path.join(self.sim_dir, f)
                             print(f"Copying {dest_path} to {sh_copy_path}\n")
                             shutil.copy(dest_path, sh_copy_path)
-
                         files_moved = True
-
         if not files_moved:
             print("clean_sim did not move any files\n\n")
 
 class PeakImageDataset(Dataset):
-
     # for PyTorch DataLoader
-    
     def __init__(self, paths, transform=None):
         self.peak_image_paths = paths.get_peak_image_paths()
         self.water_image_paths = paths.get_water_image_paths()
@@ -124,27 +120,7 @@ class PeakImageDataset(Dataset):
         print(f"Number of water images: {len(self.water_image_paths)}")
         print(f"Number of label images: {len(self.label_image_paths)}")
 
-
-    # def extract_labels(self, filepath):
-    #     ## 
-    #     # REDO
-    #     ##
-    #     default_protein = '1IC6'
-    #     default_camera_len = 0.1 # in mm
-    #     default_camera_len_label = 0
-
-    #     # retrieve 
-    #     match = re.search(r'(processed_)?img_7keV_clen(\d{2})_\d+\.h5', filepath)
-    #     if match:
-    #         camera_length_label = int(match.group(2)) - 1  # Convert '01', '02', '03', to 0, 1, 2, etc.
-    #         camera_length = float(f"0.{match.group(2)}")
-    #         protein = default_protein
-    #         return (protein, camera_length, camera_length_label)
-    #     else:
-    #         print(f'Warning: Filename does not match expected pattern: {filepath}')
-    #     return ('default', 0.0, -1)
-
-    def __getitem__(self, idx):
+    def __getitem__(self, idx:int) -> tuple:
         peak_image = self.load_h5(self.peak_image_paths[idx])
         water_image = self.load_h5(self.water_image_paths[idx])
         label_image = self.load_h5(self.label_image_paths[idx])
@@ -155,15 +131,15 @@ class PeakImageDataset(Dataset):
             label_image = self.transform(label_image)
         return (peak_image, water_image), label_image
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.peak_image_paths)
 
-    def load_h5(self, filepath):
+    def load_h5(self, filepath:str) -> np.ndarray:
         with h5.File(filepath, 'r') as file:
             return np.array(file['entry/data/data'])
         
 class TransformToTensor:
-    def __call__(self, image):
+    def __call__(self, image:np.ndarray) -> torch.Tensor:
         """
         Converts a numpy array to a PyTorch tensor while ensuring:
         - The output is in B x C x H x W format for a single image.
@@ -189,7 +165,7 @@ class DataPreparation:
         self.batch_size = batch_size
         self.dataset = dataset
     
-    def prep_data(self):
+    def prep_data(self) -> tuple:
         """
         Prepares and splits the data into training and testing datasets.
         Applies transformations and loads them into DataLoader objects.
@@ -210,57 +186,35 @@ class DataPreparation:
         print(f"Number of batches in train_loader: {len(train_loader)} \n\n")
         
         return train_loader, test_loader # returns train/test tensor data loaders
-
-    # def generate_heatmaps(self, batch_images, processor):
-    #     """
-    #     Processes a batch of images to generate heatmaps based on peak detections.
-    #     Args:
-    #         batch_images: A batch of image tensors.
-    #         processor: An object capable of detecting peaks in images and generating heatmaps.
-
-    #     Returns:
-    #         A tensor containing heatmaps for each image in the batch.
-    #     """
-    #     batch_heatmaps = []
-    #     for image_tensor in batch_images:
-    #         peak_coords = processor.process_image(image_tensor)  # Assume a method to process each image tensor
-    #         heatmap = np.zeros(image_tensor.squeeze().shape)
-    #         for y, x in peak_coords:
-    #             heatmap[y, x] = 1  # Set peak positions to 1
-    #         heatmap_tensor = torch.tensor(heatmap).float().unsqueeze(0)  # Add a new dimension for the batch
-    #         batch_heatmaps.append(heatmap_tensor)
-        
-    #     # Stack all heatmap tensors to form a batch
-    #     return torch.stack(batch_heatmaps)
     
 class PeakThresholdProcessor: 
-    def __init__(self, threshold_value=0):
+    def __init__(self, threshold_value=0) -> None:
         self.threshold_value = threshold_value
 
-    def set_threshold_value(self, new):
+    def set_threshold_value(self, new:int) -> None:
         self.threshold_value = new
     
-    def get_local_maxima(self):
+    def get_local_maxima(self) -> list:
         image_1d = self.image.flatten()
         peaks, _ = find_peaks(image_1d, height=self.threshold_value)
         coordinates = [self.flat_to_2d(idx) for idx in peaks]
         return coordinates
         
-    def flat_to_2d(self, index, shape):
+    def flat_to_2d(self, index:int, shape:tuple) -> tuple:
         rows, cols = shape
         return (index // cols, index % cols) 
     
-    def process_image(self, image_tensor):
+    def process_image(self, image_tensor:torch.Tensor) -> np.ndarray:
         image_np = image_tensor.squeeze().cpu().numpy()
         return np.argwhere(image_np > self.threshold_value)
     
 class ImageProcessor:
     # with concurrent processing
-    def __init__(self, water_background_array):
+    def __init__(self, water_background_array:np.ndarray) -> None:
         self.water_background_array = water_background_array
 
     @staticmethod
-    def load_h5_image(file_path):        
+    def load_h5_image(file_path:str) -> np.ndarray:        
         if not os.path.exists(file_path):
             print(f"File not found: {file_path}")
             raise FileNotFoundError(f"File not found: {file_path}")
@@ -277,7 +231,7 @@ class ImageProcessor:
                 raise IOError(f"Failed to read the file {file_path}: {e}")
     
     @staticmethod
-    def update_clen(file_path, clen):
+    def update_clen(file_path:str, clen:float) -> None:
         """
         Updates an HDF5 file with the clen values.
         """
@@ -289,10 +243,10 @@ class ImageProcessor:
             print(f"Error updating 'clen' value for {file_path}: {e}")
             raise e
                
-    def apply_water_background(self, peak_image_array):
+    def apply_water_background(self, peak_image_array: np.ndarray) -> np.ndarray:
         return peak_image_array + self.water_background_array
 
-    def heatmap(self, peak_image_array, threshold_value=0, min_distance=3):
+    def heatmap(self, peak_image_array: np.ndarray, threshold_value=0, min_distance=3) -> tuple:
         """
         Generates a heatmap based on detected Bragg peaks in an image.
 
@@ -310,7 +264,7 @@ class ImageProcessor:
         labeled_array[tuple(coordinates.T)] = 1 # efficiently assigns 1 to the coordinates
         return to_tensor(labeled_array).unsqueeze(0), coordinates  # Ensure it matches expected dimensions [C, H, W]        
     
-    def process_directory(self, paths, threshold_value, clen):
+    def process_directory(self, paths, threshold_value:int, clen:float) -> None:
         """
         Processes all peak images in the directory, applies the water background,
         generates label heatmaps for detecting Bragg peaks, and updates the HDF5 files
