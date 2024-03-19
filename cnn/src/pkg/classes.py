@@ -19,16 +19,13 @@ class PathManager:
         
     def setup_directories(self) -> None:
         self.images_dir = os.path.join(self.root, 'images')
-        self.peak_images_dir = os.path.join(self.images_dir, 'peaks')
-        self.water_images_dir = os.path.join(self.images_dir, 'data')
+        ### 01 through 09 for each
+        self.peaks_dir = os.path.join(self.images_dir, 'peaks') 
+        self.labels_dir = os.path.join(self.images_dir, 'labels')
+        self.peak_water_overlay_dir = os.path.join(self.images_dir, 'peak_water_overlay')
+        self.water_dir = os.path.join(self.images_dir, 'water')
+        ###
         self.processed_images_dir = os.path.join(self.images_dir, 'processed_images')
-        self.preprocessed_images_dir = os.path.join(self.images_dir, 'preprocessed_images')
-        self.label_images_dir = os.path.join(self.images_dir, 'labels')
-        self.sim_dir = os.path.join(self.root, 'sim')
-        self.sim_specs_dir = os.path.join(self.sim_dir, 'sim_specs')
-        self.pdb_dir = os.path.join(self.sim_dir, 'pdb')
-        self.sh_dir = os.path.join(self.sim_dir, 'sh')
-        self.water_background_h5 = os.path.join(self.sim_dir, 'water_background.h5')
         
     def re_root(self, current_path: str) -> str:
         match = re.search("cxls_hitfinder", current_path)
@@ -38,31 +35,21 @@ class PathManager:
         else:
             raise Exception("Could not find the root directory. (cxls_hitfinder)\n", "Current working dir:", self.current_path)
 
-<<<<<<< HEAD
     @lru_cache(maxsize=32)
     def get_path(self, path_name:str) -> str:
-=======
-    def get_path(self, path_name:str):
-        # returns the path of the path_name
->>>>>>> progress-Everett
         paths_dict = {
             'root': self.root,
             'images_dir': self.images_dir,
-            'sim_dir': self.sim_dir,
-            'sim_specs_dir': self.sim_specs_dir,
-            'peak_images_dir': self.peak_images_dir,
-            'water_images_dir': self.water_images_dir,
+            'peaks_dir': self.peaks_dir,
+            'labels_dir': self.labels_dir,
+            'peak_water_overlay_dir': self.peak_water_overlay_dir,
+            'water_dir': self.water_dir,
             'processed_images_dir': self.processed_images_dir,
-            'preprocessed_images_dir': self.preprocessed_images_dir,
-            'label_images_dir': self.label_images_dir,
-            'pdb_dir': self.pdb_dir,
-            'sh_dir': self.sh_dir,
-            'water_background_h5': self.water_background_h5,
         }
         return paths_dict.get(path_name, None)
 
     @lru_cache(maxsize=32)
-    def get_peak_image_paths(self) -> list:
+    def get_peak_image_paths(self, dataset:int) -> list:
         return [os.path.join(self.peak_images_dir, f) for f in os.listdir(self.peak_images_dir) if f.endswith('.h5')]
 
     @lru_cache(maxsize=32)
@@ -77,14 +64,14 @@ class PathManager:
     def get_label_images_paths(self) -> list:
         return [os.path.join(self.label_images_dir, f) for f in os.listdir(self.label_images_dir) if f.startswith('label')]
     
-    # @lru_cache(maxsize=32)
-    # def get_pdb_path(self, pdb_file):
-    #     # returns the .pdb file path of the file name in the pdb directory
-    #     return os.path.join(self.pdb_dir, pdb_file)
-    # @lru_cache(maxsize=32)
-    # def get_sh_path(self, sh_file):
-    #     # returns the .sh file path of the file name in the sh directory
-    #     return os.path.join(self.sh_dir, sh_file)
+    @lru_cache(maxsize=32)
+    def get_pdb_path(self, pdb_file):
+        # returns the .pdb file path of the file name in the pdb directory
+        return os.path.join(self.pdb_dir, pdb_file)
+    @lru_cache(maxsize=32)
+    def get_sh_path(self, sh_file):
+        # returns the .sh file path of the file name in the sh directory
+        return os.path.join(self.sh_dir, sh_file)
     
     @lru_cache(maxsize=32)
     def clean_sim(self) -> None:
@@ -136,37 +123,7 @@ class PeakImageDataset(Dataset):
             label_image = self.transform(label_image)
         return (peak_image, water_image), label_image
 
-<<<<<<< HEAD
     def __len__(self) -> int:
-=======
-    #     # retrieve 
-    #     match = re.search(r'(processed_)?img_7keV_clen(\d{2})_\d+\.h5', filepath)
-    #     if match:
-    #         camera_length_label = int(match.group(2)) - 1  # Convert '01', '02', '03', to 0, 1, 2, etc.
-    #         camera_length = float(f"0.{match.group(2)}")
-    #         protein = default_protein
-    #         return (protein, camera_length, camera_length_label)
-    #     else:
-    #         print(f'Warning: Filename does not match expected pattern: {filepath}')
-    #     return ('default', 0.0, -1)
-
-    def __getitem__(self, idx):
-        try: 
-            peak_image = self.load_h5(self.peak_image_paths[idx])
-            water_image = self.load_h5(self.water_image_paths[idx])
-            label_image = self.load_h5(self.label_image_paths[idx])
-
-            if self.transform:
-                peak_image = self.transform(peak_image) 
-                water_image = self.transform(water_image) # dimensions: B x C x H x W
-                ### Changed long to float 
-                label_image = self.transform(label_image).float() # long tensor for cross-entropy loss
-            return (peak_image, water_image), label_image
-        except Exception as e:
-            raise IndexError(f"Error accessing index {idx}: {str(e)}")
-
-    def __len__(self):
->>>>>>> progress-Everett
         return len(self.peak_image_paths)
 
     def load_h5(self, filepath:str) -> np.ndarray:
