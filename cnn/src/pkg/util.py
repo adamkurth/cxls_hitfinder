@@ -52,7 +52,7 @@ def check_attributes(paths, dataset: str, type: str) -> bool:
         paths = paths.get_label_images_paths(dataset)
     elif type == 'overlay':
         paths = paths.get_peaks_water_overlay_image_paths(dataset)
-    elif type == 'water_background':
+    elif type == 'background':
         paths = [paths.get_water_background(dataset)]  # Make it a list to use in iteration
     else:
         raise ValueError("Invalid type specified.")
