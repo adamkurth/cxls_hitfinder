@@ -105,8 +105,7 @@ def sim_parameters(paths):
     return combined_params
 
 
-<<<<<<< HEAD
-def load_h5(file_path):        
+def load_h5(file_path: str) -> np.ndarray:        
     if not os.path.exists(file_path):
         print(f"File not found: {file_path}")
         raise FileNotFoundError(f"File not found: {file_path}")
@@ -121,7 +120,7 @@ def load_h5(file_path):
             raise IOError(f"File cannot be opened, might be corrupt or not an HDF5 file: {file_path}")
         else:
             raise IOError(f"Failed to read the file {file_path}: {e}")
-=======
+        
 def train_test_model(model, loader, criterion, optimizer, epochs, device, N, batch, classes):
 
     """
@@ -257,4 +256,3 @@ def train_test_model(model, loader, criterion, optimizer, epochs, device, N, bat
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
     plt.show()
->>>>>>> progress-Everett
