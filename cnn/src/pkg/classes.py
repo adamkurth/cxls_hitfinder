@@ -157,7 +157,7 @@ class DataPreparation:
         self.batch_size = batch_size
         self.dataset = dataset
     
-    def prep_data(self) -> tuple:
+    def prepare(self) -> tuple:
         """
         Prepares and splits the data into training and testing datasets.
         Applies transformations and loads them into DataLoader objects.

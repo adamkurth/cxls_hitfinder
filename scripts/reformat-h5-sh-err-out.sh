@@ -1,17 +1,19 @@
 #!/bin/bash
 
-# Function to reformat filenames within a given directory based on their extension
+# Function to reformat filenames within a given directory based on their extension and given parameters
 reformat_filenames() {
   local directory=$1
-  local prefix="img_7keV_clen01"
+  local kev=$2
+  local clen=$3
+  local prefix="img_${kev}keV_clen${clen}"
   local h5_count=1
   local sh_count=1
   local err_count=1
   local out_count=1
 
-  # Check if directory is provided
-  if [[ -z "$directory" ]]; then
-    printf "Usage: %s <directory>\n" "$0" >&2
+  # Check if directory and parameters are provided
+  if [[ -z "$directory" || -z "$kev" || -z "$clen" ]]; then
+    printf "Usage: %s <directory> <keV> <clen>\n" "$0" >&2
     return 1
   fi
 
@@ -46,33 +48,20 @@ reformat_filenames() {
     # Determine the correct new name based on the extension
     case "$extension" in
       sh)
-        new_name="${prefix}.sh"
+        new_name="${prefix}_${sh_count}.sh"
         ((sh_count++))
         ;;
       err)
-        new_name="${prefix}.err"
+        new_name="${prefix}_${err_count}.err"
         ((err_count++))
         ;;
       out)
-        new_name="${prefix}.out"
+        new_name="${prefix}_${out_count}.out"
         ((out_count++))
         ;;
     esac
 
     printf "Renaming '%s' to '%s'\n" "$file" "$new_name"
-
-    # Handle potential conflicts by appending a count to the filename
-    if [[ -e $new_name ]]; then
-      local base="${new_name%.*}"
-      local counter=2 # Start from 2 since 1 is implied in the initial name
-      local conflict_name="${base}_${counter}.${extension}"
-      while [[ -e $conflict_name ]]; do
-        ((counter++))
-        conflict_name="${base}_${counter}.${extension}"
-      done
-      new_name=$conflict_name
-    fi
-
     mv -- "$file" "$new_name"
   done
 
@@ -83,15 +72,17 @@ reformat_filenames() {
 # Main function to handle script logic
 main() {
   local target_directory=$1
+  local kev=$2
+  local clen=$3
 
   # Validate input
-  if [[ -z "$target_directory" ]]; then
-    printf "Error: No directory specified.\nUsage: %s <directory>\n" "$0" >&2
+  if [[ -z "$target_directory" || -z "$kev" || -z "$clen" ]]; then
+    printf "Error: Insufficient arguments provided.\nUsage: %s <directory> <keV> <clen>\n" "$0" >&2
     return 1
   fi
 
-  # Call the reformat function with the provided directory
-  reformat_filenames "$target_directory"
+  # Call the reformat function with the provided directory and parameters
+  reformat_filenames "$target_directory" "$kev" "$clen"
 }
 
 # Script execution starts here
