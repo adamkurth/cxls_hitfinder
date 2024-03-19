@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from functools import lru_cache
 from skimage.feature import peak_local_max
-from torch.utils.data import Dataset
+from torch.utils.data import DataLoader, Dataset
 from torchvision.transforms.functional import to_tensor
 import numpy as np
 
@@ -25,7 +25,73 @@ def parameter_matrix(clen_values: list, photon_energy_values: list) -> None:
     for i, clen in enumerate(clen_values):
         for j, photon_energy in enumerate(photon_energy_values):
             matrix[i, j] = (clen, photon_energy)
-    print(matrix)
+    return matrix
+
+def retrieve_attributes(file_path: str) -> tuple:
+    """
+    Retrieves 'clen' and 'photon_energy' attributes from an HDF5 file.
+    """
+    with h5.File(file_path, 'r') as file:
+        clen = file.attrs.get('clen')
+        photon_energy = file.attrs.get('photon_energy')
+    return clen, photon_energy
+
+def check_attributes(paths, dataset: str, type: str) -> bool:
+    """
+    Checks that 'clen' and 'photon_energy' attributes for all files in a specified type within a dataset
+    match expected values derived from the parameter matrix.
+    """
+    clen_values, photon_energy_values = [1.5, 2.5, 3.5], [6000, 7000, 8000]
+    matrix = parameter_matrix(clen_values, photon_energy_values)
+    dataset_index = int(dataset) - 1  # Assumes '01' corresponds to index 0, '02' to 1, etc.
+    exp_clen, exp_photon_energy = matrix[dataset_index % len(clen_values), dataset_index // len(clen_values)]
+    
+    if type == 'peak':
+        paths = paths.get_peak_image_paths(dataset)
+    elif type == 'label':
+        paths = paths.get_label_images_paths(dataset)
+    elif type == 'overlay':
+        paths = paths.get_peaks_water_overlay_image_paths(dataset)
+    elif type == 'water_background':
+        paths = [paths.get_water_background(dataset)]  # Make it a list to use in iteration
+    else:
+        raise ValueError("Invalid type specified.")
+
+    
+    for path in paths:
+        clen, photon_energy = retrieve_attributes(path)
+        if clen != exp_clen or photon_energy != exp_photon_energy:
+            print(f"File {path} has mismatching attributes: clen={clen}, photon_energy={photon_energy}")
+            return False  # Mismatch found
+    
+    print(f"All files in dataset {dataset} of type '{type}' have matching attributes.")
+    return True
+
+def prepare(data_manager:Dataset, batch_size:int=32) -> tuple:
+    """
+    Prepares and splits the data into training and testing datasets.
+    Applies transformations and loads them into DataLoader objects.
+
+    :param data_manager: An instance of DatasetManager, which is a subclass of torch.utils.data.Dataset.
+    :param batch_size: The size of each data batch.
+    :return: A tuple containing train_loader and test_loader.
+    """
+    # Split the dataset into training and testing sets.
+    num_items = len(data_manager)
+    num_train = int(0.8 * num_items)
+    num_test = num_items - num_train
+    train_dataset, test_dataset = torch.utils.data.random_split(data_manager, [num_train, num_test])
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)    
+        
+    print("\nData prepared.")
+    print(f"Train size: {len(train_dataset)}")
+    print(f"Test size: {len(test_dataset)}")
+    print(f"Batch size: {batch_size}")
+    print(f"Number of batches in train_loader: {len(train_loader)} \n")
+    
+    return train_loader, test_loader # returns train/test tensor data loaders
     
 class PathManager:
     def __init__(self, root_dir=None) -> None:
@@ -50,9 +116,9 @@ class PathManager:
         self.dataset = dataset # select dataset 01 through 09
         peak_paths = self.get_peak_image_paths(dataset)
         water_peak_paths = self.get_peaks_water_overlay_image_paths(dataset)
-        labels = self.get_label_images_paths(dataset)
+        labels_paths = self.get_label_images_paths(dataset)
         water_background = self.get_water_background(dataset)
-        return peak_paths, water_peak_paths, labels, water_background
+        return peak_paths, water_peak_paths, labels_paths, water_background
          
     def re_root(self, current_path: str) -> str:
         match = re.search("cxls_hitfinder", current_path)
@@ -86,6 +152,7 @@ class PathManager:
     def get_peaks_water_overlay_image_paths(self, dataset:str) -> list:
         dataset_dir = os.path.join(self.peaks_water_overlay_dir, dataset)
         return [os.path.join(dataset_dir, f) for f in os.listdir(dataset_dir) if f.endswith('.h5')]    
+    
     @lru_cache(maxsize=32)
     def get_label_images_paths(self, dataset:str) -> list:
         dataset_dir = os.path.join(self.labels_dir, dataset)
@@ -94,9 +161,13 @@ class PathManager:
     @lru_cache(maxsize=32)
     def get_water_background(self, dataset:str) -> str:
         dataset_dir = os.path.join(self.water_background_dir, dataset)
-        water_image = [f for f in os.listdir(dataset_dir) if f.startswith('water') and f.endswith('.h5')]
-        if len(water_image) > 0:
-            return os.path.join(dataset_dir, water_image[0]) # expecting 1 image
+        water_images = [f for f in os.listdir(dataset_dir) if f.startswith('water') and f.endswith('.h5')]
+        
+        if len(water_images) == 1:
+            print(f"Found water background image: {water_images[0]}")
+            return os.path.join(dataset_dir, water_images[0]) # expecting 1 image 
+        elif len(water_images) > 1:
+            raise Exception("Multiple water images found in the specified dataset directory.")
         else:
             raise Exception("Could not find water image in the specified dataset directory.")
         
@@ -154,7 +225,7 @@ class Processor:
             print(f"'{value_name}' value {value} confirmed successfully.")
             return True
         else:
-            print(f"'{value_name}' confirmation failed at attempt {i}.")
+            print(f"'{value_name}' confirmation failed at attempt\n")
             return False
     
     def process_directory(self, dataset:str, clen:float, photon_energy:int) -> None: 
@@ -168,8 +239,9 @@ class Processor:
         dataset_confirmed = self.confirm_value(dataset, 'dataset')
         clen_confirmed = self.confirm_value(clen, 'clen')
         photon_energy_confirmed = self.confirm_value(photon_energy, 'photon_energy')
+        water_background_confirmed = self.confirm_value(self.paths.get_water_background(dataset), 'water_background')
         
-        if not (clen_confirmed and photon_energy_confirmed and dataset_confirmed):
+        if not (clen_confirmed and photon_energy_confirmed and dataset_confirmed and water_background_confirmed):
             print("Operation cancelled due to confirmation failure.")
             return
         
@@ -199,28 +271,55 @@ class Processor:
             self.update_attributes(out_label_path, clen, photon_energy)
             
             print(f"Processed and labeled images for {basename} saved.")
-    
         
-
-# class DatasetManager(Dataset):
-#     # for PyTorch DataLoader
-#     def __init__(self, paths:PathManager, dataset:str, transform=False) -> None:
-#         self.paths = paths
-#         self.dataset = dataset
-#         self.peak_paths, self.water_peak_paths, self.labels = self.paths.select_dataset(dataset)
-#         # self.transform = transform if transform is not None else TransformToTensor()
     
-#     def __len__(self) -> int:
-#         return len(self.peak_paths)
+class DatasetManager(Dataset):
+    # for PyTorch DataLoader
+    def __init__(self, paths, dataset:str, transform=False) -> None:
+        self.paths = paths
+        self.dataset = dataset
+        self.peak_paths, self.water_peak_paths, self.labels_paths, self.water_background = self.paths.select_dataset(dataset)
+        self.transform = transform if transform is not None else TransformToTensor()
+        #NOTE: self.water_background is a string path
+        # assert len(self.peak_paths) == len(self.water_peak_paths) == len(self.labels_images), "Mismatch in dataset sizes"
+        print(f"Number of peak images: {len(self.peak_paths)}")
+        print(f"Number of water images: {len(self.water_peak_paths)}")
+        print(f"Number of label images: {len(self.labels_paths)}")
+        print(f"Check: Path to water background image: {self.water_background}\n")
     
-#     def __getitem__(self, idx:int) -> tuple:
-#         peak_image = self.load_h5(self.peak_image_paths[idx])
-#         water_image = self.load_h5(self.water_image_paths[idx])
-#         label_image = self.load_h5(self.label_image_paths[idx])
+    def __len__(self) -> int:
+        return len(self.peak_paths)
+    
+    def __getitem__(self, idx:int) -> tuple:
+        peak_image = load_h5(self.peak_paths[idx])
+        water_image = load_h5(self.water_peak_paths[idx])
+        label_image = load_h5(self.labels_paths[idx])
 
-#         # if self.transform:
-#         #     peak_image = self.transform(peak_image) 
-#         #     water_image = self.transform(water_image) # dimensions: C x H x W
-#         #     label_image = self.transform(label_image)
-#         return (peak_image, water_image), label_image
+        if self.transform:
+            peak_image = self.transform(peak_image) 
+            water_image = self.transform(water_image) # dimensions: C x H x W
+            label_image = self.transform(label_image)
+            
+        return (peak_image, water_image), label_image
 
+class TransformToTensor:
+    def __call__(self, image:np.ndarray) -> torch.Tensor:
+        """
+        Converts a numpy array to a PyTorch tensor while ensuring:
+        - The output is in B x C x H x W format for a single image.
+        - The tensor is of dtype float32.
+        - For grayscale images, a dummy channel is added to ensure compatibility.
+
+        Args:
+            image (numpy.ndarray): The input image.
+
+        Returns:
+            torch.Tensor: The transformed image tensor.
+        """
+        if image.ndim == 2:  # For grayscale images
+            image = np.expand_dims(image, axis=0)  # Add channel dimension 
+        else : 
+            raise ValueError(f"Image has invalid dimensions: {image.shape}")
+        image_tensor = torch.from_numpy(image).float().to(dtype=torch.float32)  # Convert to tensor with dtype=torch.float32
+        return image_tensor # dimensions: C x H x W 
+    
