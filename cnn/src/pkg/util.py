@@ -151,24 +151,24 @@ class Processor:
         
         for peak_path in peak_image_paths:
             # derive a unique basename for each peak image
-            basename = os.path.basename(peak_image_paths[0])
-            # define unique output paths for the current peak image
+            basename = os.path.basename(peak_path)
+            # unique filenames for the overlay and label images based on the current peak image's basename
             out_overlay_path = os.path.join(self.paths.peaks_water_overlay_dir, dataset, f'overlay_{basename}')
             out_label_path = os.path.join(self.paths.labels_dir, dataset, f'label_{basename}')
             
-            # load h5
             peak_image = load_h5(peak_path)
-            # generate heatmap (label image)
             labeled_array = self.heatmap(peak_image)
-            # apply water background array 
             peak_water_overlay_image = self.apply_water_background(peak_image)
-            # save h5s
-            save_h5(out_overlay_path, peak_water_overlay_image) # save peak_water_overlay_image
-            save_h5(out_label_path, labeled_array) # save labeled_array
-            # update attributes
-            self.update_attributes(peak_path, clen, photon_energy) # peaks
-            self.update_attributes(out_overlay_path, clen, photon_energy) # overlay
-            self.update_attributes(out_label_path, clen, photon_energy) # labels
+            
+           # Save the processed peak image and labeled image to their respective unique paths
+            save_h5(out_overlay_path, peak_water_overlay_image)
+            save_h5(out_label_path, labeled_array)
+            
+            # Update attributes for each file with clen and photon energy
+            self.update_attributes(peak_path, clen, photon_energy)
+            self.update_attributes(out_overlay_path, clen, photon_energy)
+            self.update_attributes(out_label_path, clen, photon_energy)
+            
             print(f"Processed and labeled images for {basename} saved.")
     
         
