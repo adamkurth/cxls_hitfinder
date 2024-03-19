@@ -7,7 +7,7 @@ from functools import lru_cache
 from skimage.feature import peak_local_max
 from torch.utils.data import Dataset
 from torchvision.transforms.functional import to_tensor
-
+import numpy as np
 
 def load_h5(file_path:str) -> np.ndarray:
     with h5.File(file_path, 'r') as file:
@@ -16,6 +16,16 @@ def load_h5(file_path:str) -> np.ndarray:
 def save_h5(file_path:str, data:np.ndarray) -> None:
     with h5.File(file_path, 'w') as file:
         file.create_dataset('entry/data/data', data=data)
+
+def parameter_matrix(clen_values: list, photon_energy_values: list) -> None:
+    # limited to 2d for now 
+    print("\ntrue parameter matrix...\n")
+    dtype = [('clen', float), ('photon_energy', float)]
+    matrix = np.zeros((len(clen_values), len(photon_energy_values)), dtype=dtype)
+    for i, clen in enumerate(clen_values):
+        for j, photon_energy in enumerate(photon_energy_values):
+            matrix[i, j] = (clen, photon_energy)
+    print(matrix)
     
 class PathManager:
     def __init__(self, root_dir=None) -> None:
@@ -138,12 +148,31 @@ class Processor:
 
         return heatmap_tensor  # Ensure it matches expected dimensions [C, H, W]        
 
+    def confirm_value(self, value:float, value_name:str) -> bool:
+        confirm = input(f"Confirm '{value_name}' value: {value} (type 'y' to confirm): ")
+        if confirm.lower() == 'y':
+            print(f"'{value_name}' value {value} confirmed successfully.")
+            return True
+        else:
+            print(f"'{value_name}' confirmation failed at attempt {i}.")
+            return False
+    
     def process_directory(self, dataset:str, clen:float, photon_energy:int) -> None: 
         """
         Processes all peak images in the directory, applies the water background,
         generates label heatmaps for detecting Bragg peaks, and updates the HDF5 files
         with 'clen' and 'photon_energy' attributes for peak images, water images, and label images.
         """
+        # Confirmations for clen and photon_energy
+
+        dataset_confirmed = self.confirm_value(dataset, 'dataset')
+        clen_confirmed = self.confirm_value(clen, 'clen')
+        photon_energy_confirmed = self.confirm_value(photon_energy, 'photon_energy')
+        
+        if not (clen_confirmed and photon_energy_confirmed and dataset_confirmed):
+            print("Operation cancelled due to confirmation failure.")
+            return
+        
         # get peak images
         peak_image_paths = self.paths.get_peak_image_paths(dataset)
         # get water background image 
