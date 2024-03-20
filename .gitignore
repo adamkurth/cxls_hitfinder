@@ -1,9 +1,14 @@
-images/data/*
+# Ignore .h5 files globally
+*.h5
+
+# Re-include .h5 files in the specific directory
+!images/water/**/*.h5
+
+# Ignore directories as before
+images/peaks_water_overlay/*
 images/labels/*
 images/peaks/*
-images/preprocessed/*
-images/preprocessed_images/*
-images/processed/*
-images/processed_images/*
+images/temp/*
 cnn/src/__pycache__
 __pycache__
+

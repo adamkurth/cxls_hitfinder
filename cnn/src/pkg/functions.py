@@ -104,20 +104,23 @@ def sim_parameters(paths):
     combined_params = {**essential_sh_params, **unitcell_params_dict}
     return combined_params
 
-# def __preview__(self, image_path):
-#     try:
-#         image = self.__load_h5__(image_path)
-#         # visualize outliers 
-#         plt.imshow(image, cmap='viridis')
-#         plt.colorbar()
-#         plt.title(f'{image_type.capitalize()} Image at Index {idx}')
-#         plt.axis('off')
-#         plt.show()
-#     except Exception as e:
-#         print(e)
-#         print(f'Error: Could not load the image at {image_path}')
 
-
+def load_h5(file_path: str) -> np.ndarray:        
+    if not os.path.exists(file_path):
+        print(f"File not found: {file_path}")
+        raise FileNotFoundError(f"File not found: {file_path}")
+    try:
+        with h5.File(file_path, 'r') as f:
+            data = f['entry/data/data']
+            return np.array(data) 
+    except KeyError:
+        raise ValueError(f"Dataset 'entry/data/data' not found in file: {file_path}")
+    except IOError as e:
+        if 'unable to open file' in str(e).lower():
+            raise IOError(f"File cannot be opened, might be corrupt or not an HDF5 file: {file_path}")
+        else:
+            raise IOError(f"Failed to read the file {file_path}: {e}")
+        
 def train_test_model(model, loader, criterion, optimizer, epochs, device, N, batch, classes):
 
     """
