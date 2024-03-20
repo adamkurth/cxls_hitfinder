@@ -1,3 +1,5 @@
+cnn/src/pkg/__pycache__/*
+
 # Ignore .h5 files globally
 *.h5
 
@@ -5,10 +7,20 @@
 !images/water/**/*.h5
 
 # Ignore directories as before
-images/peaks_water_overlay/*
-images/labels/*
-images/peaks/*
-images/temp/*
-cnn/src/__pycache__
-__pycache__
+images/peaks_water_overlay/**
+images/labels/**
+images/peaks/**
+images/temp/**
+cnn/src/__pycache__/**
+__pycache__/**
 
+# Include all directories in images/ with structure 01, 02, ..., 09
+!images/**/01/**
+!images/**/02/**
+!images/**/03/**
+!images/**/04/**
+!images/**/05/**
+!images/**/06/**
+!images/**/07/**
+!images/**/08/**
+!images/**/09/**
