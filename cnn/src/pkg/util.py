@@ -322,4 +322,58 @@ class TransformToTensor:
             raise ValueError(f"Image has invalid dimensions: {image.shape}")
         image_tensor = torch.from_numpy(image).float().to(dtype=torch.float32)  # Convert to tensor with dtype=torch.float32
         return image_tensor # dimensions: C x H x W 
+
+class TrainTestModels:
+    def __init__(self, model, loader: list, criterion, optimizer, epochs: int, device, batch: int, classe: int) -> None:
+        self.model = model
+        self.loader = loader
+        self.criterion = criterion
+        self.optimizer = optimizer
+        self.epochs = epochs
+        self.device = device
+        self.batch = batch
+        self.classes = classe
+        self.plot_train_accuracy = np.zeros(epochs)
+        self.plot_train_loss = np.zeros(epochs)
+        self.plot_test_accuracy = np.zeros(epochs)
+        self.plot_test_loss = np.zeros(epochs)
+
+    def test_model_no_freeze(self) -> None:
+        print(f'Model training: {self.model.__class__.__name__}')
+        
+        for epoch in range(self.epochs):
+            print('-- epoch '+str(epoch)) 
+            running_loss_train = 0.0
+            accuracy_train = 0.0
+            predictions = 0.0
+            total_predictions = 0.0
+            self.model.train()
+            for inputs, labels in self.loader[0]:
+                peak_images, _ = inputs
+                peak_images = peak_images.to(self.device)
+                labels = labels.to(self.device)
+
+                self.optimizer.zero_grad()
+                score = self.model(peak_images)
+                loss = self.criterion(score, labels)
+
+                loss.backward()
+                self.optimizer.step()
+                running_loss_train += loss.item()  
+                predictions = (torch.sigmoid(score) > 0.5).long()  
+                accuracy_train += (predictions == labels).float().sum()
+                total_predictions += np.prod(labels.shape)
+        pass
+        
+    def test_model_freeze(self) -> None:
+        pass
+        
+    def train_model(self) -> None:
+        print(f'Model testing: {self.model.__class__.__name__}')
+        pass
     
+    def plot_loss_accuracy(self) -> None:
+        pass
+    
+    def plot_confusion_matrix(self) -> None:
+        pass
