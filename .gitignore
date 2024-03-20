@@ -24,3 +24,9 @@ __pycache__/**
 !images/**/07/**
 !images/**/08/**
 !images/**/09/**
+
+# Ignore .h5 files in specific directories
+images/peaks_water_overlay/**/*.h5
+images/labels/**/*.h5
+images/peaks/**/*.h5
+images/temp/**/*.h5
