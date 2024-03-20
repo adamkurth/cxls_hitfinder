@@ -7,10 +7,6 @@ cnn/src/pkg/__pycache__/*
 !images/water/**/*.h5
 
 # Ignore directories as before
-images/peaks_water_overlay/**
-images/labels/**
-images/peaks/**
-images/temp/**
 cnn/src/__pycache__/**
 __pycache__/**
 
