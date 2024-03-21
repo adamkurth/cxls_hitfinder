@@ -7,6 +7,8 @@ from functools import lru_cache
 from skimage.feature import peak_local_max
 from torch.utils.data import DataLoader, Dataset
 from torchvision.transforms.functional import to_tensor
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
@@ -327,6 +329,10 @@ class TransformToTensor:
             raise ValueError(f"Image has invalid dimensions: {image.shape}")
         image_tensor = torch.from_numpy(image).float().to(dtype=torch.float32)  # Convert to tensor with dtype=torch.float32
         return image_tensor # dimensions: C x H x W 
+<<<<<<< HEAD
+=======
+    
+>>>>>>> main
 
 class TrainTestModels:
     """ This class trains, tests, and plots the loss, accuracy, and confusion matrix of a model.
@@ -481,3 +487,7 @@ class TrainTestModels:
         plt.ylabel('True label')
         plt.xlabel('Predicted label')
         plt.show()
+<<<<<<< HEAD
+=======
+    
+>>>>>>> main
