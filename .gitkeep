@@ -1,0 +1,49 @@
+touch images/peaks/01/.gitkeep
+touch images/peaks/02/.gitkeep
+touch images/peaks/03/.gitkeep
+touch images/peaks/04/.gitkeep
+touch images/peaks/05/.gitkeep
+touch images/peaks/06/.gitkeep
+touch images/peaks/07/.gitkeep
+touch images/peaks/08/.gitkeep
+touch images/peaks/09/.gitkeep
+
+touch images/labels/01/.gitkeep
+touch images/labels/02/.gitkeep
+touch images/labels/03/.gitkeep
+touch images/labels/04/.gitkeep
+touch images/labels/05/.gitkeep
+touch images/labels/06/.gitkeep
+touch images/labels/07/.gitkeep
+touch images/labels/08/.gitkeep
+touch images/labels/09/.gitkeep
+
+touch images/peaks_water_overlay/01/.gitkeep
+touch images/peaks_water_overlay/02/.gitkeep
+touch images/peaks_water_overlay/03/.gitkeep
+touch images/peaks_water_overlay/04/.gitkeep
+touch images/peaks_water_overlay/05/.gitkeep
+touch images/peaks_water_overlay/06/.gitkeep
+touch images/peaks_water_overlay/07/.gitkeep
+touch images/peaks_water_overlay/08/.gitkeep
+touch images/peaks_water_overlay/09/.gitkeep
+
+touch images/temp/01/.gitkeep
+touch images/temp/02/.gitkeep
+touch images/temp/03/.gitkeep
+touch images/temp/04/.gitkeep
+touch images/temp/05/.gitkeep
+touch images/temp/06/.gitkeep
+touch images/temp/07/.gitkeep
+touch images/temp/08/.gitkeep
+touch images/temp/09/.gitkeep
+
+touch images/water/01/.gitkeep
+touch images/water/02/.gitkeep
+touch images/water/03/.gitkeep
+touch images/water/04/.gitkeep
+touch images/water/05/.gitkeep
+touch images/water/06/.gitkeep
+touch images/water/07/.gitkeep
+touch images/water/08/.gitkeep
+touch images/water/09/.gitkeep
