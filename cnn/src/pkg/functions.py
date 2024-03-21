@@ -171,7 +171,7 @@ def train_test_model(model, loader, criterion, optimizer, epochs, device, N, bat
             predictions = (torch.sigmoid(score) > 0.5).long()  # Assuming 'score' is the output of your model
             accuracy_train += (predictions == labels).float().sum()
             total_predictions += np.prod(labels.shape)
-    # test
+        # test
         running_loss_test = 0.0
         accuracy_test = 0.0
         predicted = 0.0
@@ -190,7 +190,7 @@ def train_test_model(model, loader, criterion, optimizer, epochs, device, N, bat
                 accuracy_test += (predicted == labels).float().sum()
                 total += np.prod(labels.shape)
 
-    # statistics
+        # statistics
 
         loss_train = running_loss_train/batch[0]
         plot_train_loss[epoch] = loss_train
