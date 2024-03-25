@@ -1,11 +1,12 @@
 #!/bin/bash
 
-# Extract keV and clen values from a filename
+# Extract keV and clen values from a filename, handling both original and already renamed files
 extract_kev_clen() {
   local filename=$1
   local kev clen
 
-  if [[ $filename =~ master_[0-9]+_([0-9]+)keV_clen([0-9]+)_ ]]; then
+  # First pattern matches original naming convention, second pattern matches already renamed files
+  if [[ $filename =~ master_[0-9]+_([0-9]+)keV_clen([0-9]+)_ ]] || [[ $filename =~ img_([0-9]+)keV_clen([0-9]+)_ ]]; then
     kev=${BASH_REMATCH[1]}
     clen=${BASH_REMATCH[2]}
     echo "$kev $clen"
@@ -15,22 +16,17 @@ extract_kev_clen() {
   fi
 }
 
-# Reformat filenames based on extracted keV and clen values
+# Function to reformat filenames in all subdirectories
 reformat_filenames() {
   local directory=$1
-  local subdirs=("01" "02" "03" "04" "05" "06" "07" "08" "09")
+  local img_count=1
 
-  for subdir in "${subdirs[@]}"; do
-    local path="$directory/$subdir"
-    if [[ ! -d $path ]]; then
-      printf "Directory '%s' not found.\n" "$path" >&2
-      continue
-    fi
+  # Reset IFS to default to avoid issues in file paths with spaces
+  IFS=$' \t\n'
 
-    local files_found=0
-    for file in "$path"/*.h5; do
+  find "$directory" -type d -print0 | while IFS= read -r -d '' subdir; do
+    for file in "$subdir"/*.h5; do
       if [[ -f $file ]]; then
-        files_found=1
         local filename=$(basename -- "$file")
         read -r kev clen <<< $(extract_kev_clen "$filename")
         if [[ $? -ne 0 ]]; then
@@ -38,15 +34,13 @@ reformat_filenames() {
           continue
         fi
 
-        local new_filename="img_${kev}keV_clen${clen}.h5"
-        mv -- "$file" "$path/$new_filename"
-        printf "Renamed '%s' to '%s'\n" "$filename" "$new_filename"
+        local new_filename_format="img_${kev}keV_clen${clen}_$(printf "%05d" "$img_count").h5"
+        local new_filepath="${subdir}/${new_filename_format}"
+        mv -- "$file" "$new_filepath"
+        printf "Renamed '%s' to '%s'\n" "$file" "$new_filepath"
+        ((img_count++))
       fi
     done
-
-    if [[ $files_found -eq 0 ]]; then
-      printf "No .h5 files found in '%s'.\n" "$path" >&2
-    fi
   done
 }
 
