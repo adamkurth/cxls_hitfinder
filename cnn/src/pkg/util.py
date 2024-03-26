@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision.transforms.functional import to_tensor
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
+import logging 
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
@@ -409,7 +410,8 @@ class TrainTestModels:
         pass
         
     def test(self) -> None:
-        """ This function test the model and prints the loss and accuracy of the testing sets per epoch.
+        """ 
+        This function test the model and prints the loss and accuracy of the testing sets per epoch.
         """
         print(f'Model testing: {self.model.__class__.__name__}')
         
