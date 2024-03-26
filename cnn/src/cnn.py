@@ -38,7 +38,6 @@ peak_paths, water_peak_paths, labels, water_background_path = pm.select_dataset(
 p = u.Processor(paths=pm, dataset=dataset)
 dm = u.DatasetManager(paths=pm, dataset=dataset, transform=None)
 
-
 # p.process_directory(dataset=dataset, clen=clen, photon_energy=photon_energy)
 
 # generate peak/overlay/label and upate attributes

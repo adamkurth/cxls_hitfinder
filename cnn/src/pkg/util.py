@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import logging 
 import numpy as np
+import logging
 
 def load_h5(file_path:str) -> np.ndarray:
     with h5.File(file_path, 'r') as file:
@@ -357,16 +358,17 @@ class TrainTestModels:
         self.plot_train_loss = np.zeros(self.epochs)
         self.plot_test_accuracy = np.zeros(self.epochs)
         self.plot_test_loss = np.zeros(self.epochs)
+        self.logger = logging.getLogger(__name__)
 
     def train(self) -> None:
         """
         This function trains the model without freezing the parameters in the case of transfer learning.
         This will print the loss and accuracy of the training sets per epoch.
         """
-        print(f'Model training: {self.model.__class__.__name__}')
+        self.logger.info(f'Model training: {self.model.__class__.__name__}')
         
         for epoch in range(self.epochs):
-            print('-- epoch '+str(epoch)) 
+            self.logger.info('-- epoch '+str(epoch)) 
             running_loss_train = accuracy_train = predictions = total_predictions = 0.0
 
             self.model.train()
@@ -389,12 +391,12 @@ class TrainTestModels:
             loss_train = running_loss_train / self.batch
             self.plot_train_loss[epoch] = loss_train
             
-            print(f'Train loss: {loss_train}')
+            self.logger.info(f'Train loss: {loss_train}')
 
             # If you want to uncomment these lines, make sure the calculation of accuracy_train is corrected as follows:
             accuracy_train /= total_predictions
             self.plot_train_accuracy[epoch] = accuracy_train
-            print(f'Train accuracy: {accuracy_train}')
+            self.logger.info(f'Train accuracy: {accuracy_train}')
             
     def test_freeze(self) -> None:
         """ 
@@ -408,10 +410,10 @@ class TrainTestModels:
         """ 
         This function test the model and prints the loss and accuracy of the testing sets per epoch.
         """
-        print(f'Model testing: {self.model.__class__.__name__}')
+        self.logger.info(f'Model testing: {self.model.__class__.__name__}')
         
         for epoch in range(self.epochs):
-            print('-- epoch '+str(epoch)) 
+            self.logger.info('-- epoch '+str(epoch)) 
             
             running_loss_test = accuracy_test = predicted = total = 0.0
             self.model.eval()
@@ -434,8 +436,8 @@ class TrainTestModels:
             accuracy_test /= total
             self.plot_test_accuracy[epoch] = accuracy_test
 
-            print(f'Test loss: {loss_test}')
-            print(f'Test accuracy: {accuracy_test}')
+            self.logger.info(f'Test loss: {loss_test}')
+            self.logger.info(f'Test accuracy: {accuracy_test}')
         
     def plot_loss_accuracy(self) -> None:
         """ 
