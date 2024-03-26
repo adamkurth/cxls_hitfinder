@@ -327,11 +327,13 @@ class TransformToTensor:
     
 
 class TrainTestModels:
-    """ This class trains, tests, and plots the loss, accuracy, and confusion matrix of a model.
-        There are two methods for training: test_model_no_freeze and test_model_freeze.
+    """ 
+    This class trains, tests, and plots the loss, accuracy, and confusion matrix of a model.
+    There are two methods for training: test_model_no_freeze and test_model_freeze.
     """
     def __init__(self, model, loader: list, criterion, optimizer, device, cfg: dict) -> None:
-        """ Takes the arguments for training and testing and makes them available to the class.
+        """ 
+        Takes the arguments for training and testing and makes them available to the class.
 
         Args:
             model: PyTorch model
@@ -343,32 +345,31 @@ class TrainTestModels:
         """
         self.model = model
         self.loader = loader
+        self.train_loader, self.test_loader = loader[0], loader[1]
         self.criterion = criterion
         self.optimizer = optimizer
         self.epochs = cfg['num_epochs']
         self.device = device
         self.batch = cfg['batch_size']
         self.classes = cfg['num_classes']
-        
         self.plot_train_accuracy = np.zeros(self.epochs)
         self.plot_train_loss = np.zeros(self.epochs)
         self.plot_test_accuracy = np.zeros(self.epochs)
         self.plot_test_loss = np.zeros(self.epochs)
 
-    def test_model_no_freeze(self) -> None:
-        """ This function trains the model without freezing the parameters of in the case of transfer learning.
-            This will print the loss and accuracy of the training sets per epoch.
+    def train(self) -> None:
+        """
+        This function trains the model without freezing the parameters in the case of transfer learning.
+        This will print the loss and accuracy of the training sets per epoch.
         """
         print(f'Model training: {self.model.__class__.__name__}')
         
         for epoch in range(self.epochs):
             print('-- epoch '+str(epoch)) 
-            running_loss_train = 0.0
-            accuracy_train = 0.0
-            predictions = 0.0
-            total_predictions = 0.0
+            running_loss_train = accuracy_train = predictions = total_predictions = 0.0
+
             self.model.train()
-            for inputs, labels in self.loader[0]:
+            for inputs, labels in self.loader[0]:  # Assuming self.loader[0] is the training data loader
                 peak_images, _ = inputs
                 peak_images = peak_images.to(self.device)
                 labels = labels.to(self.device)
@@ -384,23 +385,25 @@ class TrainTestModels:
                 accuracy_train += (predictions == labels).float().sum()
                 total_predictions += np.prod(labels.shape)
                 
-                
-            loss_train = running_loss_train/self.batch[0]
+            loss_train = running_loss_train / self.batch
             self.plot_train_loss[epoch] = loss_train
+            
+            print(f'Train loss: {loss_train}')
+
+            # If you want to uncomment these lines, make sure the calculation of accuracy_train is corrected as follows:
             accuracy_train /= total_predictions
             self.plot_train_accuracy[epoch] = accuracy_train
-                
-            print(f'Train loss: {loss_train}')
             print(f'Train accuracy: {accuracy_train}')
-        
-    def test_model_freeze(self) -> None:
-        """ This function trains the model with freezing the parameters of in the case of transfer learning.
-            This will print the loss and accuracy of the testing sets per epoch.
-            WIP
+            
+    def test_freeze(self) -> None:
+        """ 
+        This function trains the model with freezing the parameters of in the case of transfer learning.
+        This will print the loss and accuracy of the testing sets per epoch.
+        WIP
         """
         pass
         
-    def train_model(self) -> None:
+    def test(self) -> None:
         """ This function test the model and prints the loss and accuracy of the testing sets per epoch.
         """
         print(f'Model testing: {self.model.__class__.__name__}')
@@ -408,10 +411,7 @@ class TrainTestModels:
         for epoch in range(self.epochs):
             print('-- epoch '+str(epoch)) 
             
-            running_loss_test = 0.0
-            accuracy_test = 0.0
-            predicted = 0.0
-            total = 0.0
+            running_loss_test = accuracy_test = predicted = total = 0.0
             self.model.eval()
             with torch.no_grad():
                 for inputs, labels in self.loader[1]:
@@ -436,7 +436,8 @@ class TrainTestModels:
             print(f'Test accuracy: {accuracy_test}')
         
     def plot_loss_accuracy(self) -> None:
-        """ This function plots the loss and accuracy of the training and testing sets per epoch.
+        """ 
+        This function plots the loss and accuracy of the training and testing sets per epoch.
         """
         plt.plot(range(self.epochs), self.plot_train_accuracy, marker='o', color='red')
         plt.plot(range(self.epochs), self.plot_test_accuracy, marker='o', color='orange', linestyle='dashed')
@@ -449,7 +450,8 @@ class TrainTestModels:
         plt.show()
     
     def plot_confusion_matrix(self) -> None:
-        """ This function plots the confusion matrix of the testing set.
+        """ 
+        This function plots the confusion matrix of the testing set.
         """
         cm_test = np.zeros((self.classes,self.classes), dtype=int)
         all_labels = []
