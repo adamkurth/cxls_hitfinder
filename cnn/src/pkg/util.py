@@ -331,12 +331,13 @@ class TransformToTensor:
         image_tensor = torch.from_numpy(image).float().to(dtype=torch.float32)  # Convert to tensor with dtype=torch.float32
         return image_tensor # dimensions: C x H x W 
 
-
+# -----------------------------------------------------------------------------------------------------------------------
 class TrainTestModels:
     """ 
     This class trains, tests, and plots the loss, accuracy, and confusion matrix of a model.
     There are two methods for training: test_model_no_freeze and test_model_freeze.
     """
+    
     def __init__(self, model, loader: list, criterion, optimizer, device, cfg: dict) -> None:
         """ 
         Takes the arguments for training and testing and makes them available to the class.
@@ -362,85 +363,81 @@ class TrainTestModels:
         self.plot_train_loss = np.zeros(self.epochs)
         self.plot_test_accuracy = np.zeros(self.epochs)
         self.plot_test_loss = np.zeros(self.epochs)
+        self.cm = np.zeros((self.classes,self.classes), dtype=int)
 
-    def train(self) -> None:
+    def train(self, epoch) -> None:
         """
         This function trains the model without freezing the parameters in the case of transfer learning.
         This will print the loss and accuracy of the training sets per epoch.
         """
-        print(f'Model training: {self.model.__class__.__name__}')
-        
-        for epoch in range(self.epochs):
-            print('-- epoch '+str(epoch)) 
-            running_loss_train = accuracy_train = predictions = total_predictions = 0.0
+        # print(f'Model training: {self.model.__class__.__name__}')
 
-            self.model.train()
-            for inputs, labels in self.loader[0]:  # Assuming self.loader[0] is the training data loader
-                peak_images, _ = inputs
-                peak_images = peak_images.to(self.device)
-                labels = labels.to(self.device)
+        running_loss_train = accuracy_train = predictions = total_predictions = 0.0
 
-                self.optimizer.zero_grad()
-                score = self.model(peak_images)
-                loss = self.criterion(score, labels)
+        self.model.train()
+        for inputs, labels in self.loader[0]:  # Assuming self.loader[0] is the training data loader
+            peak_images, _ = inputs
+            peak_images = peak_images.to(self.device)
+            labels = labels.to(self.device)
 
-                loss.backward()
-                self.optimizer.step()
-                running_loss_train += loss.item()  
-                predictions = (torch.sigmoid(score) > 0.5).long()  
-                accuracy_train += (predictions == labels).float().sum()
-                total_predictions += np.prod(labels.shape)
-                
-            loss_train = running_loss_train / self.batch
-            self.plot_train_loss[epoch] = loss_train
+            self.optimizer.zero_grad()
+            score = self.model(peak_images)
+            loss = self.criterion(score, labels)
+
+            loss.backward()
+            self.optimizer.step()
+            running_loss_train += loss.item()  
+            predictions = (torch.sigmoid(score) > 0.5).long()  
+            accuracy_train += (predictions == labels).float().sum()
+            total_predictions += np.prod(labels.shape)
             
-            print(f'Train loss: {loss_train}')
+        loss_train = running_loss_train / self.batch
+        self.plot_train_loss[epoch] = loss_train
+        
+        print(f'Train loss: {loss_train}')
 
-            # If you want to uncomment these lines, make sure the calculation of accuracy_train is corrected as follows:
-            accuracy_train /= total_predictions
-            self.plot_train_accuracy[epoch] = accuracy_train
-            print(f'Train accuracy: {accuracy_train}')
+        # If you want to uncomment these lines, make sure the calculation of accuracy_train is corrected as follows:
+        accuracy_train /= total_predictions
+        self.plot_train_accuracy[epoch] = accuracy_train
+        print(f'Train accuracy: {accuracy_train}')
             
     def test_freeze(self) -> None:
         """ 
         This function trains the model with freezing the parameters of in the case of transfer learning.
         This will print the loss and accuracy of the testing sets per epoch.
         WIP
-        """
+        """ 
         pass
         
-    def test(self) -> None:
+    def test(self, epoch) -> None:
         """ 
         This function test the model and prints the loss and accuracy of the testing sets per epoch.
         """
-        print(f'Model testing: {self.model.__class__.__name__}')
-        
-        for epoch in range(self.epochs):
-            print('-- epoch '+str(epoch)) 
+        # print(f'Model testing: {self.model.__class__.__name__}')
             
-            running_loss_test = accuracy_test = predicted = total = 0.0
-            self.model.eval()
-            with torch.no_grad():
-                for inputs, labels in self.loader[1]:
-                    peak_images, _ = inputs
-                    peak_images = peak_images.to(self.device)
-                    labels = labels.to(self.device)
+        running_loss_test = accuracy_test = predicted = total = 0.0
+        self.model.eval()
+        with torch.no_grad():
+            for inputs, labels in self.loader[1]:
+                peak_images, _ = inputs
+                peak_images = peak_images.to(self.device)
+                labels = labels.to(self.device)
 
-                    score = self.model(peak_images)
-                    loss = self.criterion(score, labels)
-                    running_loss_test += loss.item()  # Convert to Python number with .item()
-                    predicted = (torch.sigmoid(score) > 0.5).long()  # Assuming 'score' is the output of your model
-                    accuracy_test += (predicted == labels).float().sum()
-                    total += np.prod(labels.shape)
+                score = self.model(peak_images)
+                loss = self.criterion(score, labels)
+                running_loss_test += loss.item()  # Convert to Python number with .item()
+                predicted = (torch.sigmoid(score) > 0.5).long()  # Assuming 'score' is the output of your model
+                accuracy_test += (predicted == labels).float().sum()
+                total += np.prod(labels.shape)
 
-            loss_test = running_loss_test/self.batch[1]
-            self.plot_test_loss[epoch] = loss_test
+        loss_test = running_loss_test/self.batch
+        self.plot_test_loss[epoch] = loss_test
 
-            accuracy_test /= total
-            self.plot_test_accuracy[epoch] = accuracy_test
+        accuracy_test /= total
+        self.plot_test_accuracy[epoch] = accuracy_test
 
-            print(f'Test loss: {loss_test}')
-            print(f'Test accuracy: {accuracy_test}')
+        print(f'Test loss: {loss_test}')
+        print(f'Test accuracy: {accuracy_test}')
         
     def plot_loss_accuracy(self) -> None:
         """ 
@@ -460,7 +457,6 @@ class TrainTestModels:
         """ 
         This function plots the confusion matrix of the testing set.
         """
-        cm_test = np.zeros((self.classes,self.classes), dtype=int)
         all_labels = []
         all_predictions = []
 
@@ -480,11 +476,27 @@ class TrainTestModels:
         all_labels = np.array(all_labels)
         all_predictions = np.array(all_predictions)
 
-        cm_test = confusion_matrix(all_labels, all_predictions)
+        self.cm = confusion_matrix(all_labels, all_predictions, normalize='true')
 
-        plt.matshow(cm_test,cmap="Blues")
+        plt.matshow(self.cm ,cmap="Blues")
         plt.title('Confusion matrix')
         plt.colorbar()
         plt.ylabel('True label')
         plt.xlabel('Predicted label')
         plt.show()
+
+    def get_confusion_matrix(self) -> np.ndarray:
+        """ 
+        This function returns the confusion matrix of the testing set.
+        """
+        return self.cm
+    
+    def epoch_loop(self) -> None: 
+        
+        print(f'Model testing and validating: {self.model.__class__.__name__}')       
+        
+        for epoch in range(self.epochs):
+            print('-- epoch '+str(epoch))
+
+            self.train(epoch)
+            self.test(epoch)
