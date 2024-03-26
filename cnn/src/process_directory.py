@@ -76,9 +76,15 @@ def main(images_dir):
     for dir_name in target_dirs:
         create_and_populate_dirs(os.path.join(images_dir, dir_name))
     
+    # Perform directory validation
     if validate_directories(images_dir):
-        print("Directory structure and image count verification completed successfully. Proceeding with data processing.")
-        process_data(images_dir)
+        print("Directory structure and image count verification completed successfully.")
+        user_decision = input("Do you want to proceed with data processing? (yes/no): ").strip().lower()
+        if user_decision == 'yes':
+            print("Proceeding with data processing.")
+            process_data(images_dir)
+        else:
+            print("Skipping data processing based on user input.")
     else:
         print("Errors detected during directory structure and image count verification. Please resolve these issues before proceeding.")
 

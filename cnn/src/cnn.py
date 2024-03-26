@@ -38,7 +38,15 @@ peak_paths, water_peak_paths, labels, water_background_path = pm.select_dataset(
 p = u.Processor(paths=pm, dataset=dataset)
 dm = u.DatasetManager(paths=pm, dataset=dataset, transform=None)
 
+# runs process_directory.py, 
+#   checks uniformity of images/
+#   generates all, with corresponding water/*/.h5
+#       labels/ 
+#       peaks_water_overlay/ 
+
+%run process_directory.py ../../images 
 # p.process_directory(dataset=dataset, clen=clen, photon_energy=photon_energy)
+
 
 # generate peak/overlay/label and upate attributes
 # overlaying the correct water01.h5 path to the peak images
