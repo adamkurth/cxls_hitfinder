@@ -401,13 +401,13 @@ class TrainTestModels:
         self.plot_train_accuracy[epoch] = accuracy_train
         print(f'Train accuracy: {accuracy_train}')
             
-    def test_freeze(self) -> None:
-        """ 
-        This function trains the model with freezing the parameters of in the case of transfer learning.
-        This will print the loss and accuracy of the testing sets per epoch.
-        WIP
-        """ 
-        pass
+    # def test_freeze(self) -> None:
+    #     """ 
+    #     This function trains the model with freezing the parameters of in the case of transfer learning.
+    #     This will print the loss and accuracy of the testing sets per epoch.
+    #     WIP
+    #     """   
+    #     pass
         
     def test(self, epoch) -> None:
         """ 
