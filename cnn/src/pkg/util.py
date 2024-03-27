@@ -393,7 +393,6 @@ class TrainTestModels:
             
         loss_train = running_loss_train / self.batch
         self.plot_train_loss[epoch] = loss_train
-        
         print(f'Train loss: {loss_train}')
 
         # If you want to uncomment these lines, make sure the calculation of accuracy_train is corrected as follows:
@@ -492,6 +491,9 @@ class TrainTestModels:
         return self.cm
     
     def epoch_loop(self) -> None: 
+        """
+        This function loops through the number of epochs and trains and tests the model.
+        """
         
         print(f'Model testing and validating: {self.model.__class__.__name__}')       
         
