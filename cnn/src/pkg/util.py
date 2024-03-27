@@ -11,18 +11,21 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import logging 
 import numpy as np
+import logging
 
 def load_h5(file_path:str) -> np.ndarray:
     with h5.File(file_path, 'r') as file:
         return np.array(file['entry/data/data'])
 
-def save_h5(file_path:str, data:np.ndarray) -> None:
+def save_h5(file_path:str, data:np.ndarray, save_attributes:bool, parameters:tuple) -> None:
     with h5.File(file_path, 'w') as file:
         file.create_dataset('entry/data/data', data=data)
+    if save_attributes:
+        assign_attributes(file_path, parameters)
+    print(f"File saved: {file_path}")
 
 def parameter_matrix(clen_values: list, photon_energy_values: list) -> None:
     # limited to 2d for now 
-    print("\ntrue parameter matrix...\n")
     dtype = [('clen', float), ('photon_energy', float)]
     matrix = np.zeros((len(clen_values), len(photon_energy_values)), dtype=dtype)
     for i, clen in enumerate(clen_values):
@@ -30,6 +33,13 @@ def parameter_matrix(clen_values: list, photon_energy_values: list) -> None:
             matrix[i, j] = (clen, photon_energy)
     return matrix
 
+def assign_attributes(file_path: str, parameters: tuple): 
+    clen, photon_energy = parameters
+    with h5.File(file_path, 'a') as f:
+        f.attrs['clen'] = clen
+        f.attrs['photon_energy'] = photon_energy
+    print(f"Attributes 'clen' and 'photon_energy' assigned to {file_path}")
+  
 def retrieve_attributes(file_path: str) -> tuple:
     """
     Retrieves 'clen' and 'photon_energy' attributes from an HDF5 file.
@@ -55,11 +65,10 @@ def check_attributes(paths, dataset: str, type: str) -> bool:
         paths = paths.get_label_images_paths(dataset)
     elif type == 'overlay':
         paths = paths.get_peaks_water_overlay_image_paths(dataset)
-    elif type == 'background':
-        paths = [paths.get_water_background(dataset)]  # Make it a list to use in iteration
+    elif type == 'background': # do not know if i need this for 'background' type
+        paths = [paths.get_water_background(dataset)]  # Make it a list to use in iteration 
     else:
         raise ValueError("Invalid type specified.")
-
     
     for path in paths:
         clen, photon_energy = retrieve_attributes(path)
@@ -278,32 +287,90 @@ class Processor:
     
 class DatasetManager(Dataset):
     # for PyTorch DataLoader
-    def __init__(self, paths, dataset:str, transform=False) -> None:
+    #NOTE: self.water_background is a string path
+    #   self.water_count is the number of water images to be added to the dataset
+    #   self.include_water_background is a boolean flag to include water background images in the dataset
+    #   self.percent_water_repeat is the percentage of water images to be added to the dataset
+    
+    def __init__(self, paths, dataset:str, parameters:tuple, transform=False, include_water_background:bool=True, percent_water_repeat:float=0.35) -> None:
         self.paths = paths
         self.dataset = dataset
+        self.parameters = parameters
         self.peak_paths, self.water_peak_paths, self.labels_paths, self.water_background = self.paths.select_dataset(dataset)
         self.transform = transform if transform is not None else TransformToTensor()
-        #NOTE: self.water_background is a string path
-        # assert len(self.peak_paths) == len(self.water_peak_paths) == len(self.labels_images), "Mismatch in dataset sizes"
+        assign_attributes(self.water_background, self.parameters) # assign attributes to water background image
+        
+        self.percent_water_repeat = percent_water_repeat
+        self.include_water_background = include_water_background
+        
         print(f"Number of peak images: {len(self.peak_paths)}")
         print(f"Number of water images: {len(self.water_peak_paths)}")
         print(f"Number of label images: {len(self.labels_paths)}")
         print(f"Check: Path to water background image: {self.water_background}\n")
     
+        if self.include_water_background:
+            self.generate_empty_labels()
+        
+    def generate_empty_labels(self) -> None:
+        total_images = len(self.peak_paths) # total number of peak images
+        self.water_count = int(self.percent_water_repeat * total_images) # e.g. 35% of total images 
+        
+        for _ in range(self.water_count):
+            empty_label_path = self.create_empty_label()
+            self.labels_paths.append(empty_label_path)
+            self.peak_paths.append(self.water_background) # add water background image to peak paths
+    
+        print(f"\nTotal images (true peak count): {total_images}")
+        print(f"Total images (including water background): {len(self.peak_paths)}")
+        print(f"Water background images added: {self.water_count}\n")
+        
+    def create_empty_label(self) -> str:
+        empty_label_path = os.path.join(self.paths.labels_dir, self.dataset, f'label_empty_{self.dataset}.h5')
+        if self.peak_paths: 
+            sample_peak_iamge_shape = load_h5(self.peak_paths[0]).shape # example image
+            empty_data = np.zeros(sample_peak_iamge_shape, dtype=np.float32)
+            save_h5(empty_label_path, empty_data, save_attributes=True, parameters=self.parameters)
+            print(f"Empty label file created: {empty_label_path}")
+        else:
+            print("No peak paths available to determine shape for empty label file.")
+        return empty_label_path
+
     def __len__(self) -> int:
         return len(self.peak_paths)
     
     def __getitem__(self, idx:int) -> tuple:
         peak_image = load_h5(self.peak_paths[idx])
         water_image = load_h5(self.water_peak_paths[idx])
-        label_image = load_h5(self.labels_paths[idx])
-
+        # label_image = load_h5(self.labels_paths[idx])
+        empty_label = os.path.join(self.paths.labels_dir, self.dataset, 'empty_water{dataset}.h5')
+        
+        # For labels of water images, use all zeros; for other images, load their labels
+        if self.label_paths[idx] == empty_label:
+            label_image = np.zeros_like(peak_image) # EMPTY LABEL
+        else:
+            label_path = self.labels_paths[idx]
+            label_image = load_h5(label_path)
+            
         if self.transform:
             peak_image = self.transform(peak_image) 
             water_image = self.transform(water_image) # dimensions: C x H x W
             label_image = self.transform(label_image)
             
         return (peak_image, water_image), label_image
+        
+    # def create_empty_label(self):
+    #     empty_label_path = os.path.join(self.paths.labels_dir, self.dataset, f'empty_water{self.dataset}.h5')
+    #     if not os.path.exists(empty_label_path):
+    #         if self.peak_paths:
+    #             sample_peak_image_shape = load_h5(self.peak_paths[0]).shape # example image
+    #             with h5.File(empty_label_path, 'w') as f:
+    #                 f.create_dataset('entry/data/data', data=np.zeros(sample_peak_image_shape, dtype=np.float32))
+    #                 print(f"Empty label file created: {empty_label_path}")
+    #         else:
+    #             print("No peak paths available to determine shape for empty label file.")
+    #     assign_attributes(empty_label_path, self.parameters)
+    #     return empty_label_path
+
 
 class TransformToTensor:
     def __call__(self, image:np.ndarray) -> torch.Tensor:
@@ -357,23 +424,23 @@ class TrainTestModels:
         self.plot_train_loss = np.zeros(self.epochs)
         self.plot_test_accuracy = np.zeros(self.epochs)
         self.plot_test_loss = np.zeros(self.epochs)
+        self.logger = logging.getLogger(__name__)
 
     def train(self) -> None:
         """
         This function trains the model without freezing the parameters in the case of transfer learning.
         This will print the loss and accuracy of the training sets per epoch.
         """
-        print(f'Model training: {self.model.__class__.__name__}')
+        self.logger.info(f'Model training: {self.model.__class__.__name__}')
         
         for epoch in range(self.epochs):
-            print('-- epoch '+str(epoch)) 
+            self.logger.info('-- epoch '+str(epoch)) 
             running_loss_train = accuracy_train = predictions = total_predictions = 0.0
 
             self.model.train()
-            for inputs, labels in self.loader[0]:  # Assuming self.loader[0] is the training data loader
-                peak_images, _ = inputs
-                peak_images = peak_images.to(self.device)
-                labels = labels.to(self.device)
+            for inputs, labels in self.loader[0]: 
+                peak_images, overlay_images = inputs
+                peak_images, overlay_images, labels = peak_images.to(self.device), overlay_images.to(self.device), labels.to(self.device)
 
                 self.optimizer.zero_grad()
                 score = self.model(peak_images)
@@ -389,12 +456,12 @@ class TrainTestModels:
             loss_train = running_loss_train / self.batch
             self.plot_train_loss[epoch] = loss_train
             
-            print(f'Train loss: {loss_train}')
+            self.logger.info(f'Train loss: {loss_train}')
 
             # If you want to uncomment these lines, make sure the calculation of accuracy_train is corrected as follows:
             accuracy_train /= total_predictions
             self.plot_train_accuracy[epoch] = accuracy_train
-            print(f'Train accuracy: {accuracy_train}')
+            self.logger.info(f'Train accuracy: {accuracy_train}')
             
     def test_freeze(self) -> None:
         """ 
@@ -408,10 +475,10 @@ class TrainTestModels:
         """ 
         This function test the model and prints the loss and accuracy of the testing sets per epoch.
         """
-        print(f'Model testing: {self.model.__class__.__name__}')
+        self.logger.info(f'Model testing: {self.model.__class__.__name__}')
         
         for epoch in range(self.epochs):
-            print('-- epoch '+str(epoch)) 
+            self.logger.info('-- epoch '+str(epoch)) 
             
             running_loss_test = accuracy_test = predicted = total = 0.0
             self.model.eval()
@@ -434,8 +501,8 @@ class TrainTestModels:
             accuracy_test /= total
             self.plot_test_accuracy[epoch] = accuracy_test
 
-            print(f'Test loss: {loss_test}')
-            print(f'Test accuracy: {accuracy_test}')
+            self.logger.info(f'Test loss: {loss_test}')
+            self.logger.info(f'Test accuracy: {accuracy_test}')
         
     def plot_loss_accuracy(self) -> None:
         """ 
