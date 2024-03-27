@@ -66,12 +66,15 @@ def main(dataset:str, process_dir:bool, images_path:str):
     pm = u.PathManager()
     # peak_paths, water_peak_paths, labels, water_background_path = pm.select_dataset(dataset=dataset) 
     p = u.Processor(paths=pm, dataset=dataset)
-    dm = u.DatasetManager(paths=pm, dataset=dataset, transform=None, include_water_background=True, percent_water_repeat=0.35)
+
+    # peak, label, overlay, background are valid types
+    dm = u.DatasetManager(paths=pm, dataset=dataset, parameters=(clen, photon_energy), transform=None, include_water_background=True, percent_water_repeat=0.35)
 
     # peak, label, overlay, background are valid types
     u.check_attributes(paths=pm, dataset=dataset, type='peak') 
     u.check_attributes(paths=pm, dataset=dataset, type='overlay')
     u.check_attributes(paths=pm, dataset=dataset, type='label')
+    u.check_attributes(paths=pm, dataset=dataset, type='background')
     
     # test/train loaders
     train_loader, test_loader = u.prepare(data_manager=dm, batch_size=10)
