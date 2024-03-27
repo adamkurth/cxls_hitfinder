@@ -23,7 +23,6 @@ def save_h5(file_path:str, data:np.ndarray) -> None:
 
 def parameter_matrix(clen_values: list, photon_energy_values: list) -> None:
     # limited to 2d for now 
-    print("\ntrue parameter matrix...\n")
     dtype = [('clen', float), ('photon_energy', float)]
     matrix = np.zeros((len(clen_values), len(photon_energy_values)), dtype=dtype)
     for i, clen in enumerate(clen_values):
@@ -56,8 +55,12 @@ def check_attributes(paths, dataset: str, type: str) -> bool:
         paths = paths.get_label_images_paths(dataset)
     elif type == 'overlay':
         paths = paths.get_peaks_water_overlay_image_paths(dataset)
-    elif type == 'background':
-        paths = [paths.get_water_background(dataset)]  # Make it a list to use in iteration
+    
+    # do not know if i need this for 'background' type
+    
+    # elif type == 'background':
+    #     paths = [paths.get_water_background(dataset)]  # Make it a list to use in iteration 
+    
     else:
         raise ValueError("Invalid type specified.")
 
@@ -279,13 +282,31 @@ class Processor:
     
 class DatasetManager(Dataset):
     # for PyTorch DataLoader
-    def __init__(self, paths, dataset:str, transform=False) -> None:
+    #NOTE: self.water_background is a string path
+    #   self.water_count is the number of water images to be added to the dataset
+    #   self.include_water_background is a boolean flag to include water background images in the dataset
+    #   self.percent_water_repeat is the percentage of water images to be added to the dataset
+    
+    def __init__(self, paths, dataset:str, transform=False, include_water_background:bool=True, percent_water_repeat:float=0.35) -> None:
         self.paths = paths
         self.dataset = dataset
         self.peak_paths, self.water_peak_paths, self.labels_paths, self.water_background = self.paths.select_dataset(dataset)
+        self.percent_water_repeat = percent_water_repeat 
+        self.include_water_background = include_water_background
+        
+        if self.include_water_background:
+            total_images = len(self.peak_paths) # total number of peak images
+            self.water_count = int(percent_water_repeat * total_images) # e.g. 35% of total images 
+            
+            # add water background (empty) multiple times according to calculated water_count
+            self.peak_paths += [self.water_background] * self.water_count
+            # assuming the label for water background is 0 for all pixels
+            self.labels_paths += [np.zeros_like(load_h5(self.water_background))] * self.water_count 
+            print(f"\nTotal images (true peak count): {total_images}")
+            print(f"Total images (including water background): {len(self.peak_paths)}")
+            print(f"Water background images added: {self.water_count}\n")
+        
         self.transform = transform if transform is not None else TransformToTensor()
-        #NOTE: self.water_background is a string path
-        # assert len(self.peak_paths) == len(self.water_peak_paths) == len(self.labels_images), "Mismatch in dataset sizes"
         print(f"Number of peak images: {len(self.peak_paths)}")
         print(f"Number of water images: {len(self.water_peak_paths)}")
         print(f"Number of label images: {len(self.labels_paths)}")
@@ -297,8 +318,14 @@ class DatasetManager(Dataset):
     def __getitem__(self, idx:int) -> tuple:
         peak_image = load_h5(self.peak_paths[idx])
         water_image = load_h5(self.water_peak_paths[idx])
-        label_image = load_h5(self.labels_paths[idx])
-
+        
+        # For labels of water images, use all zeros; for other images, load their labels
+        if idx >= len(self.peak_paths) - self.water_count: 
+            label = np.zeros_like(peak_image) # EMPTY LABEL
+        else:
+            label_path = self.labels_paths[idx]
+            label_image = load_h5(label_path)
+            
         if self.transform:
             peak_image = self.transform(peak_image) 
             water_image = self.transform(water_image) # dimensions: C x H x W
@@ -372,10 +399,9 @@ class TrainTestModels:
             running_loss_train = accuracy_train = predictions = total_predictions = 0.0
 
             self.model.train()
-            for inputs, labels in self.loader[0]:  # Assuming self.loader[0] is the training data loader
-                peak_images, _ = inputs
-                peak_images = peak_images.to(self.device)
-                labels = labels.to(self.device)
+            for inputs, labels in self.loader[0]: 
+                peak_images, overlay_images = inputs
+                peak_images, overlay_images, labels = peak_images.to(self.device), overlay_images.to(self.device), labels.to(self.device)
 
                 self.optimizer.zero_grad()
                 score = self.model(peak_images)
