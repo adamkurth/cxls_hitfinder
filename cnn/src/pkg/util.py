@@ -577,6 +577,7 @@ class TrainTestModels:
         
         for epoch in range(self.epochs):
             self.logger.info('-- epoch '+str(epoch)) 
+            print('-- epoch '+str(epoch)) 
 
             self.train(epoch)
             self.test(epoch)
