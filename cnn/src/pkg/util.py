@@ -324,7 +324,7 @@ class DatasetManager(Dataset):
             empty_label_path = self.create_empty_label()
             self.labels_paths.append(empty_label_path)
             ### in __getitem__, water_peaks_paths[idx] will go out of bounds if below is added because idx will be based on the range of peak_paths ###
-            self.peak_paths.append(self.water_background) # add water background image to peak paths
+            # self.peak_paths.append(self.water_background) # add water background image to peak paths
     
         print(f"\nTotal images (true peak count): {total_images}")
         print(f"Total images (including water background): {len(self.peak_paths)}")
@@ -345,7 +345,7 @@ class DatasetManager(Dataset):
         return len(self.peak_paths)
     
     def __getitem__(self, idx:int) -> tuple:
-        print(len(self.peak_paths), len(self.water_peak_paths), idx) ### testing idx out of bounds ###
+        # print(len(self.peak_paths), len(self.water_peak_paths), idx) ### testing idx out of bounds ###
         peak_image = load_h5(self.peak_paths[idx])
         # water_image = load_h5(self.water_peak_paths[idx])       
         label_image = load_h5(self.labels_paths[idx])
