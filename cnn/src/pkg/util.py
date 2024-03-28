@@ -465,11 +465,13 @@ class TrainTestModels:
         loss_train = running_loss_train / self.batch
         self.plot_train_loss[epoch] = loss_train
         self.logger.info(f'Train loss: {loss_train}')
+        print(f'Train loss: {loss_train}')
 
         # If you want to uncomment these lines, make sure the calculation of accuracy_train is corrected as follows:
         accuracy_train /= total_predictions
         self.plot_train_accuracy[epoch] = accuracy_train
         self.logger.info(f'Train accuracy: {accuracy_train}')
+        print(f'Train accuracy: {accuracy_train}')
             
     # def test_freeze(self) -> None:
     #     """ 
@@ -508,6 +510,8 @@ class TrainTestModels:
         self.plot_test_accuracy[epoch] = accuracy_test
 
         self.logger.info(f'Test loss: {loss_test}')
+        self.logger.info(f'Test accuracy: {accuracy_test}')
+        print(f'Test loss: {loss_test}')
         print(f'Test accuracy: {accuracy_test}')
 
         
@@ -568,12 +572,17 @@ class TrainTestModels:
         This function loops through the number of epochs and trains and tests the model.
         """
         
-        # print(f'Model testing and validating: {self.model.__class__.__name__}')       
-        
         self.logger.info(f'Model training and testing: {self.model.__class__.__name__}')
+        print(f'Model testing and validating: {self.model.__class__.__name__}')       
         
         for epoch in range(self.epochs):
             self.logger.info('-- epoch '+str(epoch)) 
 
             self.train(epoch)
             self.test(epoch)
+            
+    def get_loss_accuracy(self) -> dict:
+        """ 
+        This function returns the loss and accuracy of the training and testing sets.
+        """
+        return {'train loss': self.plot_train_loss, 'train accuracy': self.plot_train_accuracy, 'test loss': self.plot_test_loss, 'test accuracy': self.plot_test_accuracy}
