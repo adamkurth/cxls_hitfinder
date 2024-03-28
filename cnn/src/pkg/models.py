@@ -194,7 +194,7 @@ class DenseNetBraggPeakClassifier(nn.Module):
 
 
 
-class BraggPeakAnalysisPipeline:
+class ModelPipeline:
     def __init__(self, peak_model, energy_model, clen_model) -> None:
         """
         This class represents a pipeline for analyzing Bragg peak images.
