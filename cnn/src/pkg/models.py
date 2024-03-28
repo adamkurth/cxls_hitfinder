@@ -210,7 +210,7 @@ class BraggPeakAnalysisPipeline:
         self.energy_model = energy_model
         self.clen_model = clen_model
 
-    def run_pipeline(self, image):
+    def run_pipeline(self, image) -> tuple:
         """ 
         This function runs the analysis pipeline on a given image.
 
