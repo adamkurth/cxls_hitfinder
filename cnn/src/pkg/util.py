@@ -321,7 +321,8 @@ class DatasetManager(Dataset):
         for _ in range(self.water_count):
             empty_label_path = self.create_empty_label()
             self.labels_paths.append(empty_label_path)
-            self.peak_paths.append(self.water_background) # add water background image to peak paths
+            ### in __getitem__, water_peaks_paths[idx] will go out of bounds if below is added because idx will be based on the range of peak_paths ###
+            # self.peak_paths.append(self.water_background) # add water background image to peak paths
     
         print(f"\nTotal images (true peak count): {total_images}")
         print(f"Total images (including water background): {len(self.peak_paths)}")
@@ -333,7 +334,7 @@ class DatasetManager(Dataset):
             sample_peak_iamge_shape = load_h5(self.peak_paths[0]).shape # example image
             empty_data = np.zeros(sample_peak_iamge_shape, dtype=np.float32)
             save_h5(empty_label_path, empty_data, save_attributes=True, parameters=self.parameters)
-            print(f"Empty label file created: {empty_label_path}")
+            print(f"Empty label file created: {empty_label_path}");
         else:
             print("No peak paths available to determine shape for empty label file.")
         return empty_label_path
@@ -342,13 +343,14 @@ class DatasetManager(Dataset):
         return len(self.peak_paths)
     
     def __getitem__(self, idx:int) -> tuple:
+        # print(len(self.peak_paths), len(self.water_peak_paths), idx) ### testing idx out of bounds ###
         peak_image = load_h5(self.peak_paths[idx])
-        water_image = load_h5(self.water_peak_paths[idx])
+        water_image = load_h5(self.water_peak_paths[idx])       
         # label_image = load_h5(self.labels_paths[idx])
         empty_label = os.path.join(self.paths.labels_dir, self.dataset, 'empty_water{dataset}.h5')
         
         # For labels of water images, use all zeros; for other images, load their labels
-        if self.label_paths[idx] == empty_label:
+        if self.labels_paths[idx] == empty_label:  ### mispell label_paths ###
             label_image = np.zeros_like(peak_image) # EMPTY LABEL
         else:
             label_path = self.labels_paths[idx]
@@ -462,12 +464,12 @@ class TrainTestModels:
             
         loss_train = running_loss_train / self.batch
         self.plot_train_loss[epoch] = loss_train
-        print(f'Train loss: {loss_train}')
+        self.logger.info(f'Train loss: {loss_train}')
 
         # If you want to uncomment these lines, make sure the calculation of accuracy_train is corrected as follows:
         accuracy_train /= total_predictions
         self.plot_train_accuracy[epoch] = accuracy_train
-        print(f'Train accuracy: {accuracy_train}')
+        self.logger.info(f'Train accuracy: {accuracy_train}')
             
     # def test_freeze(self) -> None:
     #     """ 
@@ -505,7 +507,7 @@ class TrainTestModels:
         accuracy_test /= total
         self.plot_test_accuracy[epoch] = accuracy_test
 
-        print(f'Test loss: {loss_test}')
+        self.logger.info(f'Test loss: {loss_test}')
         print(f'Test accuracy: {accuracy_test}')
 
         
@@ -571,7 +573,7 @@ class TrainTestModels:
         self.logger.info(f'Model training and testing: {self.model.__class__.__name__}')
         
         for epoch in range(self.epochs):
-            print('-- epoch '+str(epoch))
+            self.logger.info('-- epoch '+str(epoch)) 
 
             self.train(epoch)
             self.test(epoch)
