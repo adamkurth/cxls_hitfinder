@@ -185,12 +185,35 @@ class PathManager:
 class Processor:
     def __init__(self, paths, dataset: str) -> None:
         self.paths = paths  # Expecting an instance of PathManager
-        self.length = None     # .15, .25, .35 m
-        self.photon_energy = None # 6,7.5, 8 keV 
+        self.length = None          # .15, .25, .35 m
+        self.photon_energy = None   #  6, 7.5, 8 keV 
         self.threshold = 1 # used for peak images (pure signal)
-        # self.protein = '1IC6'
+        self.dataset = dataset
+        self.dataset_init()
         self.water_background = load_h5(self.paths.get_water_background(dataset))
 
+    def dataset_init(self) -> None:
+        clen_values, photon_energy_values = [1.5, 2.5, 3.5], [6000, 7000, 8000]
+        self.dataset_dict = {
+            '01': [clen_values[0], photon_energy_values[0]],
+            '02': [clen_values[0], photon_energy_values[1]],
+            '03': [clen_values[0], photon_energy_values[2]],
+            '04': [clen_values[1], photon_energy_values[0]],
+            '05': [clen_values[1], photon_energy_values[1]],
+            '06': [clen_values[1], photon_energy_values[2]],
+            '07': [clen_values[2], photon_energy_values[0]],
+            '08': [clen_values[2], photon_energy_values[1]],
+            '09': [clen_values[2], photon_energy_values[2]],
+            }
+
+        clen, photon_energy = self.get_parameters()
+        return self.dataset_dict
+  
+    def get_parameters(self) -> tuple:
+        clen, photon_energy = self.dataset_dict[self.dataset] # get parameters 
+        print(f'Parameter values of dataset {self.dataset}: {clen}, {photon_energy}')
+        return clen, photon_energy
+    
     @staticmethod
     def update_attributes(file_path:str, clen:float, photon_energy:float) -> None:
         # check file exists
@@ -282,7 +305,7 @@ class Processor:
             self.update_attributes(out_label_path, clen, photon_energy)
             
             print(f"Processed and labeled images for {basename} saved.")
-        
+
     
 class DatasetManager(Dataset):
     # for PyTorch DataLoader
@@ -324,7 +347,8 @@ class DatasetManager(Dataset):
             empty_label_path = self.create_empty_label()
             self.labels_paths.append(empty_label_path) # append path of empty label images
             self.peak_paths.append(self.water_background) # add water background image to peak paths
-            self.water_peak_paths.append(self.water_background)
+            self.water_peak_paths.append(self.water_background) # add water background image to water peak paths
+            
         print(f"\nTotal images (true peak count): {total_images}")
         print(f"Total images (including water background): {len(self.peak_paths)}")
         print(f"Water background images added: {self.water_count}\n")
