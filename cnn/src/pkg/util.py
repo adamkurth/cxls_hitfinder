@@ -105,13 +105,13 @@ def prepare(data_manager:Dataset, batch_size:int=32) -> tuple:
     return train_loader, test_loader # returns train/test tensor data loaders
     
 class PathManager:
-    def __init__(self, root_dir=None) -> None:
+    def __init__(self, dataset:str, root_dir=None) -> None:
         if root_dir is None:
             self.current_path = os.getcwd()  # Using the current working directory as a fallback
             self.root = self.re_root(self.current_path)
         else:
             self.root = root_dir  # Directly using the provided root directory
-        self.dataset = None
+        self.dataset = dataset
         self.setup_directories()
         
     def setup_directories(self) -> None:
@@ -122,15 +122,15 @@ class PathManager:
         self.peaks_water_overlay_dir = os.path.join(self.images_dir, 'peaks_water_overlay')
         self.water_background_dir = os.path.join(self.images_dir, 'water')
         self.temp = os.path.join(self.images_dir, 'temp')
+        self.select_dataset(dataset=self.dataset) # calls init_lists()
+        
+    def init_lists(self, dataset:str) -> None:
+        self.peak_list = self.get_peak_image_paths(self.dataset)
+        self.water_peak_list = self.get_peaks_water_overlay_image_paths(self.dataset)
+        self.label_list = self.get_label_images_paths(self.dataset)
+        self.water_background_list = [self.get_water_background(self.dataset)] # expecting 1 image
+        return self.peak_list, self.water_peak_list, self.label_list, self.water_background_list
     
-    def select_dataset(self, dataset:str) -> tuple:
-        self.dataset = dataset # select dataset 01 through 09
-        peak_paths = self.get_peak_image_paths(dataset)
-        water_peak_paths = self.get_peaks_water_overlay_image_paths(dataset)
-        labels_paths = self.get_label_images_paths(dataset)
-        water_background = self.get_water_background(dataset)
-        return peak_paths, water_peak_paths, labels_paths, water_background
-         
     def re_root(self, current_path: str) -> str:
         match = re.search("cxls_hitfinder", current_path)
         if match:
@@ -138,7 +138,11 @@ class PathManager:
             return root
         else:
             raise Exception("Could not find the root directory. (cxls_hitfinder)\n", "Current working dir:", self.current_path)
-
+        
+    def select_dataset(self, dataset:str) -> tuple:    
+        self.dataset = dataset # select dataset 01 through 09
+        return self.init_lists(self.dataset)  #peak_paths, water_peak_paths, labels_paths, water_background
+    
     def get_path(self, path_name:str) -> str:
             paths_dict = {
                 'root': self.root,
@@ -173,15 +177,40 @@ class PathManager:
     def get_water_background(self, dataset:str) -> str:
         dataset_dir = os.path.join(self.water_background_dir, dataset)
         water_images = [f for f in os.listdir(dataset_dir) if f.startswith('water') and f.endswith('.h5')]
-        
         if len(water_images) == 1:
             print(f"Found water background image: {water_images[0]}")
-            return os.path.join(dataset_dir, water_images[0]) # expecting 1 image 
+            return os.path.join(dataset_dir, water_images[0]) # expecting 1 image, output:str
         elif len(water_images) > 1:
             raise Exception("Multiple water images found in the specified dataset directory.")
         else:
             raise Exception("Could not find water image in the specified dataset directory.")
+    
+    def update_paths(self, file_path:str, dir_type:str) -> None:
+        """
+        Updates the internal tracking of file paths after a new file has been added.
+        Clears cache for affected directory paths and optionally updates internal lists.
+
+        Parameters:
+        - file_path: The full path of the newly added file.
+        - type: The type of the file added ('peak', 'overlay', 'label', or 'background').
+        """
+        # Clear cache to reflect changes in the filesystem
+        if dir_type == 'peak':
+            self.peak_list.append(file_path)
+        elif dir_type == 'overlay':
+            self.water_peak_list.append(file_path)
+        elif dir_type == 'label':
+            self.label_list.append(file_path)
+        elif dir_type == 'background':
+            self.water_background_list.append(file_path)
+        else:
+            raise ValueError("Invalid type specified for updating paths.")
         
+        print(f"Paths updated for {dir_type}. New file added: {file_path}")
+
+        parameters = retrieve_attributes(file_path=file_path)
+        check_attributes(paths=self, dataset=self.dataset,type=dir_type)
+
 class Processor:
     def __init__(self, paths, dataset: str) -> None:
         self.paths = paths  # Expecting an instance of PathManager
@@ -204,14 +233,13 @@ class Processor:
             '07': [clen_values[2], photon_energy_values[0]],
             '08': [clen_values[2], photon_energy_values[1]],
             '09': [clen_values[2], photon_energy_values[2]],
-            }
-
+        }
         clen, photon_energy = self.get_parameters()
         return self.dataset_dict
   
     def get_parameters(self) -> tuple:
         clen, photon_energy = self.dataset_dict[self.dataset] # get parameters 
-        print(f'Parameter values of dataset {self.dataset}: {clen}, {photon_energy}')
+        self.parameters = (clen, photon_energy)
         return clen, photon_energy
     
     @staticmethod
@@ -250,10 +278,10 @@ class Processor:
         labeled_array = self.heatmap(peak_image_array, min_distance)
         # Assuming to_tensor is a function converting numpy arrays to PyTorch tensors
         heatmap_tensor = torch.tensor(labeled_array).unsqueeze(0)  # Add a channel dimension at the beginning
-
         return heatmap_tensor  # Ensure it matches expected dimensions [C, H, W]        
 
     def confirm_value(self, value:float, value_name:str) -> bool:
+        # used in process_directory()
         confirm = input(f"Confirm '{value_name}' value: {value} (type 'y' to confirm): ")
         if confirm.lower() == 'y':
             print(f"'{value_name}' value {value} confirmed successfully.")
@@ -261,7 +289,17 @@ class Processor:
         else:
             print(f"'{value_name}' confirmation failed at attempt\n")
             return False
-    
+
+    def confirm_action(self, action_discription:str) -> bool:
+        # used in process_empty()
+        confirm = input(f"Confirm action: {action_discription} (type 'y' to confirm): ")
+        if confirm.lower() == 'y':
+            print(f"Action '{action_discription}' confirmed successfully.")
+            return True
+        else:
+            print(f"Action '{action_discription}' confirmation failed at attempt\n")
+            return False
+        
     def process_directory(self, dataset:str, clen:float, photon_energy:int) -> None: 
         """
         Processes all peak images in the directory, applies the water background,
@@ -275,38 +313,85 @@ class Processor:
         photon_energy_confirmed = self.confirm_value(photon_energy, 'photon_energy')
         water_background_confirmed = self.confirm_value(self.paths.get_water_background(dataset), 'water_background')
         
+        parameters = self.get_parameters()
+
         if not (clen_confirmed and photon_energy_confirmed and dataset_confirmed and water_background_confirmed):
             print("Operation cancelled due to confirmation failure.")
             return
         
         # get peak images
-        peak_image_paths = self.paths.get_peak_image_paths(dataset)
+        peak_image_paths = self.paths.get_peak_image_paths(dataset=dataset)
         # get water background image 
         water_background = self.water_background
         
         for peak_path in peak_image_paths:
             # derive a unique basename for each peak image
             basename = os.path.basename(peak_path)
+            
             # unique filenames for the overlay and label images based on the current peak image's basename
             out_overlay_path = os.path.join(self.paths.peaks_water_overlay_dir, dataset, f'overlay_{basename}')
             out_label_path = os.path.join(self.paths.labels_dir, dataset, f'label_{basename}')
             
-            peak_image = load_h5(peak_path)
-            labeled_array = self.heatmap(peak_image)
-            peak_water_overlay_image = self.apply_water_background(peak_image)
+            peak_image = load_h5(file_path=peak_path)
+            labeled_array = self.heatmap(peak_image_array=peak_image)
+            peak_water_overlay_image = self.apply_water_background(peak_image_array=peak_image)
             
            # Save the processed peak image and labeled image to their respective unique paths
-            save_h5(out_overlay_path, peak_water_overlay_image)
-            save_h5(out_label_path, labeled_array)
+            save_h5(file_path=out_overlay_path, data=peak_water_overlay_image, save_attributes=True, parameters=parameters)
+            save_h5(file_path=out_label_path, data=labeled_array, save_attributes=True, parameters=parameters)
             
             # Update attributes for each file with clen and photon energy
-            self.update_attributes(peak_path, clen, photon_energy)
-            self.update_attributes(out_overlay_path, clen, photon_energy)
-            self.update_attributes(out_label_path, clen, photon_energy)
+            self.update_attributes(file_path=peak_path, clen=clen, photon_energy=photon_energy)
+            self.update_attributes(file_path=out_overlay_path, clen=clen, photon_energy=photon_energy)
+            self.update_attributes(file_path=out_label_path, clen=clen, photon_energy=photon_energy)
             
             print(f"Processed and labeled images for {basename} saved.")
+        print(f"\nProcessing complete for dataset {dataset}.\n")
+        
+    def process_empty(self, percent_empty:float=0.3) -> None:
+        self.percent_empty = percent_empty  
+        print('\nStarting Step 2...')
+        print(f"Processing empty images for dataset {self.dataset}...")
+        
+        if not self.confirm_action("This will generate empty images based on the specified percentage."):
+            print("Operation canceled by the user.")
+            return
 
-    
+        # calculate number of empty images to add based on percentage
+        num_exist_images = len(self.paths.get_peak_image_paths(self.dataset)) # number of duplicated empty images
+        num_empty_images = int(percent_empty * num_exist_images) # number of duplicated water images 
+        
+        # generate and save empty images, update PathManager accordingly
+        print(f'Will generate {num_empty_images} empty images for dataset {self.dataset}...')
+        
+        for i in range(num_empty_images):
+            formatted = f'{i+1:05d}' # starts at 00001
+            empty_label_path = os.path.join(self.paths.labels_dir, self.dataset, f'empty_{self.dataset}_{formatted}.h5')
+            empty_peak_path = os.path.join(self.paths.peaks_dir, self.dataset, f'empty_{self.dataset}_{formatted}.h5')
+            empty_overlay_path = os.path.join(self.paths.peaks_water_overlay_dir, self.dataset, f'empty_{self.dataset}_{formatted}.h5')
+            
+            # data 
+            empty = np.zeros_like(self.water_background, dtype=np.float32) # empty image no water_background 
+            water_background = self.water_background # water background image
+            
+            # save h5 files 
+            # labels -> empty, peaks -> empty, overlay -> water background
+            save_h5(empty_label_path, empty, save_attributes=True, parameters=self.parameters) # empty label
+            save_h5(empty_peak_path, empty, save_attributes=True, parameters=self.parameters) # empty peak
+            save_h5(empty_overlay_path, water_background, save_attributes=True, parameters=self.parameters) # water background
+            
+            # save paths to PathManager
+            self.paths.update_paths(file_path=empty_label_path, dir_type='label')
+            self.paths.update_paths(empty_label_path, dir_type='peak')
+            self.paths.update_paths(empty_overlay_path, dir_type='overlay')
+            
+            print(f"\nEmpty label file created: {empty_label_path}")
+            print(f"Empty peak file created: {empty_peak_path}")
+            print(f"Empty overlay file mimicking water background created: {empty_overlay_path}\n")
+
+        print(f"Empty images added: {num_empty_images}")
+        print(f"Processing complete for dataset {self.dataset}.\n")
+        
 class DatasetManager(Dataset):
     # for PyTorch DataLoader
     #NOTE: self.water_background is a string path
