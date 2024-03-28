@@ -190,3 +190,45 @@ class DenseNetBraggPeakClassifier(nn.Module):
         x = self.heatmap_conv(x)  # Convolution to generate heatmap
         x = self.upsample(x)  # Upsample to match desired heatmap size
         return x
+
+
+
+
+class BraggPeakAnalysisPipeline:
+    def __init__(self, peak_model, energy_model, clen_model) -> None:
+        """
+        This class represents a pipeline for analyzing Bragg peak images.
+        It combines three models for peak detection, energy estimation, and clen calculation.
+
+        Args:
+            peak_model (nn.Module): Convolutional neural network for peak detection.
+            energy_model (nn.Module): Convolutional neural network for energy estimation. This model is used when a peak is detected.
+            clen_model (nn.Module): Convolutional neural network for clen calculation. This model is used when a peak is detected after energy_model.
+        """
+        
+        self.binary_model = peak_model
+        self.energy_model = energy_model
+        self.clen_model = clen_model
+
+    def run_pipeline(self, image):
+        """ 
+        This function runs the analysis pipeline on a given image.
+
+        Args:
+            image (torch.Tensor): This file should be a 2D tensor representing the image of the Bragg peak .h5 file. 
+
+        Returns:
+            tuple: This function returns the estimated x-ray energy and clen value if a peak is detected, otherwise None.
+        """
+        
+        with torch.no_grad():  
+            peak_detected = self.binary_model(image).argmax(dim=1).item() == 1
+              
+            if peak_detected:
+                x_ray_energy = self.energy_model(image).item()
+                clen = self.clen_model(image).item()
+                
+                return x_ray_energy, clen
+            else:
+                return None 
+
