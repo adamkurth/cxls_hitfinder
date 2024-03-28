@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import logging 
 import numpy as np
-import logging
 
 def load_h5(file_path:str) -> np.ndarray:
     with h5.File(file_path, 'r') as file:
@@ -296,30 +295,36 @@ class DatasetManager(Dataset):
         self.paths = paths
         self.dataset = dataset
         self.parameters = parameters
-        self.peak_paths, self.water_peak_paths, self.labels_paths, self.water_background = self.paths.select_dataset(dataset)
         self.transform = transform if transform is not None else TransformToTensor()
+        
+        # load dataset paths
+        self.peak_paths, self.water_peak_paths, self.labels_paths, self.water_background = self.paths.select_dataset(dataset)
         assign_attributes(self.water_background, self.parameters) # assign attributes to water background image
-        
-        self.percent_water_repeat = percent_water_repeat
-        self.include_water_background = include_water_background
-        
+    
+        print(f"Dataset {self.dataset} configured.")
         print(f"Number of peak images: {len(self.peak_paths)}")
         print(f"Number of water images: {len(self.water_peak_paths)}")
         print(f"Number of label images: {len(self.labels_paths)}")
         print(f"Check: Path to water background image: {self.water_background}\n")
     
-        if self.include_water_background:
+        # decide whether to include water background images
+        self.percent_water_repeat = percent_water_repeat
+        self.include_water_background = include_water_background
+    
+        if self.include_water_background: 
             self.generate_empty_labels()
         
     def generate_empty_labels(self) -> None:
+        # determine the number of "empty" images to add to the dataset (based on percentage)
         total_images = len(self.peak_paths) # total number of peak images
         self.water_count = int(self.percent_water_repeat * total_images) # e.g. 35% of total images 
         
+        # generate and appent empty labels and their corresponding water background images
         for _ in range(self.water_count):
             empty_label_path = self.create_empty_label()
-            self.labels_paths.append(empty_label_path)
+            self.labels_paths.append(empty_label_path) # append path of empty label images
             self.peak_paths.append(self.water_background) # add water background image to peak paths
-    
+            self.water_peak_paths.append(self.water_background)
         print(f"\nTotal images (true peak count): {total_images}")
         print(f"Total images (including water background): {len(self.peak_paths)}")
         print(f"Water background images added: {self.water_count}\n")
@@ -327,8 +332,8 @@ class DatasetManager(Dataset):
     def create_empty_label(self) -> str:
         empty_label_path = os.path.join(self.paths.labels_dir, self.dataset, f'label_empty_{self.dataset}.h5')
         if self.peak_paths: 
-            sample_peak_iamge_shape = load_h5(self.peak_paths[0]).shape # example image
-            empty_data = np.zeros(sample_peak_iamge_shape, dtype=np.float32)
+            sample_peak_image_shape = load_h5(self.peak_paths[0]).shape # example image
+            empty_data = np.zeros(sample_peak_image_shape, dtype=np.float32)
             save_h5(empty_label_path, empty_data, save_attributes=True, parameters=self.parameters)
             print(f"Empty label file created: {empty_label_path}")
         else:
@@ -341,11 +346,11 @@ class DatasetManager(Dataset):
     def __getitem__(self, idx:int) -> tuple:
         peak_image = load_h5(self.peak_paths[idx])
         water_image = load_h5(self.water_peak_paths[idx])
-        # label_image = load_h5(self.labels_paths[idx])
+
         empty_label = os.path.join(self.paths.labels_dir, self.dataset, 'empty_water{dataset}.h5')
         
         # For labels of water images, use all zeros; for other images, load their labels
-        if self.label_paths[idx] == empty_label:
+        if self.label_paths[idx] == empty_label: #????
             label_image = np.zeros_like(peak_image) # EMPTY LABEL
         else:
             label_path = self.labels_paths[idx]
@@ -358,20 +363,6 @@ class DatasetManager(Dataset):
             
         return (peak_image, water_image), label_image
         
-    # def create_empty_label(self):
-    #     empty_label_path = os.path.join(self.paths.labels_dir, self.dataset, f'empty_water{self.dataset}.h5')
-    #     if not os.path.exists(empty_label_path):
-    #         if self.peak_paths:
-    #             sample_peak_image_shape = load_h5(self.peak_paths[0]).shape # example image
-    #             with h5.File(empty_label_path, 'w') as f:
-    #                 f.create_dataset('entry/data/data', data=np.zeros(sample_peak_image_shape, dtype=np.float32))
-    #                 print(f"Empty label file created: {empty_label_path}")
-    #         else:
-    #             print("No peak paths available to determine shape for empty label file.")
-    #     assign_attributes(empty_label_path, self.parameters)
-    #     return empty_label_path
-
-
 class TransformToTensor:
     def __call__(self, image:np.ndarray) -> torch.Tensor:
         """
