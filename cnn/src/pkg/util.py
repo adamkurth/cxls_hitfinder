@@ -185,31 +185,43 @@ class PathManager:
         else:
             raise Exception("Could not find water image in the specified dataset directory.")
     
-    def update_paths(self, file_path:str, dir_type:str) -> None:
+    def update_path(self, file_path:str, dir_type:str) -> None:
         """
-        Updates the internal tracking of file paths after a new file has been added.
-        Clears cache for affected directory paths and optionally updates internal lists.
+        Updates the internal lists of file paths after a new file has been added.
 
         Parameters:
         - file_path: The full path of the newly added file.
-        - type: The type of the file added ('peak', 'overlay', 'label', or 'background').
+        - dir_type: The type of the file added ('peak', 'overlay', 'label', or 'background').
         """
-        # Clear cache to reflect changes in the filesystem
+        target_list = None
         if dir_type == 'peak':
-            self.peak_list.append(file_path)
+            target_list = self.peak_list
         elif dir_type == 'overlay':
-            self.water_peak_list.append(file_path)
+            target_list = self.water_peak_list
         elif dir_type == 'label':
-            self.label_list.append(file_path)
+            target_list = self.label_list
         elif dir_type == 'background':
-            self.water_background_list.append(file_path)
+            target_list = self.water_background_list
+        
+        if target_list is not None:
+            target_list.append(file_path)
+            print(f"Path appended to {dir_type}: {file_path}")
         else:
             raise ValueError("Invalid type specified for updating paths.")
         
         print(f"Paths updated for {dir_type}. New file added: {file_path}")
 
-        parameters = retrieve_attributes(file_path=file_path)
-        check_attributes(paths=self, dataset=self.dataset,type=dir_type)
+    def remove_path(self, file_path: str, dir_type: str) -> None:
+        """
+        Removes the specified file path from the internal tracking list based on the directory type.
+        """
+        target_list = getattr(self, f"{dir_type}_list", None)
+        
+        if target_list is not None and file_path in target_list:
+            target_list.remove(file_path)
+            print(f"Path removed from {dir_type}: {file_path}")
+        else:
+            print(f"File path not found in {dir_type} list or invalid type specified.")        
 
 class Processor:
     def __init__(self, paths, dataset: str) -> None:
@@ -347,15 +359,70 @@ class Processor:
             
             print(f"Processed and labeled images for {basename} saved.")
         print(f"\nProcessing complete for dataset {dataset}.\n")
+            
+    def cleanup(self) -> None:
+        """
+        Scans through specified directories and removes files containing the keyword 'empty' in their filename.
+        Also, physically removes the files from the filesystem and prints the count of deleted files per directory.
+        """
+        print("Starting cleanup of empty images...")
+        directories = [self.paths.peaks_dir, self.paths.labels_dir, self.paths.peaks_water_overlay_dir]
+
+        for dir_path in directories:
+            deleted = 0  # Reset deleted counter for each directory
+            for root, _, files in os.walk(dir_path):
+                for file in files:
+                    if 'empty' in file:
+                        file_path = os.path.join(root, file)
+                        try:
+                            os.remove(file_path)
+                            print(f"Successfully removed: {file_path}")
+                            deleted += 1
+                        except OSError as e:
+                            print(f"Failed to remove {file_path}: {e}")
+            print(f"Total 'empty' files deleted in {dir_path}: {deleted}")
+    
+        print("Cleanup of empty images complete.")
+        self.cleanup_authenticator()
         
+    def cleanup_authenticator(self) -> None:
+        """
+        Scans through specified dataset directories and removes files containing the keyword 'empty' in their filename.
+        Also, physically removes the files from the filesystem and prints the count of deleted files per directory.
+        """
+        print("Starting cleanup of empty images...")
+        # Specify directories specific to the dataset
+        directories = [
+            os.path.join(self.paths.peaks_dir, self.dataset),
+            os.path.join(self.paths.labels_dir, self.dataset),
+            os.path.join(self.paths.peaks_water_overlay_dir, self.dataset),
+        ]
+
+        for dir_path in directories:
+            deleted = 0  # Reset deleted counter for each directory
+            for root, _, files in os.walk(dir_path):
+                for file in files:
+                    if 'empty' in file:
+                        file_path = os.path.join(root, file)
+                        try:
+                            os.remove(file_path)
+                            print(f"Successfully removed: {file_path}")
+                            deleted += 1
+                        except OSError as e:
+                            print(f"Failed to remove {file_path}: {e}")
+            print(f"Total 'empty' files deleted in {dir_path}: {deleted}")
+
+        print("Cleanup of empty images complete.")
+    
     def process_empty(self, percent_empty:float=0.3) -> None:
         self.percent_empty = percent_empty  
         print('\nStarting Step 2...')
         print(f"Processing empty images for dataset {self.dataset}...")
         
+        print(f"Percent empty: {percent_empty}")
         if not self.confirm_action("This will generate empty images based on the specified percentage."):
             print("Operation canceled by the user.")
-            return
+            return 
 
         # calculate number of empty images to add based on percentage
         num_exist_images = len(self.paths.get_peak_image_paths(self.dataset)) # number of duplicated empty images
@@ -366,9 +433,9 @@ class Processor:
         
         for i in range(num_empty_images):
             formatted = f'{i+1:05d}' # starts at 00001
-            empty_label_path = os.path.join(self.paths.labels_dir, self.dataset, f'empty_{self.dataset}_{formatted}.h5')
-            empty_peak_path = os.path.join(self.paths.peaks_dir, self.dataset, f'empty_{self.dataset}_{formatted}.h5')
-            empty_overlay_path = os.path.join(self.paths.peaks_water_overlay_dir, self.dataset, f'empty_{self.dataset}_{formatted}.h5')
+            empty_label_path = os.path.join(self.paths.labels_dir, self.dataset, f'empty_label_{self.dataset}_{formatted}.h5')
+            empty_peak_path = os.path.join(self.paths.peaks_dir, self.dataset, f'empty_peak_{self.dataset}_{formatted}.h5')
+            empty_overlay_path = os.path.join(self.paths.peaks_water_overlay_dir, self.dataset, f'empty_overlay_{self.dataset}_{formatted}.h5')
             
             # data 
             empty = np.zeros_like(self.water_background, dtype=np.float32) # empty image no water_background 
@@ -381,9 +448,13 @@ class Processor:
             save_h5(empty_overlay_path, water_background, save_attributes=True, parameters=self.parameters) # water background
             
             # save paths to PathManager
-            self.paths.update_paths(file_path=empty_label_path, dir_type='label')
-            self.paths.update_paths(empty_label_path, dir_type='peak')
-            self.paths.update_paths(empty_overlay_path, dir_type='overlay')
+            self.paths.update_path(file_path=empty_label_path, dir_type='label')
+            self.paths.update_path(empty_label_path, dir_type='peak')
+            self.paths.update_path(empty_overlay_path, dir_type='overlay')
+            
+            assign_attributes(empty_label_path, self.parameters)
+            assign_attributes(empty_peak_path, self.parameters)
+            assign_attributes(empty_overlay_path, self.parameters)
             
             print(f"\nEmpty label file created: {empty_label_path}")
             print(f"Empty peak file created: {empty_peak_path}")
@@ -391,6 +462,11 @@ class Processor:
 
         print(f"Empty images added: {num_empty_images}")
         print(f"Processing complete for dataset {self.dataset}.\n")
+        
+        print("Step 2 complete.\n")
+        print(f"Number of peak files: {len(self.paths.get_peak_image_paths(self.dataset))}")
+        print(f"Number of label files: {len(self.paths.get_label_images_paths(self.dataset))}")
+        print(f"Number of overlay files: {len(self.paths.get_peaks_water_overlay_image_paths(self.dataset))}")
         
 class DatasetManager(Dataset):
     # for PyTorch DataLoader

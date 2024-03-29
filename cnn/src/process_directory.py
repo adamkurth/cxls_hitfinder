@@ -90,17 +90,20 @@ def process_data(directory, percent_empty=0.3):
     Parameters:
     - directory: The directory containing data to process.
     """
+    
     dataset_num = input("Enter dataset number: ")
     dataset = dataset_num.zfill(2) # string (ex '01')
     
     pm = u.PathManager(dataset=dataset)
-    
     p = u.Processor(paths=pm, dataset=dataset)
     clen, photon_energy = p.get_parameters()
 
+    # Step 0: Remove all existing empty images.
+    p.cleanup()
+    p.cleanup_authenticator()
     # Step 1: Process existing data to generate labels, overlays, and possibly more.
     p.process_directory(dataset=dataset, clen=clen, photon_energy=photon_energy)
-
+    p.cleanup_authenticator()
     # Step 2: Calculate the number of empty images to add based on the percentage.
     p.process_empty(percent_empty=percent_empty)
  
