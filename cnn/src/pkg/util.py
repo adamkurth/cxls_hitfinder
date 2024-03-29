@@ -1,9 +1,10 @@
+from operator import truth
 import os 
 import re
 import h5py as h5 
 import numpy as np
 import torch
-from functools import lru_cache
+from functools import lru_cache, singledispatch
 from skimage.feature import peak_local_max
 from torch.utils.data import DataLoader, Dataset
 from torchvision.transforms.functional import to_tensor
@@ -39,8 +40,22 @@ def assign_attributes(file_path: str, parameters: tuple):
         f.attrs['clen'] = clen
         f.attrs['photon_energy'] = photon_energy
     print(f"Attributes 'clen' and 'photon_energy' assigned to {file_path}")
-  
-def retrieve_attributes(file_path: str) -> tuple:
+
+# This singledispatch is funtioning like overriding an function, which is not normally supported due to dynamic data types. If the input is a string, the file path in this case, it will use the string case. If given the file directly, it will use the default case, since a special case does not exist for it.
+
+@singledispatch
+def retrieve_attributes(file) -> tuple:
+    try:
+        clen = file.attrs.get('clen')
+        photon_energy = file.attrs.get('photon_energy')
+    except KeyError:
+        clen = None
+        photon_energy = None
+        print(f"Attributes 'clen' and 'photon_energy' not found in {file}.")
+    return clen, photon_energy
+
+@retrieve_attributes.register(str)
+def _(file_path: str) -> tuple:
     """
     Retrieves 'clen' and 'photon_energy' attributes from an HDF5 file.
     """
@@ -212,7 +227,7 @@ class PathManager:
     @lru_cache(maxsize=32)
     def get_label_images_paths(self, dataset:str) -> list:
         dataset_dir = os.path.join(self.labels_dir, dataset)
-        return [os.path.join(dataset_dir, f) for f in os.listdir(dataset_dir) if f.startswith('label')]
+        return [os.path.join(dataset_dir, f) for f in os.listdir(dataset_dir) if f.startswith('label') or f.startswith('empty')] ### test fix
     
     @lru_cache(maxsize=32)
     def get_water_background(self, dataset:str) -> str:
@@ -534,6 +549,7 @@ class DatasetManager(Dataset):
         return len(self.peak_paths)
     
     def __getitem__(self, idx:int) -> tuple:
+        # print(idx, len(self.peak_paths), len(self.water_peak_paths), len(self.labels_paths)) # debug print for idx out of range error
         peak_image = load_h5(self.peak_paths[idx])
         water_image = load_h5(self.water_peak_paths[idx])
         label_image = load_h5(self.labels_paths[idx])
@@ -630,7 +646,7 @@ class TrainTestModels:
         self.plot_test_loss = np.zeros(self.epochs)
 
         self.cm = np.zeros((self.classes,self.classes), dtype=int)
-
+        self.threshold = 0.5
         self.logger = logging.getLogger(__name__)
 
 
@@ -656,9 +672,13 @@ class TrainTestModels:
             loss.backward()
             self.optimizer.step()
             running_loss_train += loss.item()  
-            predictions = (torch.sigmoid(score) > 0.5).long()  
-            accuracy_train += (predictions == labels).float().sum()
-            total_predictions += np.prod(labels.shape)
+            predictions = (torch.sigmoid(score) > self.threshold).long()  
+            truth = (torch.sigmoid(labels) > self.threshold).long()
+            # accuracy_train += (predictions == labels).float().sum()
+            
+            accuracy_train += (predictions == truth).float().sum()
+            # total_predictions += np.prod(labels.shape)
+            total_predictions += torch.numel(labels)
             
         loss_train = running_loss_train / self.batch
         self.plot_train_loss[epoch] = loss_train
@@ -697,9 +717,13 @@ class TrainTestModels:
                 score = self.model(peak_images)
                 loss = self.criterion(score, labels)
                 running_loss_test += loss.item()  # Convert to Python number with .item()
-                predicted = (torch.sigmoid(score) > 0.5).long()  # Assuming 'score' is the output of your model
-                accuracy_test += (predicted == labels).float().sum()
-                total += np.prod(labels.shape)
+                predicted = (torch.sigmoid(score) > self.threshold).long()  # Assuming 'score' is the output of your model
+                truth = (torch.sigmoid(labels) > self.threshold).long()
+                
+                # accuracy_test += (predicted == labels).float().sum()
+                accuracy_test += (predicted == truth).float().sum()
+                # total += np.prod(labels.shape)
+                total += torch.numel(labels)
 
         loss_test = running_loss_test/self.batch
         self.plot_test_loss[epoch] = loss_test
@@ -741,10 +765,11 @@ class TrainTestModels:
                 label = label.to(self.device)
 
                 score = self.model(peak_images).squeeze()
+                predictions = (torch.sigmoid(score) > self.threshold).long()
+                truth = (torch.sigmoid(label) > self.threshold).long()
 
-                predictions = (torch.sigmoid(score) > 0.5).long()
-
-                all_labels.extend(label.cpu().numpy().flatten()) 
+                # all_labels.extend(label.cpu().numpy().flatten())
+                all_labels.extend(truth.cpu().numpy().flatten()) 
                 all_predictions.extend(predictions.cpu().numpy().flatten())
 
         all_labels = np.array(all_labels)
