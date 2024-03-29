@@ -115,16 +115,13 @@ class BasicCNN1(nn.Module):
         return x
 
 
-
 class BasicCNN2(nn.Module):
-    """
-    A basic CNN for detecting Bragg peaks in crystallography images.
-    This model is simplified and does not use a pre-trained architecture.
-    """
     def __init__(self, input_channels=1, output_channels=1, heatmap_size=(2163, 2069)):
         super(BasicCNN2, self).__init__()
         
         self.heatmap_size = heatmap_size
+        self.input_channels = input_channels
+        self.output_channels = output_channels
 
         # Convolutional layers
         self.conv1 = nn.Conv2d(input_channels, 32, kernel_size=3, stride=1, padding=1)
@@ -132,21 +129,36 @@ class BasicCNN2(nn.Module):
         self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
         self.conv4 = nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1)
 
-        # Pooling layer to reduce spatial dimensions
+        # Pooling layer
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
 
-        # Convolutional layer to generate heatmap with one channel
+        self.flattened_size = 256 * (heatmap_size[0] // 16) * (heatmap_size[1] // 16)  
+
+        # Linear layers - you may adjust the sizes and number of linear layers
+        self.fc1 = nn.Linear(self.flattened_size, 1024)
+        self.fc2 = nn.Linear(1024, self.flattened_size)  
+
+        # Convolutional layer for heatmap generation
         self.heatmap_conv = nn.Conv2d(256, output_channels, kernel_size=3, stride=1, padding=1)
 
-        # Upsampling layer to match the desired output size
+        # Upsampling layer
         self.upsample = nn.Upsample(size=heatmap_size, mode='bilinear', align_corners=True)
 
     def forward(self, x):
-        # Applying consecutive convolutions and pooling
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
         x = self.pool(F.relu(self.conv3(x)))
         x = self.pool(F.relu(self.conv4(x)))
+
+        # Flatten the output for the linear layer
+        x = x.view(-1, self.flattened_size)
+
+        # Pass through linear layers
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+
+        # Reshape output back to match the convolutional layer expected input
+        x = x.view(-1, 256, self.heatmap_size[0] // 16, self.heatmap_size[1] // 16)
 
         # Generating heatmap
         x = self.heatmap_conv(x)
@@ -155,6 +167,7 @@ class BasicCNN2(nn.Module):
         x = self.upsample(x)
 
         return x
+
     
     
     
