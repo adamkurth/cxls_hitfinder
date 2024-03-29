@@ -646,7 +646,7 @@ class TrainTestModels:
         self.plot_test_loss = np.zeros(self.epochs)
 
         self.cm = np.zeros((self.classes,self.classes), dtype=int)
-        self.threshold = 0.5
+        self.threshold = 0.3
         self.logger = logging.getLogger(__name__)
 
 
@@ -667,18 +667,27 @@ class TrainTestModels:
 
             self.optimizer.zero_grad()
             score = self.model(peak_images)
-            loss = self.criterion(score, labels)
+            predictions = (torch.sigmoid(score) > self.threshold).long()  
+            
+            truth = (torch.sigmoid(labels) > self.threshold).long()
+            predictions = predictions.any().item()
+            truth = truth.any().item()
+            predictions = torch.tensor([float(predictions)], requires_grad=True)
+            truth = torch.tensor([float(truth)])
+            # loss = self.criterion(score, labels)
+            loss = self.criterion(predictions, truth)
 
             loss.backward()
             self.optimizer.step()
             running_loss_train += loss.item()  
-            predictions = (torch.sigmoid(score) > self.threshold).long()  
-            truth = (torch.sigmoid(labels) > self.threshold).long()
+            # predictions = (torch.sigmoid(score) > self.threshold).long()  
+            # truth = (torch.sigmoid(labels) > self.threshold).long()
             # accuracy_train += (predictions == labels).float().sum()
             
             accuracy_train += (predictions == truth).float().sum()
             # total_predictions += np.prod(labels.shape)
-            total_predictions += torch.numel(labels)
+            # total_predictions += torch.numel(labels)
+            total_predictions += 1
             
         loss_train = running_loss_train / self.batch
         self.plot_train_loss[epoch] = loss_train
@@ -715,15 +724,26 @@ class TrainTestModels:
 
 
                 score = self.model(peak_images)
-                loss = self.criterion(score, labels)
-                running_loss_test += loss.item()  # Convert to Python number with .item()
                 predicted = (torch.sigmoid(score) > self.threshold).long()  # Assuming 'score' is the output of your model
                 truth = (torch.sigmoid(labels) > self.threshold).long()
+                predicted = predicted.any().item()
+                truth = truth.any().item()
+                predicted = torch.tensor([float(predicted)])
+                truth = torch.tensor([float(truth)])
+                
+                loss = self.criterion(predicted, truth)
+                # loss = self.criterion(score, labels)
+                
+                
+                running_loss_test += loss.item()  # Convert to Python number with .item()
+                # predicted = (torch.sigmoid(score) > self.threshold).long()  # Assuming 'score' is the output of your model
+                # truth = (torch.sigmoid(labels) > self.threshold).long()
                 
                 # accuracy_test += (predicted == labels).float().sum()
                 accuracy_test += (predicted == truth).float().sum()
                 # total += np.prod(labels.shape)
-                total += torch.numel(labels)
+                # total += torch.numel(labels)
+                total += 1
 
         loss_test = running_loss_test/self.batch
         self.plot_test_loss[epoch] = loss_test
@@ -767,10 +787,14 @@ class TrainTestModels:
                 score = self.model(peak_images).squeeze()
                 predictions = (torch.sigmoid(score) > self.threshold).long()
                 truth = (torch.sigmoid(label) > self.threshold).long()
+                predictions = predictions.any().item()
+                truth = truth.any().item()
 
                 # all_labels.extend(label.cpu().numpy().flatten())
-                all_labels.extend(truth.cpu().numpy().flatten()) 
-                all_predictions.extend(predictions.cpu().numpy().flatten())
+                # all_labels.extend(truth.cpu().numpy().flatten()) 
+                # all_predictions.extend(predictions.cpu().numpy().flatten())
+                all_labels.append(truth)
+                all_predictions.append(predictions)
 
         all_labels = np.array(all_labels)
         all_predictions = np.array(all_predictions)

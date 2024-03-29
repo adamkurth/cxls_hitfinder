@@ -205,4 +205,39 @@ class DenseNetBraggPeakClassifier(nn.Module):
         x = self.upsample(x)  # Upsample to match desired heatmap size
         return x
 
+class BasicCNN3(nn.Module):
+    def __init__(self, input_channels=1, input_size=(2163, 2069)):
+        super(BasicCNN3, self).__init__()
+        
+        # Convolutional layer followed by pooling
+        self.conv1 = nn.Conv2d(input_channels, 16, kernel_size=5, stride=1, padding=2)
+        self.pool = nn.MaxPool2d(kernel_size=4, stride=4, padding=0)
+        
+        # Additional convolutional layers
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
+        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
+        
+        # Calculate the size of the flattened feature map.
+        # This is an example calculation that needs to be adjusted
+        # based on the actual size of your input images and the architecture's downsampling operations.
+        reduced_size = input_size[0] // (4**3), input_size[1] // (4**3)  # Assuming three pooling layers each reducing size by a factor of 4
+        self.fc_input_size = 64 * reduced_size[0] * reduced_size[1]  # Adjust this based on your network's architecture
+        
+        # Fully connected layer to produce a single output
+        self.fc = nn.Linear(self.fc_input_size, 1)
+
+    def forward(self, x):
+        # Applying convolutions and pooling
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = self.pool(F.relu(self.conv3(x)))
+        
+        # Flattening the output for the fully connected layer
+        x = x.view(-1, self.fc_input_size)
+        
+        # Fully connected layer to get to a single output value
+        x = self.fc(x)
+        
+        return x
+
 
