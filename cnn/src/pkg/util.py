@@ -27,7 +27,7 @@ def save_h5(file_path:str, data:np.ndarray, save_attributes:bool, parameters:tup
         assign_attributes(file_path, parameters)
     print(f"File saved: {file_path}")
 
-def parameter_matrix(clen_values: list, photon_energy_values: list) -> None:
+def parameter_matrix(clen_values: list, photon_energy_values: list) -> np.ndarray:
     # limited to 2d for now 
     dtype = [('clen', float), ('photon_energy', float)]
     matrix = np.zeros((len(clen_values), len(photon_energy_values)), dtype=dtype)
