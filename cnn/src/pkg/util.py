@@ -10,6 +10,7 @@ from torchvision.transforms.functional import to_tensor
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import logging 
+from glob import glob
 import numpy as np
 
 def load_h5(file_path:str) -> np.ndarray:
@@ -78,6 +79,31 @@ def check_attributes(paths, dataset: str, type: str) -> bool:
     print(f"All files in dataset {dataset} of type '{type}' have matching attributes.")
     return True
 
+def get_counts(path_manager):
+    """
+    Counts and reports the number of 'normal' and 'empty' images in the specified directories
+    for the selected dataset, using the path_manager to access directory paths.
+    """
+    # Refresh the lists in PathManager to ensure they are up-to-date
+    path_manager.refresh_all()
+
+    # Directories to check
+    directory_types = ['peaks', 'labels', 'peaks_water_overlay']
+    dataset = path_manager.dataset
+
+    # Loop through each directory type and count files
+    for directory_type in directory_types:
+        directory_path = os.path.join(path_manager.images_dir, directory_type, dataset)
+        all_files = glob(os.path.join(directory_path, '*.h5'))  # Corrected usage here
+        normal_files = [file for file in all_files if 'empty' not in os.path.basename(file)]
+        empty_files = [file for file in all_files if 'empty' in os.path.basename(file)]
+
+        # Reporting the counts
+        print(f"Directory: {directory_type}/{dataset}")
+        print(f"  Total files: {len(all_files)}")
+        print(f"  Normal images: {len(normal_files)}")
+        print(f"  Empty images: {len(empty_files)}")
+
 def prepare(data_manager:Dataset, batch_size:int=32) -> tuple:
     """
     Prepares and splits the data into training and testing datasets.
@@ -131,6 +157,21 @@ class PathManager:
         self.water_background_list = [self.get_water_background(self.dataset)] # expecting 1 image
         return self.peak_list, self.water_peak_list, self.label_list, self.water_background_list
     
+    def refresh_all(self) -> tuple:
+        """
+        Refreshes the internal lists of file paths to reflect current directory state.
+        """
+        # Clears the cache for each method to force re-computation
+        self.get_peak_image_paths.cache_clear()
+        self.get_peaks_water_overlay_image_paths.cache_clear()
+        self.get_label_images_paths.cache_clear()
+        self.get_water_background.cache_clear()
+
+        # Reinitialize the lists with current directory contents
+        self.peak_list, self.water_peak_list, self.label_list, self.water_background_list = self.select_dataset(self.dataset)
+        
+        print(f"Paths refreshed for dataset {self.dataset}.")
+    
     def re_root(self, current_path: str) -> str:
         match = re.search("cxls_hitfinder", current_path)
         if match:
@@ -178,7 +219,7 @@ class PathManager:
         dataset_dir = os.path.join(self.water_background_dir, dataset)
         water_images = [f for f in os.listdir(dataset_dir) if f.startswith('water') and f.endswith('.h5')]
         if len(water_images) == 1:
-            print(f"Found water background image: {water_images[0]}")
+            # print(f"Found water background image: {water_images[0]}")
             return os.path.join(dataset_dir, water_images[0]) # expecting 1 image, output:str
         elif len(water_images) > 1:
             raise Exception("Multiple water images found in the specified dataset directory.")
@@ -221,7 +262,8 @@ class PathManager:
             target_list.remove(file_path)
             print(f"Path removed from {dir_type}: {file_path}")
         else:
-            print(f"File path not found in {dir_type} list or invalid type specified.")        
+            print(f"File path not found in {dir_type} list or invalid type specified.")    
+        
 
 class Processor:
     def __init__(self, paths, dataset: str) -> None:
@@ -475,55 +517,18 @@ class DatasetManager(Dataset):
     #   self.include_water_background is a boolean flag to include water background images in the dataset
     #   self.percent_water_repeat is the percentage of water images to be added to the dataset
     
-    def __init__(self, paths, dataset:str, parameters:tuple, transform=False, include_water_background:bool=True, percent_water_repeat:float=0.35) -> None:
+    def __init__(self, paths, dataset:str, parameters:tuple, transform=False) -> None:
         self.paths = paths
         self.dataset = dataset
         self.parameters = parameters
         self.transform = transform if transform is not None else TransformToTensor()
+        self.setup_directories(dataset=dataset)
         
-        # load dataset paths
+    def setup_directories(self, dataset:str) -> None:
+        get_counts(self.paths)
+        self.paths.refresh_all()
         self.peak_paths, self.water_peak_paths, self.labels_paths, self.water_background = self.paths.select_dataset(dataset)
-        assign_attributes(self.water_background, self.parameters) # assign attributes to water background image
-    
-        print(f"Dataset {self.dataset} configured.")
-        print(f"Number of peak images: {len(self.peak_paths)}")
-        print(f"Number of water images: {len(self.water_peak_paths)}")
-        print(f"Number of label images: {len(self.labels_paths)}")
-        print(f"Check: Path to water background image: {self.water_background}\n")
-    
-        # decide whether to include water background images
-        self.percent_water_repeat = percent_water_repeat
-        self.include_water_background = include_water_background
-    
-        if self.include_water_background: 
-            self.generate_empty_labels()
-        
-    def generate_empty_labels(self) -> None:
-        # determine the number of "empty" images to add to the dataset (based on percentage)
-        total_images = len(self.peak_paths) # total number of peak images
-        self.water_count = int(self.percent_water_repeat * total_images) # e.g. 35% of total images 
-        
-        # generate and appent empty labels and their corresponding water background images
-        for _ in range(self.water_count):
-            empty_label_path = self.create_empty_label()
-            self.labels_paths.append(empty_label_path) # append path of empty label images
-            self.peak_paths.append(self.water_background) # add water background image to peak paths
-            self.water_peak_paths.append(self.water_background) # add water background image to water peak paths
-            
-        print(f"\nTotal images (true peak count): {total_images}")
-        print(f"Total images (including water background): {len(self.peak_paths)}")
-        print(f"Water background images added: {self.water_count}\n")
-        
-    def create_empty_label(self) -> str:
-        empty_label_path = os.path.join(self.paths.labels_dir, self.dataset, f'label_empty_{self.dataset}.h5')
-        if self.peak_paths: 
-            sample_peak_image_shape = load_h5(self.peak_paths[0]).shape # example image
-            empty_data = np.zeros(sample_peak_image_shape, dtype=np.float32)
-            save_h5(empty_label_path, empty_data, save_attributes=True, parameters=self.parameters)
-            print(f"Empty label file created: {empty_label_path}")
-        else:
-            print("No peak paths available to determine shape for empty label file.")
-        return empty_label_path
+        self.authenticate_dataset()
 
     def __len__(self) -> int:
         return len(self.peak_paths)
@@ -531,15 +536,7 @@ class DatasetManager(Dataset):
     def __getitem__(self, idx:int) -> tuple:
         peak_image = load_h5(self.peak_paths[idx])
         water_image = load_h5(self.water_peak_paths[idx])
-
-        empty_label = os.path.join(self.paths.labels_dir, self.dataset, 'empty_water{dataset}.h5')
-        
-        # For labels of water images, use all zeros; for other images, load their labels
-        if self.label_paths[idx] == empty_label: #????
-            label_image = np.zeros_like(peak_image) # EMPTY LABEL
-        else:
-            label_path = self.labels_paths[idx]
-            label_image = load_h5(label_path)
+        label_image = load_h5(self.labels_paths[idx])
             
         if self.transform:
             peak_image = self.transform(peak_image) 
@@ -547,7 +544,37 @@ class DatasetManager(Dataset):
             label_image = self.transform(label_image)
             
         return (peak_image, water_image), label_image
-        
+    
+    def authenticate_dataset(self) -> None:
+        """
+        Authenticates the dataset by verifying the parameters of a sample from each path category.
+        """
+        self.count_empty_images()
+        unif_peaks = check_attributes(self.paths, self.dataset, 'peak')
+        unif_label = check_attributes(self.paths, self.dataset, 'label')
+        unif_overlay = check_attributes(self.paths, self.dataset, 'overlay')
+        unif_water = check_attributes(self.paths, self.dataset, 'background')
+        if not (unif_peaks and unif_label and unif_overlay and unif_water):
+            raise ValueError(f"Dataset {self.dataset} failed authentication.")
+        else:        
+            print(f"Dataset {self.dataset} authenticated.\n")
+    
+    def count_empty_images(self) -> float:
+        """
+        Counts the percentage of empty images across different directories within the dataset.
+        """
+        empty_counts = {
+            'peaks': sum(1 for path in self.peak_paths if 'empty' in os.path.basename(path)),
+            'water_overlays': sum(1 for path in self.water_peak_paths if 'empty' in os.path.basename(path)),
+            'labels': sum(1 for path in self.labels_paths if 'empty' in os.path.basename(path))
+        }
+        total_images_count = len(self.peak_paths) + len(self.water_peak_paths) + len(self.labels_paths)
+        total_empty_images = sum(empty_counts.values())
+        actual_percent_empty = (total_empty_images / total_images_count) * 100 if total_images_count > 0 else 0
+
+        print(f"Actual percentage of empty images: {actual_percent_empty}% across peaks, water_overlays, and labels directories.\n")
+    
+
 class TransformToTensor:
     def __call__(self, image:np.ndarray) -> torch.Tensor:
         """
