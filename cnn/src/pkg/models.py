@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import torch
 import torch.nn as nn
@@ -6,8 +5,9 @@ import torch.optim as optim
 from torchvision import models
 from torchvision.models.resnet import ResNet50_Weights
 from torchvision.models.densenet import DenseNet121_Weights
+import os
 import torch.nn.functional as F
-import util as u
+
 
 # MODEL:
 #   1. RESNET -> RESNET + Attention Mechanisms
@@ -193,64 +193,3 @@ class DenseNetBraggPeakClassifier(nn.Module):
         return x
 
 
-
-
-class ModelPipeline:
-    def __init__(self, peak_model, energy_model, clen_model) -> None:
-        """
-        This class represents a pipeline for analyzing Bragg peak images.
-        It combines three models for peak detection, energy estimation, and clen calculation.
-
-        Args:
-            peak_model (nn.Module): Convolutional neural network for peak detection.
-            energy_model (nn.Module): Convolutional neural network for energy estimation. This model is used when a peak is detected.
-            clen_model (nn.Module): Convolutional neural network for clen calculation. This model is used when a peak is detected after energy_model.
-        """
-        
-        self.binary_model = peak_model
-        self.energy_model = energy_model
-        self.clen_model = clen_model
-        self.pipeline_results = (0,0)
-        self.atributes = (0,0)
-
-    def run_pipeline(self, image) -> tuple:
-        """ 
-        This function runs the analysis pipeline on a given image.
-
-        Args:
-            image (torch.Tensor): This file shcxls_hitfinder/images/peaks/01/img_6keV_clen01_00062.h5ould be a 2D tensor representing the image of the Bragg peak .h5 file. 
-
-        Returns:
-            tuple: This function returns the estimated x-ray energy and clen value if a peak is detected, otherwise None.
-        """
-        
-        with torch.no_grad():  
-            peak_detected = self.binary_model(image).argmax(dim=1).item() == 1
-              
-            if peak_detected:
-                x_ray_energy = self.energy_model(image).item()
-                clen = self.clen_model(image).item()
-                
-                self.pipeline_results = (x_ray_energy, clen)
-                return self.pipeline_results
-            else:
-                return None 
-
-    def compare_results(self, image_path: str) -> None:
-        """
-        This function compares the pipeline results with the true attributes of the image.
-
-        Args:
-            image_path (str): This is the path to the .h5 image that was used in run_pipeline.
-
-        Returns:
-            str: The message telling us if the atributes are matching or not.
-        """
-        
-        clen, photon_energy = u.retrieve_attributes(image_path)
-        self.atributes = (clen, photon_energy)
-        
-        if self.pipeline_results == self.atributes:
-            print("The pipeline results match the true attributes.")
-        else:
-            print("The pipeline results do not match the true attributes.")
