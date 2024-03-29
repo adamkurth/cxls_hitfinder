@@ -212,7 +212,7 @@ class PathManager:
     @lru_cache(maxsize=32)
     def get_label_images_paths(self, dataset:str) -> list:
         dataset_dir = os.path.join(self.labels_dir, dataset)
-        return [os.path.join(dataset_dir, f) for f in os.listdir(dataset_dir) if f.startswith('label')]
+        return [os.path.join(dataset_dir, f) for f in os.listdir(dataset_dir) if f.startswith('label') or f.startswith('empty') and f.endswith('.h5')]
     
     @lru_cache(maxsize=32)
     def get_water_background(self, dataset:str) -> str:
