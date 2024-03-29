@@ -70,6 +70,7 @@ def main(dataset:str, process_dir:bool, images_path:str):
     u.check_attributes(paths=pm, dataset=dataset, type='peak') 
     u.check_attributes(paths=pm, dataset=dataset, type='overlay')
     u.check_attributes(paths=pm, dataset=dataset, type='label')
+    
     # train/test loaders
     train_loader, test_loader = u.prepare(data_manager=dm, batch_size=10)
     
