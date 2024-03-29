@@ -41,49 +41,73 @@ def validate_directories(base_path):
     """
     Validates the directory structure and file counts within the specified base path.
 
+    - If `peaks_water_overlay/` and `labels/` directories have zero files, it suggests
+      that the script should proceed with generating labels and overlays.
+    - If these directories have a nonzero count that matches `peaks/`, it implies
+      the processing has already been done.
+
     Parameters:
     - base_path: The base directory to validate.
 
-    Returns True if the directory structure and file counts are as expected, False otherwise.
+    Returns:
+    - A tuple (bool, bool): First bool indicates if the structure is valid, and second bool
+      indicates if processing should proceed.
     """
-    expected_dirs = ["peaks", "labels", "peaks_water_overlay", "water"]
     is_valid = True
+    proceed_with_processing = False
     
     for i in range(1, 10): # 01 to 09
         dataset_dir = f"{i:02d}"
         counts = {}
-        for dir_name in expected_dirs: 
+        dirs = ["peaks", "labels", "peaks_water_overlay", "water"]
+        for dir_name in dirs: 
             dir_path = os.path.join(base_path, dir_name, dataset_dir) 
             file_count = len(glob(os.path.join(dir_path, "*.h5")))
             counts[dir_name] = file_count
             
             # check that images/water/dataset only contains 1 .h5 file
             if dir_name == "water" and file_count != 1:
-                print(f"Error: Directory '{dir_path}' does not contain exactly 1 .h5 file.")
+                print(f"Error: Directory '{dir_path}' does not contain exactly 1 .h5 file for water background.\n")
                 is_valid = False
-            
-        if not (counts["peaks"] == counts["labels"] == counts["peaks_water_overlay"]):
-            print(f"Mismatch found: '{base_path}/peaks/{dataset_dir}' has {counts['peaks']},\n '{base_path}/labels/{dataset_dir}' has {counts['labels']},\n '{base_path}/peaks_water_overlay/{dataset_dir}' has {counts['peaks_water_overlay']} images to compare.\n")
+        # after collecting counts, perform checks
+        if counts.get('peaks_water_overlay') == counts.get('labels') == 0:
+            # Indicates that processing should occur as no overlays or labels have been generated yet.
+            proceed_with_processing = True
+            print(f"Directories for dataset {dataset_dir} are ready for processing (Step 1).")
+        elif counts.get('peaks_water_overlay') == counts.get('labels') == counts.get('peaks'):
+            # Indicates that processing has likely already occurred as counts match.
+            print(f"Directories for dataset {dataset_dir} have been processed. Matching file counts found.")
+        else:
+            print(f"Mismatch found in dataset {dataset_dir}: Peaks: {counts['peaks']}, Labels: {counts['labels']}, Overlays: {counts['peaks_water_overlay']}.\n")
             is_valid = False
-            
-    return is_valid
+        
+    return is_valid, proceed_with_processing
 
-def process_data(directory):
+def process_data(directory, percent_empty=0.3):
     """
     Processes data in the specified directory.
 
     Parameters:
     - directory: The directory containing data to process.
     """
+    
     dataset_num = input("Enter dataset number: ")
     dataset = dataset_num.zfill(2) # string (ex '01')
     
-    pm = u.PathManager()
+    pm = u.PathManager(dataset=dataset)
     p = u.Processor(paths=pm, dataset=dataset)
     clen, photon_energy = p.get_parameters()
+
+    # Step 0: Remove all existing empty images.
+    p.cleanup()
+    p.cleanup_authenticator()
+    # Step 1: Process existing data to generate labels, overlays, and possibly more.
     p.process_directory(dataset=dataset, clen=clen, photon_energy=photon_energy)
-    
-def main(images_dir, force=False):
+    p.cleanup_authenticator()
+    # Step 2: Calculate the number of empty images to add based on the percentage.
+    p.process_empty(percent_empty=percent_empty)
+ 
+def main(images_dir, force=False, percent_empty: float = 0.3):
     """
     Main function to control the script's logic.
 
@@ -96,20 +120,26 @@ def main(images_dir, force=False):
     for dir_name in  ["labels", "peaks", "peaks_water_overlay", "water"]:
         create_and_populate_dirs(os.path.join(images_dir, dir_name))
     
-    if validate_directories(images_dir) or force:
+    is_valid, proceed_with_processing = validate_directories(images_dir)
+    if force or (is_valid and proceed_with_processing):
         if force:
             print("Force-processing flag is used; proceeding with data processing despite potential issues.")
         else:
             print("Directory structure and image count verification completed successfully. Proceeding with data processing.")
-        process_data(images_dir)  # step 1: generate labels, overlays, and images
+        print("\nProceeding with data processing...")
+        # generate labels, overlays, and images, then add empty images
+        process_data(images_dir, percent_empty)
+    elif is_valid and not proceed_with_processing:
+        print("Processing not required. Directories already contain processed data.")
     else:
         print("Errors detected during directory structure and image count verification. Please resolve these issues before proceeding.")
+        
 
-    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Validate and process image directories.")
     parser.add_argument("images_dir", type=str, help="The directory containing the images to process.")
     parser.add_argument("--force", action="store_true", help="Force processing even if validation fails.")
+    parser.add_argument("--percent_empty", type=float, default=0.3, help="Percentage of empty images to add.")
     args = parser.parse_args()
-
-    main(args.images_dir, args.force)
+    
+    main(images_dir=args.images_dir, force=args.force, percent_empty=args.percent_empty)
