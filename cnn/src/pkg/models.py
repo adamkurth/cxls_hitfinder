@@ -8,17 +8,6 @@ from torchvision.models.densenet import DenseNet121_Weights
 import os
 import torch.nn.functional as F
 
-
-# MODEL:
-#   1. RESNET -> RESNET + Attention Mechanisms
-#   2. TRANSFORMER BASED MODEL FOR VISION (VIT) -> VIT + Attention Mechanisms ??
-# FURTHER DEVELOPMENT: multi-task learning model predicts clen and pdb at the same time
-
-# to detect the subleties in the data, the deeper the model like ResNet-50 or -101 would be ideal.
-# 50 and 101 models balance between depth and computational efficiency, and are widely used in practice.
-
-# RESNET-50
-
 class ResNet50BraggPeakClassifier(nn.Module):
     """
     Simplified model for detecting Bragg peaks in crystallography images using ResNet.
