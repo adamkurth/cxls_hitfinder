@@ -200,7 +200,7 @@ class PathManager:
         
     def select_dataset(self, dataset:str) -> tuple:    
         self.dataset = dataset # select dataset 01 through 09
-        return self.init_lists(self.dataset)  #peak_paths, water_peak_paths, labels_paths, water_background
+        return self.init_lists(self.dataset)  #peak_paths, water_peak_paths, label_paths, water_background
     
     def get_path(self, path_name:str) -> str:
             paths_dict = {
@@ -230,7 +230,8 @@ class PathManager:
     @lru_cache(maxsize=32)
     def get_label_images_paths(self, dataset:str) -> list:
         dataset_dir = os.path.join(self.labels_dir, dataset)
-        return [os.path.join(dataset_dir, f) for f in os.listdir(dataset_dir) if f.startswith('label') or f.startswith('empty')] ### test fix
+        return [os.path.join(dataset_dir, f) for f in os.listdir(dataset_dir) if f.startswith('label') or f.startswith('empty') and f.endswith('.h5')]
+
     
     @lru_cache(maxsize=32)
     def get_water_background(self, dataset:str) -> str:
@@ -541,14 +542,16 @@ class DatasetManager(Dataset):
         self.dataset = dataset
         self.parameters = parameters
         self.transform = transform if transform is not None else TransformToTensor()
-        self.setup_directories(dataset=dataset)
-        
-    def setup_directories(self, dataset:str) -> None:
+        self.setup(dataset=dataset)
+        print(f"Final dataset sizes - Peaks: {len(self.peak_paths)}, Labels: {len(self.label_paths)}, Overlays: {len(self.water_peak_paths)}")
+   
+    def setup(self, dataset:str) -> None:
         get_counts(self.paths)
         self.paths.refresh_all()
-        self.peak_paths, self.water_peak_paths, self.labels_paths, self.water_background = self.paths.select_dataset(dataset)
-        self.authenticate_dataset()
-
+        self.peak_paths, self.water_peak_paths, self.label_paths, self.water_background = self.paths.select_dataset(dataset)
+        self.count_empty_images()
+        self.authenticate_attributes()
+        
     def __len__(self) -> int:
         return len(self.peak_paths)
     
@@ -556,7 +559,7 @@ class DatasetManager(Dataset):
         # print(idx, len(self.peak_paths), len(self.water_peak_paths), len(self.labels_paths)) # debug print for idx out of range error
         peak_image = load_h5(self.peak_paths[idx])
         water_image = load_h5(self.water_peak_paths[idx])
-        label_image = load_h5(self.labels_paths[idx])
+        label_image = load_h5(self.label_paths[idx])
             
         if self.transform:
             peak_image = self.transform(peak_image) 
@@ -565,15 +568,14 @@ class DatasetManager(Dataset):
             
         return (peak_image, water_image), label_image
     
-    def authenticate_dataset(self) -> None:
+    def authenticate_attributes(self) -> None:
         """
-        Authenticates the dataset by verifying the parameters of a sample from each path category.
+        Authenticates the attributes of the dataset by verifying the parameters of a sample from each path category.
         """
-        self.count_empty_images()
-        unif_peaks = check_attributes(self.paths, self.dataset, 'peak')
-        unif_label = check_attributes(self.paths, self.dataset, 'label')
-        unif_overlay = check_attributes(self.paths, self.dataset, 'overlay')
-        unif_water = check_attributes(self.paths, self.dataset, 'background')
+        unif_peaks = check_attributes(paths=self.paths, dataset=self.dataset, type='peak')
+        unif_label = check_attributes(paths=self.paths, dataset=self.dataset, type='label')
+        unif_overlay = check_attributes(paths=self.paths, dataset=self.dataset, type='overlay')
+        unif_water = check_attributes(paths=self.paths, dataset=self.dataset, type='background')
         if not (unif_peaks and unif_label and unif_overlay and unif_water):
             raise ValueError(f"Dataset {self.dataset} failed authentication.")
         else:        
@@ -586,15 +588,22 @@ class DatasetManager(Dataset):
         empty_counts = {
             'peaks': sum(1 for path in self.peak_paths if 'empty' in os.path.basename(path)),
             'water_overlays': sum(1 for path in self.water_peak_paths if 'empty' in os.path.basename(path)),
-            'labels': sum(1 for path in self.labels_paths if 'empty' in os.path.basename(path))
+            'labels': sum(1 for path in self.label_paths if 'empty' in os.path.basename(path))
         }
-        total_images_count = len(self.peak_paths) + len(self.water_peak_paths) + len(self.labels_paths)
+        total_images_count = len(self.peak_paths) + len(self.water_peak_paths) + len(self.label_paths)
         total_empty_images = sum(empty_counts.values())
         actual_percent_empty = (total_empty_images / total_images_count) * 100 if total_images_count > 0 else 0
 
         print(f"Actual percentage of empty images: {actual_percent_empty}% across peaks, water_overlays, and labels directories.\n")
     
-
+    def validate_dataset_sizes(self):
+        """
+        Validates that the lengths of peak_paths, label_paths, and water_peak_paths are consistent.
+        Throws an error if there's a mismatch.
+        """
+        if not (len(self.peak_paths) == len(self.label_paths) == len(self.water_peak_paths)):
+            raise ValueError("Dataset size mismatch detected. Please ensure each peak image has a corresponding label and overlay.")
+        
 class TransformToTensor:
     def __call__(self, image:np.ndarray) -> torch.Tensor:
         """
