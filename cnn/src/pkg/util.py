@@ -14,7 +14,7 @@ import logging
 from glob import glob
 import numpy as np
 torch.set_printoptions(profile="full")
-
+from torch.profiler import tensorboard_trace_handler
 
 
 def load_h5(file_path:str) -> np.ndarray:
@@ -868,11 +868,36 @@ class TrainTestModels:
     def save_model(self, path:str) -> None:
         """
         This function saves the model's state_dict to a specified path. This can be used to load the trained model later.
-
+        Save as .pt file.
+        root: /cnn/models
         Args:
             path (str): Path to save the model's state_dict.
         """
-        torch.save(self.model.state_dict(), PATH=path)
+        torch.save(self.model.state_dict(), path)
+        
+    # def tensor_board(self) -> None:
+    #     with torch.profiler.profile(
+    #         schedule=torch.profiler.schedule(
+    #             wait=2,
+    #             warmup=2,
+    #             active=6,
+    #             repeat=1),
+    #         on_trace_ready=tensorboard_trace_handler,
+    #         with_stack=True
+    #     ) as profiler:
+    #         for step, data in enumerate(self.train_loader, 0):
+    #             print("step:{}".format(step))
+    #             inputs, labels = data[0], data[1]
+    #             peak_images, _ = inputs
+
+    #             outputs = self.model(peak_images)
+    #             loss = self.criterion(peak_images, labels)
+
+    #             self.optimizer.zero_grad()
+    #             loss.backward()
+    #             self.optimizer.step()
+    #             profiler.step()
+
     
     
 # -----------------------------------------------------------------------------------------------------------------------
