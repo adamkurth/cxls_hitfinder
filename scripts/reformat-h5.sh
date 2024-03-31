@@ -17,16 +17,23 @@ extract_kev_clen() {
   fi
 }
 
-# Reformat filenames, excluding files starting with "empty"
+# Reformat filenames, excluding files in water/ directory and starting with "empty"
 reformat_filenames() {
   local directory="$1"
   local img_count=1
 
   while IFS= read -r -d '' subdir; do
-    local files=("$subdir"/[!empty]*.h5)  # Exclude files starting with "empty"
-    [[ -e ${files[0]} ]] || continue  # Skip if no matching .h5 files found in the subdir
+    # Skip water/ directory
+    if [[ $subdir =~ /water$ ]]; then
+      printf "Skipping water directory: %s\n" "$subdir" >&2
+      continue
+    fi
 
+    local files=("$subdir"/*[!empty]*.h5)  # Exclude files starting with "empty"
     for file in "${files[@]}"; do
+      # Skip if no file found due to the glob
+      [[ -e $file ]] || continue
+
       local filename
       filename=$(basename -- "$file")
       
@@ -45,7 +52,7 @@ reformat_filenames() {
       printf "Renamed '%s' to '%s'\n" "$filename" "$new_filename_format"
       ((img_count++))
     done
-  done < <(find "$directory" -type d -print0)
+  done < <(find "$directory" -type d -print0 | grep -vzZ "$directory/water")
 }
 
 main() {
