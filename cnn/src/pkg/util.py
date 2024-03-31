@@ -395,6 +395,7 @@ class Processor:
             save_h5(file_path=out_label_path, data=labeled_array, save_attributes=True, parameters=parameters)
             
             # Update attributes for each file with clen and photon energy
+            self.update_attributes(file_path=self.paths.get_water_background(dataset=dataset), clen=clen, photon_energy=photon_energy)
             self.update_attributes(file_path=peak_path, clen=clen, photon_energy=photon_energy)
             self.update_attributes(file_path=out_overlay_path, clen=clen, photon_energy=photon_energy)
             self.update_attributes(file_path=out_label_path, clen=clen, photon_energy=photon_energy)

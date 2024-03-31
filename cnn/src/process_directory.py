@@ -101,12 +101,14 @@ def process_data(directory, percent_empty=0.3):
     # Step 0: Remove all existing empty images.
     p.cleanup()
     p.cleanup_authenticator()
+    
     # Step 1: Process existing data to generate labels, overlays, and possibly more.
     p.process_directory(dataset=dataset, clen=clen, photon_energy=photon_energy)
     p.cleanup_authenticator()
+    
     # Step 2: Calculate the number of empty images to add based on the percentage.
     p.process_empty(percent_empty=percent_empty)
- 
+    
 def main(images_dir, force=False, percent_empty: float = 0.3):
     """
     Main function to control the script's logic.
