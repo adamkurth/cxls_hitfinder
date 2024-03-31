@@ -8,16 +8,6 @@ from torchvision.models.resnet import ResNet50_Weights
 from torchvision.models.densenet import DenseNet121_Weights
 import torch.nn.functional as F
 
-# MODEL:
-#   1. RESNET -> RESNET + Attention Mechanisms
-#   2. TRANSFORMER BASED MODEL FOR VISION (VIT) -> VIT + Attention Mechanisms ??
-# FURTHER DEVELOPMENT: multi-task learning model predicts clen and pdb at the same time
-
-# to detect the subleties in the data, the deeper the model like ResNet-50 or -101 would be ideal.
-# 50 and 101 models balance between depth and computational efficiency, and are widely used in practice.
-
-# RESNET-50
-
 class ResNet50BraggPeakClassifier(nn.Module):
     """
     Simplified model for detecting Bragg peaks in crystallography images using ResNet.
@@ -61,25 +51,6 @@ class ResNet50BraggPeakClassifier(nn.Module):
 
         return x
 
-
-
-
-# if __name__ == "__main__":
-#     model = ResNet50BraggPeakClassifier()
-#     img_np = np.random.rand(2163, 2069)
-#     # add function in classes to handle this
-#     batch_size = 4 
-#     img_np_new = np.expand_dims(img_np, axis=0) # channel dim
-#     img_np_new = np.expand_dims(img_np_new, axis=0) # batch dim
-#     img_np_new = np.repeat(img_np_new, batch_size, axis=0) # 4D
-    
-#     # convert to tensor
-#     img_tensor = torch.tensor(img_np_new, dtype=torch.float32)
-    
-#     output = model(img_tensor)
-#     print(output.size()) # torch.Size([4, 1, 2163, 2069]) -> 4 images, 1 channel, 2163x2069
-    
-    
 class BasicCNN1(nn.Module):
     """
     A very basic CNN for detecting Bragg peaks in crystallography images.
