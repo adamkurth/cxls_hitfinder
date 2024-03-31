@@ -25,4 +25,6 @@ __pycache__/**
 images/peaks_water_overlay/**/*.h5
 images/labels/**/*.h5
 images/peaks/**/*.h5
-images/temp/**/*.h5
+images/temp/**/*.h5 
+
+*.DS_Store
