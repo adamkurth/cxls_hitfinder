@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import torch
 import torch.nn as nn
@@ -6,7 +5,19 @@ import torch.optim as optim
 from torchvision import models
 from torchvision.models.resnet import ResNet50_Weights
 from torchvision.models.densenet import DenseNet121_Weights
+import os
 import torch.nn.functional as F
+
+
+# MODEL:
+#   1. RESNET -> RESNET + Attention Mechanisms
+#   2. TRANSFORMER BASED MODEL FOR VISION (VIT) -> VIT + Attention Mechanisms ??
+# FURTHER DEVELOPMENT: multi-task learning model predicts clen and pdb at the same time
+
+# to detect the subleties in the data, the deeper the model like ResNet-50 or -101 would be ideal.
+# 50 and 101 models balance between depth and computational efficiency, and are widely used in practice.
+
+# RESNET-50
 
 class ResNet50BraggPeakClassifier(nn.Module):
     """
@@ -85,16 +96,13 @@ class BasicCNN1(nn.Module):
         return x
 
 
-
 class BasicCNN2(nn.Module):
-    """
-    A basic CNN for detecting Bragg peaks in crystallography images.
-    This model is simplified and does not use a pre-trained architecture.
-    """
     def __init__(self, input_channels=1, output_channels=1, heatmap_size=(2163, 2069)):
         super(BasicCNN2, self).__init__()
         
         self.heatmap_size = heatmap_size
+        self.input_channels = input_channels
+        self.output_channels = output_channels
 
         # Convolutional layers
         self.conv1 = nn.Conv2d(input_channels, 32, kernel_size=3, stride=1, padding=1)
@@ -102,21 +110,36 @@ class BasicCNN2(nn.Module):
         self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
         self.conv4 = nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1)
 
-        # Pooling layer to reduce spatial dimensions
+        # Pooling layer
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
 
-        # Convolutional layer to generate heatmap with one channel
+        self.flattened_size = 256 * (heatmap_size[0] // 16) * (heatmap_size[1] // 16)  
+
+        # Linear layers - you may adjust the sizes and number of linear layers
+        self.fc1 = nn.Linear(self.flattened_size, 1024)
+        self.fc2 = nn.Linear(1024, self.flattened_size)  
+
+        # Convolutional layer for heatmap generation
         self.heatmap_conv = nn.Conv2d(256, output_channels, kernel_size=3, stride=1, padding=1)
 
-        # Upsampling layer to match the desired output size
+        # Upsampling layer
         self.upsample = nn.Upsample(size=heatmap_size, mode='bilinear', align_corners=True)
 
     def forward(self, x):
-        # Applying consecutive convolutions and pooling
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
         x = self.pool(F.relu(self.conv3(x)))
         x = self.pool(F.relu(self.conv4(x)))
+
+        # Flatten the output for the linear layer
+        x = x.view(-1, self.flattened_size)
+
+        # Pass through linear layers
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+
+        # Reshape output back to match the convolutional layer expected input
+        x = x.view(-1, 256, self.heatmap_size[0] // 16, self.heatmap_size[1] // 16)
 
         # Generating heatmap
         x = self.heatmap_conv(x)
@@ -125,6 +148,7 @@ class BasicCNN2(nn.Module):
         x = self.upsample(x)
 
         return x
+
     
     
     
@@ -161,3 +185,40 @@ class DenseNetBraggPeakClassifier(nn.Module):
         x = self.heatmap_conv(x)  # Convolution to generate heatmap
         x = self.upsample(x)  # Upsample to match desired heatmap size
         return x
+
+class BasicCNN3(nn.Module):
+    def __init__(self, input_channels=1, input_size=(2163, 2069)):
+        super(BasicCNN3, self).__init__()
+        
+        # Convolutional layer followed by pooling
+        self.conv1 = nn.Conv2d(input_channels, 16, kernel_size=5, stride=1, padding=2)
+        self.pool = nn.MaxPool2d(kernel_size=4, stride=4, padding=0)
+        
+        # Additional convolutional layers
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
+        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
+        
+        # Calculate the size of the flattened feature map.
+        # This is an example calculation that needs to be adjusted
+        # based on the actual size of your input images and the architecture's downsampling operations.
+        reduced_size = input_size[0] // (4**3), input_size[1] // (4**3)  # Assuming three pooling layers each reducing size by a factor of 4
+        self.fc_input_size = 64 * reduced_size[0] * reduced_size[1]  # Adjust this based on your network's architecture
+        
+        # Fully connected layer to produce a single output
+        self.fc = nn.Linear(self.fc_input_size, 1)
+
+    def forward(self, x):
+        # Applying convolutions and pooling
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = self.pool(F.relu(self.conv3(x)))
+        
+        # Flattening the output for the fully connected layer
+        x = x.view(-1, self.fc_input_size)
+        
+        # Fully connected layer to get to a single output value
+        x = self.fc(x)
+        
+        return x
+
+
