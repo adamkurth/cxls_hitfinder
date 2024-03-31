@@ -1,9 +1,10 @@
+from operator import truth
 import os 
 import re
 import h5py as h5 
 import numpy as np
 import torch
-from functools import lru_cache
+from functools import lru_cache, singledispatch
 from skimage.feature import peak_local_max
 from torch.utils.data import DataLoader, Dataset
 from torchvision.transforms.functional import to_tensor
@@ -12,6 +13,9 @@ from sklearn.metrics import confusion_matrix
 import logging 
 from glob import glob
 import numpy as np
+torch.set_printoptions(profile="full")
+
+
 
 def load_h5(file_path:str) -> np.ndarray:
     with h5.File(file_path, 'r') as file:
@@ -39,8 +43,22 @@ def assign_attributes(file_path: str, parameters: tuple):
         f.attrs['clen'] = clen
         f.attrs['photon_energy'] = photon_energy
     print(f"Attributes 'clen' and 'photon_energy' assigned to {file_path}")
-  
-def retrieve_attributes(file_path: str) -> tuple:
+
+# This singledispatch is funtioning like overriding an function, which is not normally supported due to dynamic data types. If the input is a string, the file path in this case, it will use the string case. If given the file directly, it will use the default case, since a special case does not exist for it.
+
+@singledispatch
+def retrieve_attributes(file: np.ndarray) -> tuple:
+    try:
+        clen = file.attrs.get('clen')
+        photon_energy = file.attrs.get('photon_energy')
+    except KeyError:
+        clen = None
+        photon_energy = None
+        print(f"Attributes 'clen' and 'photon_energy' not found in {file}.")
+    return clen, photon_energy
+
+@retrieve_attributes.register(str)
+def _(file_path: str) -> tuple:
     """
     Retrieves 'clen' and 'photon_energy' attributes from an HDF5 file.
     """
@@ -213,6 +231,7 @@ class PathManager:
     def get_label_images_paths(self, dataset:str) -> list:
         dataset_dir = os.path.join(self.labels_dir, dataset)
         return [os.path.join(dataset_dir, f) for f in os.listdir(dataset_dir) if f.startswith('label') or f.startswith('empty') and f.endswith('.h5')]
+
     
     @lru_cache(maxsize=32)
     def get_water_background(self, dataset:str) -> str:
@@ -537,6 +556,7 @@ class DatasetManager(Dataset):
         return len(self.peak_paths)
     
     def __getitem__(self, idx:int) -> tuple:
+        # print(idx, len(self.peak_paths), len(self.water_peak_paths), len(self.labels_paths)) # debug print for idx out of range error
         peak_image = load_h5(self.peak_paths[idx])
         water_image = load_h5(self.water_peak_paths[idx])
         label_image = load_h5(self.label_paths[idx])
@@ -604,13 +624,14 @@ class TransformToTensor:
             raise ValueError(f"Image has invalid dimensions: {image.shape}")
         image_tensor = torch.from_numpy(image).float().to(dtype=torch.float32)  # Convert to tensor with dtype=torch.float32
         return image_tensor # dimensions: C x H x W 
-    
 
+# -----------------------------------------------------------------------------------------------------------------------
 class TrainTestModels:
     """ 
     This class trains, tests, and plots the loss, accuracy, and confusion matrix of a model.
     There are two methods for training: test_model_no_freeze and test_model_freeze.
     """
+    
     def __init__(self, model, loader: list, criterion, optimizer, device, cfg: dict) -> None:
         """ 
         Takes the arguments for training and testing and makes them available to the class.
@@ -636,85 +657,120 @@ class TrainTestModels:
         self.plot_train_loss = np.zeros(self.epochs)
         self.plot_test_accuracy = np.zeros(self.epochs)
         self.plot_test_loss = np.zeros(self.epochs)
+
+        self.cm = np.zeros((self.classes,self.classes), dtype=int)
+        self.threshold = 0.5
         self.logger = logging.getLogger(__name__)
 
-    def train(self) -> None:
+
+    def train(self, epoch) -> None:
         """
         This function trains the model without freezing the parameters in the case of transfer learning.
         This will print the loss and accuracy of the training sets per epoch.
         """
-        self.logger.info(f'Model training: {self.model.__class__.__name__}')
-        
-        for epoch in range(self.epochs):
-            self.logger.info('-- epoch '+str(epoch)) 
-            running_loss_train = accuracy_train = predictions = total_predictions = 0.0
 
-            self.model.train()
-            for inputs, labels in self.loader[0]: 
-                peak_images, overlay_images = inputs
-                peak_images, overlay_images, labels = peak_images.to(self.device), overlay_images.to(self.device), labels.to(self.device)
+        # print(f'Model training: {self.model.__class__.__name__}')
 
-                self.optimizer.zero_grad()
-                score = self.model(peak_images)
-                loss = self.criterion(score, labels)
+        running_loss_train = accuracy_train = predictions = total_predictions = 0.0
 
-                loss.backward()
-                self.optimizer.step()
-                running_loss_train += loss.item()  
-                predictions = (torch.sigmoid(score) > 0.5).long()  
-                accuracy_train += (predictions == labels).float().sum()
-                total_predictions += np.prod(labels.shape)
-                
-            loss_train = running_loss_train / self.batch
-            self.plot_train_loss[epoch] = loss_train
+        self.model.train()
+        for inputs, labels in self.loader[0]:  # Assuming self.loader[0] is the training data loader
+            peak_images, overlay_images = inputs
+            peak_images, overlay_images, labels = peak_images.to(self.device), overlay_images.to(self.device), labels.to(self.device)
+
+            temp = np.count_nonzero(np.array(labels.cpu()))
+            print(temp)
+
+            self.optimizer.zero_grad()
+            score = self.model(peak_images)
+            predictions = (torch.sigmoid(score) > self.threshold).long()  
+            truth = (torch.sigmoid(labels) > self.threshold).long()
+            predictions = predictions.any().item()
+            truth = truth.any().item()
+            predictions = torch.tensor([float(predictions)], requires_grad=True)
+            truth = torch.tensor([float(truth)])
+            # loss = self.criterion(score, labels)
+            loss = self.criterion(predictions, truth)
+            loss.backward()
+            self.optimizer.step()
+            running_loss_train += loss.item()  
+            # predictions = (torch.sigmoid(score) > self.threshold).long()  
+            # truth = (torch.sigmoid(labels) > self.threshold).long()
+            # accuracy_train += (predictions == labels).float().sum()
             
-            self.logger.info(f'Train loss: {loss_train}')
-
-            # If you want to uncomment these lines, make sure the calculation of accuracy_train is corrected as follows:
-            accuracy_train /= total_predictions
-            self.plot_train_accuracy[epoch] = accuracy_train
-            self.logger.info(f'Train accuracy: {accuracy_train}')
+            accuracy_train += (predictions == truth).float().sum()
+            # total_predictions += np.prod(labels.shape)
+            # total_predictions += torch.numel(labels)
+            total_predictions += 1
             
-    def test_freeze(self) -> None:
-        """ 
-        This function trains the model with freezing the parameters of in the case of transfer learning.
-        This will print the loss and accuracy of the testing sets per epoch.
-        WIP
-        """
-        pass
+        loss_train = running_loss_train / self.batch
+        self.plot_train_loss[epoch] = loss_train
+        self.logger.info(f'Train loss: {loss_train}')
+        print(f'Train loss: {loss_train}')
+
+        # If you want to uncomment these lines, make sure the calculation of accuracy_train is corrected as follows:
+        accuracy_train /= total_predictions
+        self.plot_train_accuracy[epoch] = accuracy_train
+        self.logger.info(f'Train accuracy: {accuracy_train}')
+        print(f'Train accuracy: {accuracy_train}')
+            
+    # def test_freeze(self) -> None:
+    #     """ 
+    #     This function trains the model with freezing the parameters of in the case of transfer learning.
+    #     This will print the loss and accuracy of the testing sets per epoch.
+    #     WIP
+    #     """   
+    #     pass
         
-    def test(self) -> None:
+    def test(self, epoch) -> None:
         """ 
         This function test the model and prints the loss and accuracy of the testing sets per epoch.
         """
-        self.logger.info(f'Model testing: {self.model.__class__.__name__}')
-        
-        for epoch in range(self.epochs):
-            self.logger.info('-- epoch '+str(epoch)) 
+        # print(f'Model testing: {self.model.__class__.__name__}')
             
-            running_loss_test = accuracy_test = predicted = total = 0.0
-            self.model.eval()
-            with torch.no_grad():
-                for inputs, labels in self.loader[1]:
-                    peak_images, _ = inputs
-                    peak_images = peak_images.to(self.device)
-                    labels = labels.to(self.device)
+        running_loss_test = accuracy_test = predicted = total = 0.0
+        self.model.eval()
+        with torch.no_grad():
+            for inputs, labels in self.loader[1]:
+                peak_images, _ = inputs
+                peak_images = peak_images.to(self.device)
+                labels = labels.to(self.device)
 
-                    score = self.model(peak_images)
-                    loss = self.criterion(score, labels)
-                    running_loss_test += loss.item()  # Convert to Python number with .item()
-                    predicted = (torch.sigmoid(score) > 0.5).long()  # Assuming 'score' is the output of your model
-                    accuracy_test += (predicted == labels).float().sum()
-                    total += np.prod(labels.shape)
 
-            loss_test = running_loss_test/self.batch[1]
-            self.plot_test_loss[epoch] = loss_test
 
-            accuracy_test /= total
-            self.plot_test_accuracy[epoch] = accuracy_test
+                score = self.model(peak_images)
+                predicted = (torch.sigmoid(score) > self.threshold).long()  # Assuming 'score' is the output of your model
+                truth = (torch.sigmoid(labels) > self.threshold).long()
+                predicted = predicted.any().item()
+                truth = truth.any().item()
+                predicted = torch.tensor([float(predicted)])
+                truth = torch.tensor([float(truth)])
+                
+                loss = self.criterion(predicted, truth)
+                # loss = self.criterion(score, labels)
+                
+                
+                running_loss_test += loss.item()  # Convert to Python number with .item()
+                # predicted = (torch.sigmoid(score) > self.threshold).long()  # Assuming 'score' is the output of your model
+                # truth = (torch.sigmoid(labels) > self.threshold).long()
+                
+                # accuracy_test += (predicted == labels).float().sum()
+                accuracy_test += (predicted == truth).float().sum()
+                # total += np.prod(labels.shape)
+                # total += torch.numel(labels)
+                total += 1
 
-            self.logger.info(f'Test loss: {loss_test}')
-            self.logger.info(f'Test accuracy: {accuracy_test}')
+        loss_test = running_loss_test/self.batch
+        self.plot_test_loss[epoch] = loss_test
+
+        accuracy_test /= total
+        self.plot_test_accuracy[epoch] = accuracy_test
+
+        self.logger.info(f'Test loss: {loss_test}')
+        self.logger.info(f'Test accuracy: {accuracy_test}')
+        print(f'Test loss: {loss_test}')
+        print(f'Test accuracy: {accuracy_test}')
+
         
     def plot_loss_accuracy(self) -> None:
         """ 
@@ -734,7 +790,6 @@ class TrainTestModels:
         """ 
         This function plots the confusion matrix of the testing set.
         """
-        cm_test = np.zeros((self.classes,self.classes), dtype=int)
         all_labels = []
         all_predictions = []
 
@@ -745,21 +800,117 @@ class TrainTestModels:
                 label = label.to(self.device)
 
                 score = self.model(peak_images).squeeze()
+                predictions = (torch.sigmoid(score) > self.threshold).long()
+                truth = (torch.sigmoid(label) > self.threshold).long()
+                predictions = predictions.any().item()
+                truth = truth.any().item()
 
-                predictions = (torch.sigmoid(score) > 0.5).long()
-
-                all_labels.extend(label.cpu().numpy().flatten()) 
-                all_predictions.extend(predictions.cpu().numpy().flatten())
+                # all_labels.extend(label.cpu().numpy().flatten())
+                # all_labels.extend(truth.cpu().numpy().flatten()) 
+                # all_predictions.extend(predictions.cpu().numpy().flatten())
+                all_labels.append(truth)
+                all_predictions.append(predictions)
 
         all_labels = np.array(all_labels)
         all_predictions = np.array(all_predictions)
 
-        cm_test = confusion_matrix(all_labels, all_predictions)
+        self.cm = confusion_matrix(all_labels, all_predictions, normalize='true')
 
-        plt.matshow(cm_test,cmap="Blues")
+        plt.matshow(self.cm ,cmap="Blues")
         plt.title('Confusion matrix')
         plt.colorbar()
         plt.ylabel('True label')
         plt.xlabel('Predicted label')
         plt.show()
+
+    def get_confusion_matrix(self) -> np.ndarray:
+        """ 
+        This function returns the confusion matrix of the testing set.
+        """
+        return self.cm
     
+    def epoch_loop(self) -> None: 
+        """
+        This function loops through the number of epochs and trains and tests the model.
+        """
+        
+        self.logger.info(f'Model training and testing: {self.model.__class__.__name__}')
+        print(f'Model testing and validating: {self.model.__class__.__name__}')       
+        
+        for epoch in range(self.epochs):
+            self.logger.info('-- epoch '+str(epoch)) 
+            print('-- epoch '+str(epoch)) 
+
+            self.train(epoch)
+            self.test(epoch)
+            
+    def get_loss_accuracy(self) -> dict:
+        """ 
+        This function returns the loss and accuracy of the training and testing sets.
+        """
+        return {'train loss': self.plot_train_loss, 'train accuracy': self.plot_train_accuracy, 'test loss': self.plot_test_loss, 'test accuracy': self.plot_test_accuracy}
+    
+    
+    
+# -----------------------------------------------------------------------------------------------------------------------
+
+
+class ModelPipeline:
+    def __init__(self, peak_model, energy_model, clen_model) -> None:
+        """
+        This class represents a pipeline for analyzing Bragg peak images.
+        It combines three models for peak detection, energy estimation, and clen calculation.
+
+        Args:
+            peak_model (nn.Module): Convolutional neural network for peak detection.
+            energy_model (nn.Module): Convolutional neural network for energy estimation. This model is used when a peak is detected.
+            clen_model (nn.Module): Convolutional neural network for clen calculation. This model is used when a peak is detected after energy_model.
+        """
+        
+        self.binary_model = peak_model
+        self.energy_model = energy_model
+        self.clen_model = clen_model
+        self.pipeline_results = (0,0)
+        self.atributes = (0,0)
+
+    def run_pipeline(self, image) -> tuple:
+        """ 
+        This function runs the analysis pipeline on a given image.
+
+        Args:
+            image (torch.Tensor): This file shcxls_hitfinder/images/peaks/01/img_6keV_clen01_00062.h5ould be a 2D tensor representing the image of the Bragg peak .h5 file. 
+
+        Returns:
+            tuple: This function returns the estimated x-ray energy and clen value if a peak is detected, otherwise None.
+        """
+        
+        with torch.no_grad():  
+            peak_detected = self.binary_model(image).argmax(dim=1).item() == 1
+              
+            if peak_detected:
+                x_ray_energy = self.energy_model(image).item()
+                clen = self.clen_model(image).item()
+                
+                self.pipeline_results = (x_ray_energy, clen)
+                return self.pipeline_results
+            else:
+                return None 
+
+    def compare_results(self, image_path: str) -> None:
+        """
+        This function compares the pipeline results with the true attributes of the image.
+
+        Args:
+            image_path (str): This is the path to the .h5 image that was used in run_pipeline.
+
+        Returns:
+            str: The message telling us if the atributes are matching or not.
+        """
+        
+        clen, photon_energy = retrieve_attributes(image_path)
+        self.atributes = (clen, photon_energy)
+        
+        if self.pipeline_results == self.atributes:
+            print("The pipeline results match the true attributes.")
+        else:
+            print("The pipeline results do not match the true attributes.")
