@@ -13,6 +13,9 @@ from sklearn.metrics import confusion_matrix
 import logging 
 from glob import glob
 import numpy as np
+torch.set_printoptions(profile="full")
+
+
 
 def load_h5(file_path:str) -> np.ndarray:
     with h5.File(file_path, 'r') as file:
@@ -44,7 +47,7 @@ def assign_attributes(file_path: str, parameters: tuple):
 # This singledispatch is funtioning like overriding an function, which is not normally supported due to dynamic data types. If the input is a string, the file path in this case, it will use the string case. If given the file directly, it will use the default case, since a special case does not exist for it.
 
 @singledispatch
-def retrieve_attributes(file) -> tuple:
+def retrieve_attributes(file: np.ndarray) -> tuple:
     try:
         clen = file.attrs.get('clen')
         photon_energy = file.attrs.get('photon_energy')
@@ -410,6 +413,7 @@ class Processor:
             save_h5(file_path=out_label_path, data=labeled_array, save_attributes=True, parameters=parameters)
             
             # Update attributes for each file with clen and photon energy
+            self.update_attributes(file_path=self.paths.get_water_background(dataset=dataset), clen=clen, photon_energy=photon_energy)
             self.update_attributes(file_path=peak_path, clen=clen, photon_energy=photon_energy)
             self.update_attributes(file_path=out_overlay_path, clen=clen, photon_energy=photon_energy)
             self.update_attributes(file_path=out_label_path, clen=clen, photon_energy=photon_energy)
@@ -646,7 +650,7 @@ class TrainTestModels:
         self.plot_test_loss = np.zeros(self.epochs)
 
         self.cm = np.zeros((self.classes,self.classes), dtype=int)
-        self.threshold = 0.3
+        self.threshold = 0.5
         self.logger = logging.getLogger(__name__)
 
 
@@ -665,10 +669,12 @@ class TrainTestModels:
             peak_images, overlay_images = inputs
             peak_images, overlay_images, labels = peak_images.to(self.device), overlay_images.to(self.device), labels.to(self.device)
 
+            temp = np.count_nonzero(np.array(labels.cpu()))
+            print(temp)
+
             self.optimizer.zero_grad()
             score = self.model(peak_images)
             predictions = (torch.sigmoid(score) > self.threshold).long()  
-            
             truth = (torch.sigmoid(labels) > self.threshold).long()
             predictions = predictions.any().item()
             truth = truth.any().item()
@@ -676,7 +682,6 @@ class TrainTestModels:
             truth = torch.tensor([float(truth)])
             # loss = self.criterion(score, labels)
             loss = self.criterion(predictions, truth)
-
             loss.backward()
             self.optimizer.step()
             running_loss_train += loss.item()  
@@ -721,6 +726,7 @@ class TrainTestModels:
                 peak_images, _ = inputs
                 peak_images = peak_images.to(self.device)
                 labels = labels.to(self.device)
+
 
 
                 score = self.model(peak_images)
