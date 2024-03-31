@@ -850,13 +850,36 @@ class TrainTestModels:
         """
         return {'train loss': self.plot_train_loss, 'train accuracy': self.plot_train_accuracy, 'test loss': self.plot_test_loss, 'test accuracy': self.plot_test_accuracy}
     
+    def print_state_dict(self) -> None:
+        """
+        This function prints the model's state_dict and optimizer's state_dict.
+        """
+        
+        # Print model's state_dict
+        print("Model's state_dict:")
+        for param_tensor in self.model.state_dict():
+            print(param_tensor, "\t", self.model.state_dict()[param_tensor].size())
+
+        # Print optimizer's state_dict
+        print("Optimizer's state_dict:")
+        for var_name in self.optimizer.state_dict():
+            print(var_name, "\t", self.optimizer.state_dict()[var_name])
+    
+    def save_model(self, path:str) -> None:
+        """
+        This function saves the model's state_dict to a specified path. This can be used to load the trained model later.
+
+        Args:
+            path (str): Path to save the model's state_dict.
+        """
+        torch.save(self.model.state_dict(), PATH=path)
     
     
 # -----------------------------------------------------------------------------------------------------------------------
 
 
 class ModelPipeline:
-    def __init__(self, peak_model, energy_model, clen_model) -> None:
+    def __init__(self, peak_model_path, energy_model_path, clen_model_path) -> None:
         """
         This class represents a pipeline for analyzing Bragg peak images.
         It combines three models for peak detection, energy estimation, and clen calculation.
@@ -867,9 +890,14 @@ class ModelPipeline:
             clen_model (nn.Module): Convolutional neural network for clen calculation. This model is used when a peak is detected after energy_model.
         """
         
-        self.binary_model = peak_model
-        self.energy_model = energy_model
-        self.clen_model = clen_model
+        self.binary_model = torch.load(peak_model_path)
+        self.energy_model = torch.load(energy_model_path)
+        self.clen_model = torch.load(clen_model_path)
+        
+        self.binary_model.eval()
+        self.energy_model.eval()
+        self.clen_model.eval()
+        
         self.pipeline_results = (0,0)
         self.atributes = (0,0)
 
