@@ -13,7 +13,7 @@ class TrainTestModels:
     There are two methods for training: test_model_no_freeze and test_model_freeze.
     """
     
-    def __init__(self, model: object, loader: list, criterion, optimizer, device, cfg: dict) -> None:
+    def __init__(self, model: nn.Module, loader: list, criterion, optimizer, device, cfg: dict, feature: str) -> None:
         """ 
         Takes the arguments for training and testing and makes them available to the class.
 
@@ -42,6 +42,7 @@ class TrainTestModels:
         self.cm = np.zeros((self.classes,self.classes), dtype=int)
         self.threshold = 0.5
         self.logger = logging.getLogger(__name__)
+        self.feature = feature # peak, photon_energy, clen
 
             
     def train(self, epoch:int) -> None:
@@ -59,7 +60,7 @@ class TrainTestModels:
             peak_images, overlay_images = inputs
             peak_images, overlay_images, labels = peak_images.to(self.device), overlay_images.to(self.device), labels.to(self.device)
             
-            peak_image_attribute = attributes['peak']
+            peak_image_attribute = attributes[self.feature]
             peak_image_attribute = peak_image_attribute.reshape(-1, 1)
 
             self.optimizer.zero_grad()
@@ -105,7 +106,7 @@ class TrainTestModels:
                 labels = labels.to(self.device)
                 score = self.model(peak_images)
                 
-                peak_image_attribute = attributes['peak']
+                peak_image_attribute = attributes[self.feature]
                 peak_image_attribute = peak_image_attribute.reshape(-1, 1)
 
                 self.optimizer.zero_grad()
@@ -161,7 +162,7 @@ class TrainTestModels:
                 score = self.model(peak_images)
 
                 # Flatten and append labels to all_labels
-                peak_image_attribute = attributes['peak'].reshape(-1).cpu().numpy()
+                peak_image_attribute = attributes[self.feature].reshape(-1).cpu().numpy()
                 all_labels.extend(peak_image_attribute)
 
                 # Calculate predictions, flatten, and append to all_predictions
@@ -195,7 +196,8 @@ class TrainTestModels:
         """
         
         self.logger.info(f'Model training and testing: {self.model.__class__.__name__}')
-        print(f'Model testing and validating: {self.model.__class__.__name__}')       
+        print(f'Model testing and validating: {self.model.__class__.__name__}')     
+        print(f'Looking for the feature: {self.feature}')  
         
         for epoch in range(self.epochs):
             self.logger.info('-- epoch '+str(epoch)) 
