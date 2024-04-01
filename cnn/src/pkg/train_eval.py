@@ -227,3 +227,28 @@ class TrainTestModels:
         """
         return {'train loss': self.plot_train_loss, 'train accuracy': self.plot_train_accuracy, 'test loss': self.plot_test_loss, 'test accuracy': self.plot_test_accuracy}
     
+    def print_state_dict(self) -> None:
+        """
+        This function prints the model's state_dict and optimizer's state_dict.
+        """
+        
+        # Print model's state_dict
+        print("Model's state_dict:")
+        for param_tensor in self.model.state_dict():
+            print(param_tensor, "\t", self.model.state_dict()[param_tensor].size())
+
+        # Print optimizer's state_dict
+        print("Optimizer's state_dict:")
+        for var_name in self.optimizer.state_dict():
+            print(var_name, "\t", self.optimizer.state_dict()[var_name])
+    
+    def save_model(self, path:str) -> None:
+        """
+        This function saves the model's state_dict to a specified path. This can be used to load the trained model later.
+        Save as .pt file.
+        root: /cnn/models
+        Args:
+            path (str): Path to save the model's state_dict.
+        """
+        torch.save(self.model.state_dict(), path)
+    
