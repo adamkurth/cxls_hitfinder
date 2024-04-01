@@ -5,10 +5,65 @@ from typing import Any
 from glob import glob
 from torch.utils.data import DataLoader
 import torch
+from typing import Union, List
 from pkg.path import PathManager
 
-def get_device() -> torch.device:
-    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def convert2int(datasets: List[Union[str, int]]) -> List[int]:
+    """
+    Converts a list of dataset identifiers (either string or integer) to integers.
+    
+    Args:
+        datasets (List[Union[str, int]]): The list of dataset strings or integers.
+    
+    Returns:
+        List[int]: The datasets converted to integers.
+    """
+    converted = []
+    for dataset in datasets:
+        if isinstance(dataset, str):
+            converted.append(int(dataset))
+        elif isinstance(dataset, int):
+            converted.append(dataset)
+        else:
+            raise ValueError("Invalid dataset type. Expected str or int within the list.")
+    return converted
+
+def convert2str(datasets: List[Union[str, int]]) -> List[str]:
+    """
+    Converts a list of dataset identifiers (either string or integer) to strings formatted as '01', '02', etc.
+    
+    Args:
+        datasets (List[Union[str, int]]): The list of dataset strings or integers.
+    
+    Returns:
+        List[str]: The datasets converted to strings, with leading zeros for single-digit numbers.
+    """
+    converted = []
+    for dataset in datasets:
+        if isinstance(dataset, str):
+            converted.append(dataset.zfill(2))
+        elif isinstance(dataset, int):
+            converted.append(str(dataset).zfill(2))
+        else:
+            raise ValueError("Invalid dataset type. Expected str or int within the list.")
+    return converted
+
+def convert2str_single(dataset: Union[str, int]) -> str:
+    """
+    Converts a single dataset identifier (either string or integer) to a string formatted as '01', '02', etc.
+    
+    Args:
+        dataset (Union[str, int]): The dataset string or integer.
+    
+    Returns:
+        str: The dataset converted to a string, with leading zeros for single-digit numbers.
+    """
+    if isinstance(dataset, str):
+        return dataset.zfill(2)
+    elif isinstance(dataset, int):
+        return str(dataset).zfill(2)
+    else:
+        raise ValueError("Invalid dataset type. Expected str or int.")
 
 def load_h5(file_path:str) -> np.ndarray:
     with h5.File(file_path, 'r') as file:
@@ -127,7 +182,7 @@ def check_attributes(paths: object, dataset: str, type: str, **expected_attrs) -
     print(f"All files in dataset {dataset} of type '{type}' have matching attributes.")
     return True
 
-def get_counts(paths: object) -> None:
+def get_counts(paths: object, datasets:List[int]) -> None:
     """
     Counts and reports the number of 'normal' and 'empty' images in the specified directories
     for the selected dataset, using the paths to access directory paths.
@@ -137,20 +192,20 @@ def get_counts(paths: object) -> None:
 
     # Directories to check
     directory_types = ['peaks', 'labels', 'peaks_water_overlay']
-    dataset = paths.dataset
+    
+    for dataset in datasets:
+        # Loop through each directory type and count files
+        for directory_type in directory_types:
+            directory_path = os.path.join(paths.images_dir, directory_type, dataset)
+            all_files = glob(os.path.join(directory_path, '*.h5'))  # Corrected usage here
+            normal_files = [file for file in all_files if 'empty' not in os.path.basename(file)]
+            empty_files = [file for file in all_files if 'empty' in os.path.basename(file)]
 
-    # Loop through each directory type and count files
-    for directory_type in directory_types:
-        directory_path = os.path.join(paths.images_dir, directory_type, dataset)
-        all_files = glob(os.path.join(directory_path, '*.h5'))  # Corrected usage here
-        normal_files = [file for file in all_files if 'empty' not in os.path.basename(file)]
-        empty_files = [file for file in all_files if 'empty' in os.path.basename(file)]
-
-        # Reporting the counts
-        print(f"Directory: {directory_type}/{dataset}")
-        print(f"\tTotal files: {len(all_files)}")
-        print(f"\tNormal images: {len(normal_files)}")
-        print(f"\tEmpty images: {len(empty_files)}")
+            # Reporting the counts
+            print(f"Directory: {directory_type}/{dataset}")
+            print(f"\tTotal files: {len(all_files)}")
+            print(f"\tNormal images: {len(normal_files)}")
+            print(f"\tEmpty images: {len(empty_files)}")
 
 def prepare(data_manager: object, batch_size:int=32) -> tuple:
     """
