@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # from operator import truth
 # import os 
 # import re
@@ -14,6 +15,22 @@
 # import numpy as np
 # from glob import glob
 # from typing import Any
+=======
+import os 
+import re
+import h5py as h5 
+import numpy as np
+import torch
+from functools import lru_cache
+from skimage.feature import peak_local_max
+from torch.utils.data import DataLoader, Dataset
+from torchvision.transforms.functional import to_tensor
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix
+import numpy as np
+import logging
+import torch
+>>>>>>> progress
 
 # torch.set_printoptions(profile="full")
 
@@ -21,12 +38,27 @@
 #     with h5.File(file_path, 'r') as file:
 #         return np.array(file['entry/data/data'])
 
+<<<<<<< HEAD
 # def save_h5(file_path:str, data:np.ndarray, save_parameters:bool, params:list) -> None:
 #     with h5.File(file_path, 'w') as file:
 #         file.create_dataset('entry/data/data', data=data)
 #     if save_parameters:
 #         assign_attributes(file_path=file_path, clen=params[0], photon_energy=params[1])
 #     print(f"File saved: {file_path}")
+=======
+def get_device() -> torch.device:
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def parameter_matrix(clen_values: list, photon_energy_values: list) -> None:
+    # limited to 2d for now 
+    print("\ntrue parameter matrix...\n")
+    dtype = [('clen', float), ('photon_energy', float)]
+    matrix = np.zeros((len(clen_values), len(photon_energy_values)), dtype=dtype)
+    for i, clen in enumerate(clen_values):
+        for j, photon_energy in enumerate(photon_energy_values):
+            matrix[i, j] = (clen, photon_energy)
+    return matrix
+>>>>>>> progress
 
 # def parameter_matrix(clen_values: list, photon_energy_values: list) -> None:
 #     # limited to 2d for now 
@@ -608,6 +640,7 @@
 #     #   self.include_water_background is a boolean flag to include water background images in the dataset
 #     #   self.percent_water_repeat is the percentage of water images to be added to the dataset
     
+<<<<<<< HEAD
 #     def __init__(self, paths, dataset:str, parameters:list, transform=False) -> None:
 #         self.paths = paths
 #         self.dataset = dataset
@@ -649,6 +682,43 @@
 #         unif_label = check_attributes(paths=self.paths, dataset=self.dataset, type='label', clen=clen, photon_energy=photon_energy)
 #         unif_overlay = check_attributes(paths=self.paths, dataset=self.dataset, type='overlay', clen=clen, photon_energy=photon_energy)
 #         unif_water = check_attributes(paths=self.paths, dataset=self.dataset, type='background', clen=clen, photon_energy=photon_energy)
+=======
+
+class TrainTestModels:
+    """ This class trains, tests, and plots the loss, accuracy, and confusion matrix of a model.
+        There are two methods for training: test_model_no_freeze and test_model_freeze.
+    """
+    def __init__(self, model, loader: list, criterion, optimizer, device, cfg: dict) -> None:
+        """ 
+        Takes the arguments for training and testing and makes them available to the class.
+
+        Args:
+            model: PyTorch model
+            loader: list of torch.utils.data.DataLoader where loader[0] is the training set and loader[1] is the testing set
+            criterion: PyTorch loss function
+            optimizer: PyTorch optimizer
+            device: torch.device which is either 'cuda' or 'cpu'
+            cfg: dict which holds the configuration parameters num_epochs, batch_size, and num_classes
+        """
+        self.model = model
+        self.loader = loader
+        self.criterion = criterion
+        self.optimizer = optimizer
+        self.epochs = cfg['num_epochs']
+        self.device = device
+        self.batch = [len(self.loader[0]), len(self.loader[1])]
+        self.classes = cfg['num_classes']
+        self.plot_train_accuracy = np.zeros(self.epochs)
+        self.plot_train_loss = np.zeros(self.epochs)
+        self.plot_test_accuracy = np.zeros(self.epochs)
+        self.plot_test_loss = np.zeros(self.epochs)
+
+    def train_model_no_freeze(self) -> None:
+        """ This function trains the model without freezing the parameters of in the case of transfer learning.
+            This will print the loss and accuracy of the training sets per epoch.
+        """
+        print(f'Model training: {self.model.__class__.__name__}')
+>>>>>>> progress
         
 #         if not (unif_peaks and unif_label and unif_overlay and unif_water):
 #             raise ValueError(f"Dataset {self.dataset} failed authentication.")
@@ -829,6 +899,7 @@
 #                 # predicted = (torch.sigmoid(score) > self.threshold).long()  # Assuming 'score' is the output of your model
 #                 # truth = (torch.sigmoid(labels) > self.threshold).long()
                 
+<<<<<<< HEAD
 #                 # accuracy_test += (predicted == labels).float().sum()
 #                 accuracy_test += (predicted == truth).float().sum()
 #                 # total += np.prod(labels.shape)
@@ -846,6 +917,60 @@
 #         print(f'Test loss: {loss_test}')
 #         print(f'Test accuracy: {accuracy_test}')
 
+=======
+            print(f'Train loss: {loss_train}')
+            print(f'Train accuracy: {accuracy_train}')
+        
+    def train_model_freeze(self) -> None:
+        """ 
+        This function trains the model with freezing the parameters of in the case of transfer learning.
+        This will print the loss and accuracy of the testing sets per epoch.
+        WIP
+        """
+        pass
+        
+    def train_model(self) -> None:
+        """ 
+        This function test the model and prints the loss and accuracy of the testing sets per epoch.
+        """
+        
+        print(f'Model training: {self.model.__class__.__name__}')
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+        for epoch in range(self.epochs):
+            print('-- epoch '+str(epoch)) 
+            running_loss_train = accuracy_train = total_predictions = 0.0
+            
+            self.model.train()
+            for inputs, labels in self.loader[0]:
+                peak_images, water_images, labels = inputs[0].to(self.device), inputs[1].to(self.device), labels.to(self.device)
+                # zero parameter gradients
+                self.optimizer.zero_grad()
+                # forward pass
+                score = self.model(peak_images, water_images) # edit model input
+                loss = self.criterion(score, labels)
+                # backward/optimize
+                loss.backward()
+                self.optimizer.step()
+                running_loss_train += loss.item()
+                # calculate accuracy
+                predicted = (torch.sigmoid(score) > 0.5).float()
+                correct_predictions += (predicted == labels).float().sum()
+                total_predictions += labels.size(0)
+                
+            loss_train = running_loss_train / self.batch[0] 
+            self.plot_train_loss[epoch] = loss_train
+            accuracy_train /= total_predictions
+            self.plot_train_accuracy[epoch] = accuracy_train
+                
+            print(f'Train loss: {loss_train}')
+            print(f'Train accuracy: {accuracy_train}')
+            logging.info(f'Epoch [{epoch+1}/{self.epochs}], Loss: {self.epochs}}')
+
+            
+            
+            
+>>>>>>> progress
         
 #     def plot_loss_accuracy(self) -> None:
 #         """ 
