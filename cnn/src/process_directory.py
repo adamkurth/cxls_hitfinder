@@ -12,7 +12,8 @@ Usage:
 import os
 from glob import glob
 import argparse
-from pkg import u
+from pkg import *
+
 
 def create_and_populate_dirs(target_path):
     """
@@ -94,20 +95,20 @@ def process_data(directory, percent_empty=0.3):
     dataset_num = input("Enter dataset number: ")
     dataset = dataset_num.zfill(2) # string (ex '01')
     
-    pm = u.PathManager(dataset=dataset)
-    p = u.Processor(paths=pm, dataset=dataset)
-    clen, photon_energy = p.get_parameters()
+    paths = pm.PathManager(dataset=dataset)
+    processor = p.Processor(paths=paths, dataset=dataset)
+    clen, photon_energy = processor.get_parameters()
 
     # Step 0: Remove all existing empty images.
-    p.cleanup()
-    p.cleanup_authenticator()
+    processor.cleanup()
+    processor.cleanup_authenticator()
     
     # Step 1: Process existing data to generate labels, overlays, and possibly more.
-    p.process_directory(dataset=dataset, clen=clen, photon_energy=photon_energy)
-    p.cleanup_authenticator()
+    processor.process_directory(dataset=dataset, clen=clen, photon_energy=photon_energy)
+    processor.cleanup_authenticator()
     
     # Step 2: Calculate the number of empty images to add based on the percentage.
-    p.process_empty(percent_empty=percent_empty)
+    processor.process_empty(percent_empty=percent_empty)
     
 def main(images_dir, force=False, percent_empty: float = 0.3):
     """
