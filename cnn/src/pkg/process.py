@@ -4,21 +4,60 @@ import h5py as h5
 import numpy as np
 import torch
 from skimage.feature import peak_local_max
+from typing import List
 from pkg import *
 
-       
 class Processor:
-    def __init__(self, paths, dataset: str) -> None:
+    def __init__(self, paths, datasets: List[int]) -> None:
         self.paths = paths  # Expecting an instance of PathManager
-        self.length = None          # .15, .25, .35 m
-        self.photon_energy = None   #  6, 7.5, 8 keV 
         self.threshold = 1 # used for peak images (pure signal)
-        self.dataset = dataset
-        self.dataset_init()
-        self.water_background = f.load_h5(self.paths.get_water_background(dataset))
+        self.datasets = [str(num).zfill(2) for num in datasets] # list of datasets
+        self.dataset_dict = self.dataset_init()
+        self.parameters_dict = self.selected_datasets() 
+        self.water_backgrounds = self.init_water_background()
+        self.water_background_dict = self.convert_water_backgrounds_to_dict()
+
+    def init_water_background(self) -> list:
+        self.water_backgrounds = self.paths.total_paths.water_background
+        return self.water_backgrounds        
+    
+    def convert_water_backgrounds_to_dict(self) -> dict:
+        """
+        Converts the list of water background paths into a dictionary keyed by dataset identifiers.
+        
+        Returns:
+            dict: A dictionary where keys are dataset identifiers and values are water background paths.
+        """
+        water_dict = {}
+        for path in self.water_backgrounds:
+            # Extract dataset identifier from the path
+            dataset_id = path.split('/')[-2]  # Assuming the format always has the dataset ID as the second last part of the path
+            water_dict[dataset_id] = path
+        return water_dict
+            
+    def selected_datasets(self) -> dict:
+        """Returns a dictionary of selected datasets with their corresponding parameters.
+
+        Returns:
+            dict: A dictionary where the keys are the dataset names and the values are dictionaries
+                  containing the parameters 'clen' and 'photon_energy' for each dataset.
+        """
+        parameters_dict = {}
+        for dataset in self.datasets:
+            params = self.dataset_dict.get(dataset, None)
+            if params is not None:
+                clen, photon_energy = params
+                parameters_dict[dataset] = {'clen': clen, 'photon_energy': photon_energy}
+        return parameters_dict
 
     def dataset_init(self) -> None:
-        clen_values, photon_energy_values = [1.5, 2.5, 3.5], [6000, 7000, 8000]
+        """
+        Initializes the dataset dictionary with predefined values for clen and photon energy.
+
+        Returns:
+            None
+        """
+        clen_values, photon_energy_values = [0.15, 0.25, 0.35], [6000, 7000, 8000]
         self.dataset_dict = {
             '01': [clen_values[0], photon_energy_values[0]],
             '02': [clen_values[0], photon_energy_values[1]],
@@ -32,10 +71,9 @@ class Processor:
         }
         return self.dataset_dict
   
-    def get_parameters(self) -> tuple:
-        self.parameters = self.dataset_dict.get(self.dataset, None)        
-        return self.parameters #list of clen, photon_energy
-    
+    def get_parameters(self) -> dict:
+        return self.selected_datasets()
+        
     @staticmethod
     def new_attibute(file_path:str, new:tuple) -> None:
         name, val = new
@@ -110,29 +148,34 @@ class Processor:
             print(f"Action '{action_discription}' confirmation failed at attempt\n")
             return False
     
-    def process_directory(self, dataset:str, clen:float, photon_energy:int) -> None: 
-        """
-        Processes all peak images in the directory, applies the water background,
-        generates label heatmaps for detecting Bragg peaks, and updates the HDF5 files
-        with 'clen' and 'photon_energy' attributes for peak images, water images, and label images.
-        """
-        # Confirmations for clen and photon_energy
+    def process_directory(self) -> None:
+        """Processes directories for all selected datasets, applying water background and generating labels."""
+        # Iterate through each dataset and its parameters
+        for key_dataset, parameters in self.parameters_dict.items():
+            clen, photon_energy = parameters['clen'], parameters['photon_energy']
+            # confirm dataset and parameters 
+            dataset_confirmed = self.confirm_value(key_dataset, 'dataset')
+            clen_confirmed = self.confirm_value(clen, 'clen')
+            photon_energy_confirmed = self.confirm_value(photon_energy, 'photon_energy')
+            water_background_path = self.water_background_dict.get(key_dataset)
+            water_background_confirmed = self.confirm_value(water_background_path, 'water_background')
+                
+        
+            if not (dataset_confirmed and clen_confirmed and photon_energy_confirmed and water_background_confirmed):
+                print(f"Skipping dataset {key_dataset} due to unconfirmed parameters.")
+                continue
+            
+            # Process each dataset independently
+            self.process_single_dataset(dataset=key_dataset, clen=clen, photon_energy=photon_energy) 
+            print(f"Completed processing for dataset {key_dataset}.")
 
-        dataset_confirmed = self.confirm_value(dataset, 'dataset')
-        clen_confirmed = self.confirm_value(clen, 'clen')
-        photon_energy_confirmed = self.confirm_value(photon_energy, 'photon_energy')
-        water_background_confirmed = self.confirm_value(self.paths.get_water_background(dataset), 'water_background')
+    def process_single_dataset(self, dataset: str, clen: float, photon_energy: int) -> None:
+        """Processes a single dataset by applying water background and generating label images."""
+        peak_paths = self.paths.get_peak_image_paths(dataset=dataset)
+        water_background_path = self.water_background_dict.get(dataset)
+        self.water_background = f.load_h5(file_path=water_background_path)
         
-        if not (clen_confirmed and photon_energy_confirmed and dataset_confirmed and water_background_confirmed):
-            print("Operation cancelled due to confirmation failure.")
-            return
-        
-        # get peak images
-        peak_image_paths = self.paths.get_peak_image_paths(dataset=dataset)
-        # get water background image 
-        water_background = self.water_background
-        
-        for peak_path in peak_image_paths:
+        for peak_path in peak_paths:
             # derive a unique basename for each peak image
             basename = os.path.basename(peak_path)
             
@@ -154,11 +197,7 @@ class Processor:
             self.update_attributes(file_path=out_label_path, clen=clen, photon_energy=photon_energy, peak=True)
             self.update_attributes(file_path=self.paths.get_water_background(dataset=dataset),
                                     clen=clen, photon_energy=photon_energy, peak=False)
-            
-            # self.assign_attributes(file_path=peak_path, clen=clen, photon_energy=photon_energy, peak=True)
-            # self.assign_attributes(file_path=out_overlay_path, clen=clen, photon_energy=photon_energy, peak=True)
-            # self.assign_attributes(file_path=out_label_path, clen=clen, photon_energy=photon_energy, peak=True)
-            # self.assign_attributes(file_path=self.paths.get_water_background(dataset=dataset), clen=clen, photon_energy=photon_energy, peak=False)
+
             print(f"Processed and labeled images for {basename} saved.")
         print(f"\nProcessing complete for dataset {dataset}.\n")
             
@@ -194,58 +233,72 @@ class Processor:
         """
         print("Starting cleanup of empty images...")
         # Specify directories specific to the dataset
-        directories = [
-            os.path.join(self.paths.peaks_dir, self.dataset),
-            os.path.join(self.paths.labels_dir, self.dataset),
-            os.path.join(self.paths.peaks_water_overlay_dir, self.dataset),
-        ]
+        for dataset in self.datasets:
+            directories = [
+                os.path.join(self.paths.peaks_dir, dataset),
+                os.path.join(self.paths.labels_dir, dataset),
+                os.path.join(self.paths.peaks_water_overlay_dir, dataset),
+            ]
+            for dir_path in directories:
+                deleted = 0  # Reset deleted counter for each directory
+                for root, _, files in os.walk(dir_path):
+                    for file in files:
+                        if 'empty' in file:
+                            file_path = os.path.join(root, file)
+                            try:
+                                os.remove(file_path)
+                                print(f"Successfully removed: {file_path}")
+                                deleted += 1
+                            except OSError as e:
+                                print(f"Failed to remove {file_path}: {e}")
+                print(f"Total 'empty' files deleted in {dir_path}: {deleted}")
 
-        for dir_path in directories:
-            deleted = 0  # Reset deleted counter for each directory
-            for root, _, files in os.walk(dir_path):
-                for file in files:
-                    if 'empty' in file:
-                        file_path = os.path.join(root, file)
-                        try:
-                            os.remove(file_path)
-                            print(f"Successfully removed: {file_path}")
-                            deleted += 1
-                        except OSError as e:
-                            print(f"Failed to remove {file_path}: {e}")
-            print(f"Total 'empty' files deleted in {dir_path}: {deleted}")
-
-        print("Cleanup of empty images complete.")
+        print(f"Cleanup of empty images complete for {self.datasets}.")
     
+        
     def process_empty(self, percent_empty:float=0.3) -> None:
         self.percent_empty = percent_empty  
+        
         print('\nStarting Step 2...')
-        print(f"Processing empty images for dataset {self.dataset}...")
         
-        print(f"Percent empty: {percent_empty}")
-        if not self.confirm_action("This will generate empty images based on the specified percentage."):
-            print("Operation canceled by the user.")
-            return 
+        for dataset in self.datasets:
+            print(f"\nProcessing empty images for dataset {dataset}...")
+            
+            # Confirm action for the current dataset
+            action_description = f"This will generate empty images based on {percent_empty*100}% of the existing images for dataset {dataset}."
+            if self.confirm_action(action_description):
+                self.process_empty_single_dataset(dataset=dataset, percent_empty=percent_empty)
+            else:
+                print(f"Operation canceled by the user for dataset {dataset}.")
+            
+    def process_empty_single_dataset(self, dataset:str, percent_empty:float) -> None:
+        """Processes a single dataset to generate and save empty images."""
+        print(f"\nGenerating empty images for dataset {dataset} with {percent_empty*100}% empty.")
+        self.dataset = dataset
 
-        # calculate number of empty images to add based on percentage
-        num_exist_images = len(self.paths.get_peak_image_paths(self.dataset)) # number of duplicated empty images
-        num_empty_images = int(percent_empty * num_exist_images) # number of duplicated water images 
-        
+        # Fetch paths and calculate number of empty images to add based on percentage
+        peak_image_paths = self.paths.get_peak_image_paths(dataset)
+        num_exist_images = len(peak_image_paths)
+        num_empty_images = int(percent_empty * num_exist_images)
         # generate and save empty images, update PathManager accordingly
-        print(f'Will generate {num_empty_images} empty images for dataset {self.dataset}...')
+        print(f'Will generate {num_empty_images} empty images for dataset {dataset}...')
         
         for i in range(num_empty_images):
             formatted = f'{i+1:05d}' # starts at 00001
-            empty_label_path = os.path.join(self.paths.labels_dir, self.dataset, f'empty_label_{self.dataset}_{formatted}.h5')
-            empty_peak_path = os.path.join(self.paths.peaks_dir, self.dataset, f'empty_peak_{self.dataset}_{formatted}.h5')
-            empty_overlay_path = os.path.join(self.paths.peaks_water_overlay_dir, self.dataset, f'empty_overlay_{self.dataset}_{formatted}.h5')
+            empty_label_path = os.path.join(self.paths.labels_dir, dataset, f'empty_label_{dataset}_{formatted}.h5')
+            empty_peak_path = os.path.join(self.paths.peaks_dir, dataset, f'empty_peak_{dataset}_{formatted}.h5')
+            empty_overlay_path = os.path.join(self.paths.peaks_water_overlay_dir, dataset, f'empty_overlay_{dataset}_{formatted}.h5')
             
             # data 
-            empty = np.zeros_like(self.water_background, dtype=np.float32) # empty image no water_background 
-            water_background = self.water_background # water background image
-            
+            water_background_path = self.water_background_dict.get(f.convert2str_single(dataset))
+            water_background = f.load_h5(water_background_path) # water background
+            empty = np.zeros_like(water_background, dtype=np.float32) # empty image no water_background 
+                        
             # save h5 files 
             # labels -> empty, peaks -> empty, overlay -> water background
-            parameters = self.get_parameters()
+            parameters = self.parameters_dict.get(dataset)
+            parameters = [parameters['clen'], parameters['photon_energy']]
+            
             f.save_h5(file_path=empty_label_path, data=empty, save_parameters=True, params=parameters) # empty label
             clen, photon_energy = parameters[0], parameters[1]
             f.save_h5(file_path=empty_peak_path, data=empty, save_parameters=True, params=parameters) # empty peak
@@ -253,8 +306,8 @@ class Processor:
             
             # save paths to PathManager
             self.paths.update_path(file_path=empty_label_path, dir_type='label')
-            self.paths.update_path(empty_label_path, dir_type='peak')
-            self.paths.update_path(empty_overlay_path, dir_type='overlay')
+            self.paths.update_path(file_path=empty_label_path, dir_type='peak')
+            self.paths.update_path(file_path=empty_overlay_path, dir_type='overlay')
             
             empty = False
             f.assign_attributes(file_path=empty_label_path, clen=clen, photon_energy=photon_energy, peak=empty)
@@ -266,9 +319,9 @@ class Processor:
             print(f"Empty overlay file mimicking water background created: {empty_overlay_path}\n")
 
         print(f"Empty images added: {num_empty_images}")
-        print(f"Processing complete for dataset {self.dataset}.\n")
+        print(f"Processing complete for dataset {dataset}.\n")
         
         print("Step 2 complete.\n")
-        print(f"Number of peak files: {len(self.paths.get_peak_image_paths(self.dataset))}")
-        print(f"Number of label files: {len(self.paths.get_label_images_paths(self.dataset))}")
-        print(f"Number of overlay files: {len(self.paths.get_peaks_water_overlay_image_paths(self.dataset))}")
+        print(f"Number of peak files: {len(self.paths.get_peak_image_paths(dataset))}")
+        print(f"Number of label files: {len(self.paths.get_label_images_paths(dataset))}")
+        print(f"Number of overlay files: {len(self.paths.get_peaks_water_overlay_image_paths(dataset))}")        
