@@ -74,7 +74,7 @@ def main(dataset:str, process_dir:bool, images_path:str):
     train_loader, test_loader = f.prepare(data_manager=myDataManager, batch_size=10)
     
     # model, criterion, optimizer
-    model1 = m.BasicCNN1()
+    model1 = m.BasicCNN3()
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model1.parameters(), lr=0.001)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

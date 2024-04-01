@@ -1,4 +1,3 @@
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -28,7 +27,7 @@ class ModelPipeline:
         self.pipeline_results = (0,0)
         self.atributes = (0,0)
 
-    def run_pipeline(self, image: np.ndarray) -> tuple:
+    def run_pipeline(self, image: torch.tensor) -> tuple:
         """ 
         This function runs the analysis pipeline on a given image.
 
