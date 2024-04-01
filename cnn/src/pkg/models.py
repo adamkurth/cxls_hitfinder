@@ -138,9 +138,6 @@ class BasicCNN2(nn.Module):
 
         return x
 
-    
-    
-    
 class DenseNetBraggPeakClassifier(nn.Module):
     """
     Model for detecting Bragg peaks in crystallography images using DenseNet.

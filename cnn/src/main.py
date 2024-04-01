@@ -16,8 +16,8 @@ import logging
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import argparse
-from pkg import u, m
+import argparse 
+from pkg import *
 
 # Configure logging
 def configure_logging(): 
@@ -37,7 +37,7 @@ def run_process_directory(process:bool, images_path:str):
 
 def get_data_dict(dataset):
     clen_values, photon_energy_values = [1.5, 2.5, 3.5], [6000, 7000, 8000]
-    param_matrix = u.parameter_matrix(clen_values, photon_energy_values)
+    param_matrix = f.parameter_matrix(clen_values, photon_energy_values)
     logging.info(f"\nParameter matrix:\n{param_matrix}\n")
     dataset_dict = {
         '01': [clen_values[0], photon_energy_values[0]],
@@ -57,22 +57,21 @@ def main(dataset:str, process_dir:bool, images_path:str):
     run_process_directory(process_dir, images_path)
 
     # instances
-    pm = u.PathManager(dataset=dataset)
-    p = u.Processor(paths=pm, dataset=dataset)
-    clen, photon_energy = p.get_parameters()
+    myPaths = pm.PathManager(dataset=dataset)
+    myProcessor = p.Processor(paths=myPaths, dataset=dataset)
+    clen, photon_energy = myProcessor.get_parameters()
     print(f"clen: {clen}, photon_energy: {photon_energy}")
-    p = u.Processor(paths=pm, dataset=dataset)
     
     # peak, label, overlay, background are valid types
-    dm = u.DatasetManager(paths=pm, dataset=dataset, parameters=(clen, photon_energy), transform=None)
+    myDataManager = dm.DatasetManager(paths=myPaths, dataset=dataset, parameters=(clen, photon_energy), transform=None)
 
     # peak, label, overlay are valid types
-    u.check_attributes(paths=pm, dataset=dataset, type='peak') 
-    u.check_attributes(paths=pm, dataset=dataset, type='overlay')
-    u.check_attributes(paths=pm, dataset=dataset, type='label')
+    f.check_attributes(paths=myPaths, dataset=dataset, type='peak') 
+    f.check_attributes(paths=myPaths, dataset=dataset, type='overlay')
+    f.check_attributes(paths=myPaths, dataset=dataset, type='label')
     
     # train/test loaders
-    train_loader, test_loader = u.prepare(data_manager=dm, batch_size=10)
+    train_loader, test_loader = f.prepare(data_manager=myDataManager, batch_size=10)
     
     # model, criterion, optimizer
     model1 = m.BasicCNN1()
@@ -92,9 +91,9 @@ def main(dataset:str, process_dir:bool, images_path:str):
         'model': model1,
     }
     # arguments: self, model, loader: list, criterion, optimizer, device, cfg: dict
-    t = u.TrainTestModels(model=model1, loader=[train_loader, test_loader], criterion=criterion, optimizer=optimizer, device=device, cfg=cfg)
+    t = train_eval.TrainTestModels(model=model1, loader=[train_loader, test_loader], criterion=criterion, optimizer=optimizer, device=device, cfg=cfg)
     logging.info("Starting model training...")
-    t.train()    
+    t.train(epoch=2)    
     logging.info("Script execution completed.")
     
     
