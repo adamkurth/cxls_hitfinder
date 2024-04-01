@@ -7,6 +7,9 @@ from torch.utils.data import DataLoader
 import torch
 from pkg.path import PathManager
 
+def get_device() -> torch.device:
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 def load_h5(file_path:str) -> np.ndarray:
     with h5.File(file_path, 'r') as file:
         return np.array(file['entry/data/data'])
@@ -143,38 +146,17 @@ def get_counts(paths: object) -> None:
         normal_files = [file for file in all_files if 'empty' not in os.path.basename(file)]
         empty_files = [file for file in all_files if 'empty' in os.path.basename(file)]
 
-<<<<<<< HEAD
         # Reporting the counts
         print(f"Directory: {directory_type}/{dataset}")
         print(f"\tTotal files: {len(all_files)}")
         print(f"\tNormal images: {len(normal_files)}")
         print(f"\tEmpty images: {len(empty_files)}")
-=======
-            loss.backward()
-            optimizer.step()
-            running_loss_train += loss.item()  # Convert to Python number with .item()
-            predictions = (torch.sigmoid(score) > 0.5).long()  # Assuming 'score' is the output of your model
-            accuracy_train += (predictions == labels).float().sum()
-            total_predictions += np.prod(labels.shape)
-        # test
-        running_loss_test = 0.0
-        accuracy_test = 0.0
-        predicted = 0.0
-        total = 0.0
-        model.eval()
-        with torch.no_grad():
-            for inputs, labels in loader[1]:
-                peak_images, water_images = inputs
-                peak_images = peak_images.to(device)
-                labels = labels.to(device)
->>>>>>> progress
 
 def prepare(data_manager: object, batch_size:int=32) -> tuple:
     """
     Prepares and splits the data into training and testing datasets.
     Applies transformations and loads them into DataLoader objects.
 
-<<<<<<< HEAD
     :param data_manager: An instance of DatasetManager, which is a subclass of torch.utils.data.Dataset.
     :param batch_size: The size of each data batch.
     :return: A tuple containing train_loader and test_loader.
@@ -184,9 +166,6 @@ def prepare(data_manager: object, batch_size:int=32) -> tuple:
     num_train = int(0.8 * num_items)
     num_test = num_items - num_train
     train_dataset, test_dataset = torch.utils.data.random_split(data_manager, [num_train, num_test])
-=======
-        # statistics
->>>>>>> progress
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)    

@@ -57,13 +57,13 @@ def main(dataset:str, process_dir:bool, images_path:str):
     run_process_directory(process_dir, images_path)
 
     # instances
-    myPaths = pm.PathManager(dataset=dataset)
-    myProcessor = p.Processor(paths=myPaths, dataset=dataset)
+    myPaths = path.PathManager(dataset=dataset)
+    myProcessor = process.Processor(paths=myPaths, dataset=dataset)
     clen, photon_energy = myProcessor.get_parameters()
     print(f"clen: {clen}, photon_energy: {photon_energy}")
     
     # peak, label, overlay, background are valid types
-    myDataManager = dm.DatasetManager(paths=myPaths, dataset=dataset, parameters=(clen, photon_energy), transform=None)
+    myDataManager = data.DatasetManager(paths=myPaths, dataset=dataset, parameters=(clen, photon_energy), transform=None)
 
     # peak, label, overlay are valid types
     f.check_attributes(paths=myPaths, dataset=dataset, type='peak') 

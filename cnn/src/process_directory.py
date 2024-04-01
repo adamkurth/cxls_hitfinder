@@ -8,12 +8,10 @@ Otherwise, it halts with an error message.
 Usage:
     python script_name.py <images_directory> [--force]
 """
-
 import os
 from glob import glob
 import argparse
 from pkg import *
-
 
 def create_and_populate_dirs(target_path):
     """
@@ -84,7 +82,7 @@ def validate_directories(base_path):
         
     return is_valid, proceed_with_processing
 
-def process_data(directory, percent_empty=0.3):
+def process_data(directory:path.PathManager, percent_empty=0.3):
     """
     Processes data in the specified directory.
 
@@ -95,8 +93,8 @@ def process_data(directory, percent_empty=0.3):
     dataset_num = input("Enter dataset number: ")
     dataset = dataset_num.zfill(2) # string (ex '01')
     
-    paths = pm.PathManager(dataset=dataset)
-    processor = p.Processor(paths=paths, dataset=dataset)
+    paths = path.PathManager(dataset=dataset)
+    processor = process.Processor(paths=paths, dataset=dataset)
     clen, photon_energy = processor.get_parameters()
 
     # Step 0: Remove all existing empty images.
@@ -131,7 +129,7 @@ def main(images_dir, force=False, percent_empty: float = 0.3):
             print("Directory structure and image count verification completed successfully. Proceeding with data processing.")
         print("\nProceeding with data processing...")
         # generate labels, overlays, and images, then add empty images
-        process_data(images_dir, percent_empty)
+        process_data(directory=images_dir, percent_empty=percent_empty)
     elif is_valid and not proceed_with_processing:
         print("Processing not required. Directories already contain processed data.")
     else:
