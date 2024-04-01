@@ -5,7 +5,7 @@ from pkg import *
 import numpy as np
 
 class ModelPipeline:
-    def __init__(self, peak_model_path: str, energy_model_path: str, clen_model_path: str, peak_model: torch.Module, energy_model: torch.Module, clen_model: torch.Module) -> None:
+    def __init__(self, peak_model_path: str, energy_model_path: str, clen_model_path: str, peak_model: nn.Module, energy_model: nn.Module, clen_model: nn.Module) -> None:
         """
         This class represents a pipeline for analyzing Bragg peak images.
         It combines three models for peak detection, energy estimation, and clen calculation.
