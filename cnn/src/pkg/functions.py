@@ -1,258 +1,177 @@
-import os 
-import re
+import os
 import h5py as h5
 import numpy as np
-import matplotlib.pyplot as plt
-from collections import namedtuple
-
-import numpy as np
-from sklearn.metrics import confusion_matrix
-import matplotlib.pyplot as plt
+from typing import Any
+from glob import glob
+from torch.utils.data import DataLoader
 import torch
-    
+from pkg.path import PathManager
 
-def sim_parameters(paths):
+def load_h5(file_path:str) -> np.ndarray:
+    with h5.File(file_path, 'r') as file:
+        return np.array(file['entry/data/data'])
+
+def save_h5(file_path:str, data:np.ndarray, save_parameters:bool, params:list) -> None:
+    with h5.File(file_path, 'w') as file:
+        file.create_dataset('entry/data/data', data=data)
+    if save_parameters:
+        assign_attributes(file_path=file_path, clen=params[0], photon_energy=params[1])
+    print(f"File saved: {file_path}")
+
+def parameter_matrix(clen_values: list, photon_energy_values: list) -> None:
+    # limited to 2d for now 
+    dtype = [('clen', float), ('photon_energy', float)]
+    matrix = np.zeros((len(clen_values), len(photon_energy_values)), dtype=dtype)
+    for i, clen in enumerate(clen_values):
+        for j, photon_energy in enumerate(photon_energy_values):
+            matrix[i, j] = (clen, photon_energy)
+    return matrix
+
+def assign_attributes(file_path: str, **kwargs: Any):
     """
-    Reads the .pdb and .sh files and returns a dictionary of simulation parameters.
-
-    Parameters:
-    - Paths: An instance of the Paths class that contains the paths to the .pdb and .sh files.
-
-    Returns:
-    - combined_params: A dictionary containing the simulation parameters extracted from the .pdb and .sh files.
-        The dictionary includes the following keys:
-        - geom: The geometry parameter from the .sh file.
-        - cell: The cell parameter from the .sh file.
-        - number: The number parameter from the .sh file.
-        - output_name: The output_name parameter from the .sh file.
-        - photon_energy: The photon_energy parameter from the .sh file.
-        - nphotons: The nphotons parameter from the .sh file.
-        - a: The 'a' parameter from the .pdb file.
-        - b: The 'b' parameter from the .pdb file.
-        - c: The 'c' parameter from the .pdb file.
-        - alpha: The 'alpha' parameter from the .pdb file.
-        - beta: The 'beta' parameter from the .pdb file.
-        - gamma: The 'gamma' parameter from the .pdb file.
-        - spacegroup: The spacegroup parameter from the .pdb file.
+    Assigns arbitrary attributes to an HDF5 file located at file_path.
     """
-    def read_pdb(path):
-        UnitcellParams = namedtuple('UnitcellParams', ['a', 'b', 'c', 'alpha', 'beta', 'gamma', 'spacegroup'])
-        with open(path, 'r') as f:
-            for line in f:
-                if line.startswith('CRYST1'):
-                    tokens = line.split()
-                    a, b, c = float(tokens[1]), float(tokens[2]), float(tokens[3])
-                    alpha, beta, gamma = float(tokens[4]), float(tokens[5]), float(tokens[6])
-                    spacegroup = ' '.join(tokens[7:-1])  # Exclude the last element
-        return UnitcellParams(a, b, c, alpha, beta, gamma, spacegroup)._asdict()
+    with h5.File(file_path, 'a') as f:
+        for key, value in kwargs.items():
+            f.attrs[key] = value
+    print(f"Attributes {list(kwargs.keys())} assigned to {file_path}")
 
-    def read_sh(path):
-        ShParams = namedtuple('ShParams', [
-            'geom', 'cell', 'number', 'output_name', 'sf', 'pointgroup',
-            'min_size', 'max_size', 'spectrum', 'cores', 'background',
-            'beam_bandwidth', 'photon_energy', 'nphotons', 'beam_radius', 'really_random'
-        ])
-        
-        params = {key: None for key in ShParams._fields}
-        
-        with open(path, 'r') as file:
-            content = file.read()
-        param_patterns = {
-            'geom': r'-g\s+(\S+)',
-            'cell': r'-p\s+(\S+)',
-            'number': r'--number=(\d+)',
-            'output_name': r'-o\s+(\S+)',
-            'sf': r'-i\s+(\S+)',
-            'pointgroup': r'-y\s+(\S+)',
-            'min_size': r'--min-size=(\d+)',
-            'max_size': r'--max-size=(\d+)',
-            'spectrum': r'--spectrum=(\S+)',
-            'cores': r'-s\s+(\d+)',
-            'background': r'--background=(\d+)',
-            'beam_bandwidth': r'--beam-bandwidth=([\d.]+)',
-            'photon_energy': r'--photon-energy=(\d+)',
-            'nphotons': r'--nphotons=([\d.e+-]+)',
-            'beam_radius': r'--beam-radius=([\d.]+)',
-            'really_random': r'--really-random=(True|False)'
-        }
-        for key, pattern in param_patterns.items():
-            match = re.search(pattern, content, re.MULTILINE)
-            if match:
-                value = match.group(1)
-                if value.isdigit():
-                    params[key] = int(value)
-                elif value.replace('.', '', 1).isdigit():
-                    params[key] = float(value)
-                elif value == 'True':
-                    params[key] = True
-                elif value == 'False':
-                    params[key] = False
-                else:
-                    params[key] = value
-
-        return ShParams(**params)._asdict()        
-    
-    pdb_path = os.path.join(paths.root, 'sim', 'pdb', '1ic6.pdb') # hardcoded for now
-    sh_path = os.path.join(paths.root, 'sim', 'submit_7keV_clen01.sh') # hardcode for now
-    
-    unitcell_params_dict = read_pdb(pdb_path)
-    sh_params_dict = read_sh(sh_path)
-    
-    essential_keys_sh = ['geom', 'cell', 'number', 'output_name', 'photon_energy', 'nphotons']
-    essential_sh_params = {key: sh_params_dict[key] for key in essential_keys_sh}
-    
-    combined_params = {**essential_sh_params, **unitcell_params_dict}
-    return combined_params
-
-
-def load_h5(file_path: str) -> np.ndarray:        
-    if not os.path.exists(file_path):
-        print(f"File not found: {file_path}")
-        raise FileNotFoundError(f"File not found: {file_path}")
-    try:
-        with h5.File(file_path, 'r') as f:
-            data = f['entry/data/data']
-            return np.array(data) 
-    except KeyError:
-        raise ValueError(f"Dataset 'entry/data/data' not found in file: {file_path}")
-    except IOError as e:
-        if 'unable to open file' in str(e).lower():
-            raise IOError(f"File cannot be opened, might be corrupt or not an HDF5 file: {file_path}")
-        else:
-            raise IOError(f"Failed to read the file {file_path}: {e}")
-        
-def train_test_model(model, loader, criterion, optimizer, epochs, device, N, batch, classes):
-
+def parse_attributes(paths: object, params:list) -> dict:
     """
-    This function trains, test, and plots the loss, accuracy, and confusion matrix of a model.
+    Assigns attributes including a type relevance flag to files based on directory type.
+
+    assuming non-empty images
+    peaks/ -> True
+    labels/ -> True
+    overlay/ -> True
+    water/ -> False
+    """
+    paths.refresh_all()
+    dataset = paths.dataset
+    
+    # Initialize the lists of file paths for each directory type
+    peak_path_list, overlay_path_list, label_path_list, background_path_list = paths.init_lists(dataset)
+    
+    # Mapping of directory types to their respective path lists and relevance to the task
+    dir_mappings = {
+        'peak': (peak_path_list, True),
+        'overlay': (overlay_path_list, True),
+        'label': (label_path_list, True),
+        'background': (background_path_list, False),
+    }
+    for d, (path_list, is_relavant) in dir_mappings.items():
+        for f in path_list:
+            assign_attributes(file_path=f, clen=params[0], photon_energy=params[1], peak=is_relavant)
+            print(f"Attributes assigned to {f}")
+    print("Attributes assigned to all files.")
+    
+# This singledispatch is funtioning like overriding an function, which is not normally supported due to dynamic data types. 
+# If the input is a string, the file path in this case, it will use the string case. 
+# If given the file directly, it will use the default case, since a special case does not exist for it.
+
+def get_params(dataset):
+    clen_values, photon_energy_values = [1.5, 2.5, 3.5], [6000, 7000, 8000]
+    param_matrix = parameter_matrix(clen_values, photon_energy_values)
+    dataset_dict = {
+        '01': [clen_values[0], photon_energy_values[0]],
+        '02': [clen_values[0], photon_energy_values[1]],
+        '03': [clen_values[0], photon_energy_values[2]],
+        '04': [clen_values[1], photon_energy_values[0]],
+        '05': [clen_values[1], photon_energy_values[1]],
+        '06': [clen_values[1], photon_energy_values[2]],
+        '07': [clen_values[2], photon_energy_values[0]],
+        '08': [clen_values[2], photon_energy_values[1]],
+        '09': [clen_values[2], photon_energy_values[2]],
+    }
+    return dataset_dict.get(dataset, None)
+
+def retrieve_attributes(file_path: str):
+    """
+    Retrieves specified attributes from an HDF5 file located at the given file path.
+    
     Args:
-        model: PyTorch model
-        loader: list of torch.utils.data.DataLoader
-        criterion: PyTorch loss function
-        optimizer: PyTorch optimizer
-        epochs: int
-        device: torch.device
-        N: list of int
-        batch: list of int
-        classes: int
+        file_path (str): The path to the HDF5 file.
+    
     Returns:
-        None
+        dict: A dictionary containing the attributes of the HDF5 file.
     """
+    attributes = {}
 
-    print(f'Model: {model.__class__.__name__}')
+    # Open the HDF5 file located at file_path and retrieve its attributes
+    with h5.File(file_path, 'r') as file:
+        for attr in file.attrs:
+            try:
+                attributes[attr] = file.attrs.get(attr)
+            except KeyError:
+                attributes[attr] = None
+                print(f"Attribute '{attr}' not found in file.")
+                
+    return attributes
 
-    plot_train_accuracy = np.zeros(epochs)
-    plot_train_loss = np.zeros(epochs)
-    plot_test_accuracy = np.zeros(epochs)
-    plot_test_loss = np.zeros(epochs)
+def check_attributes(paths: object, dataset: str, type: str, **expected_attrs) -> bool:
+    """
+    Checks that specified attributes for all files in a specified type within a dataset
+    match expected values. Expected attributes are passed as keyword arguments.
+    """
+    path_list = paths.fetch_paths_by_type(dataset=dataset, dir_type=type)
+    for f in path_list: 
+        attributes = retrieve_attributes(file_path=f)
+        for attr, expected_value in expected_attrs.items():
+            if attributes.get(attr) != expected_value:
+                print(f"File {f} has mismatching {attr}: expected={expected_value}, found={attributes.get(attr)}")
+                return False
+    
+    print(f"All files in dataset {dataset} of type '{type}' have matching attributes.")
+    return True
 
-    print('Training and testing the model...')
+def get_counts(paths: object) -> None:
+    """
+    Counts and reports the number of 'normal' and 'empty' images in the specified directories
+    for the selected dataset, using the paths to access directory paths.
+    """
+    # Refresh the lists in PathManager to ensure they are up-to-date
+    paths.refresh_all()
 
-    for epoch in range(epochs):
-        print('-- epoch '+str(epoch)) 
-        # train
-        running_loss_train = 0.0
-        accuracy_train = 0.0
-        predictions = 0.0
-        total_predictions = 0.0
-        model.train()
-        for inputs, labels in loader[0]:
-            peak_images, water_images = inputs
-            peak_images = peak_images.to(device)
-            labels = labels.to(device)
+    # Directories to check
+    directory_types = ['peaks', 'labels', 'peaks_water_overlay']
+    dataset = paths.dataset
 
-            optimizer.zero_grad()
-            score = model(peak_images)
-            loss = criterion(score, labels)
+    # Loop through each directory type and count files
+    for directory_type in directory_types:
+        directory_path = os.path.join(paths.images_dir, directory_type, dataset)
+        all_files = glob(os.path.join(directory_path, '*.h5'))  # Corrected usage here
+        normal_files = [file for file in all_files if 'empty' not in os.path.basename(file)]
+        empty_files = [file for file in all_files if 'empty' in os.path.basename(file)]
 
-            loss.backward()
-            optimizer.step()
-            running_loss_train += loss.item()  # Convert to Python number with .item()
-            predictions = (torch.sigmoid(score) > 0.5).long()  # Assuming 'score' is the output of your model
-            accuracy_train += (predictions == labels).float().sum()
-            total_predictions += np.prod(labels.shape)
-    # test
-        running_loss_test = 0.0
-        accuracy_test = 0.0
-        predicted = 0.0
-        total = 0.0
-        model.eval()
-        with torch.no_grad():
-            for inputs, labels in loader[1]:
-                peak_images, water_images = inputs
-                peak_images = peak_images.to(device)
-                labels = labels.to(device)
+        # Reporting the counts
+        print(f"Directory: {directory_type}/{dataset}")
+        print(f"\tTotal files: {len(all_files)}")
+        print(f"\tNormal images: {len(normal_files)}")
+        print(f"\tEmpty images: {len(empty_files)}")
 
-                score = model(peak_images)
-                loss = criterion(score, labels)
-                running_loss_test += loss.item()  # Convert to Python number with .item()
-                predicted = (torch.sigmoid(score) > 0.5).long()  # Assuming 'score' is the output of your model
-                accuracy_test += (predicted == labels).float().sum()
-                total += np.prod(labels.shape)
+def prepare(data_manager: object, batch_size:int=32) -> tuple:
+    """
+    Prepares and splits the data into training and testing datasets.
+    Applies transformations and loads them into DataLoader objects.
 
-    # statistics
+    :param data_manager: An instance of DatasetManager, which is a subclass of torch.utils.data.Dataset.
+    :param batch_size: The size of each data batch.
+    :return: A tuple containing train_loader and test_loader.
+    """
+    # Split the dataset into training and testing sets.
+    num_items = len(data_manager)
+    num_train = int(0.8 * num_items)
+    num_test = num_items - num_train
+    train_dataset, test_dataset = torch.utils.data.random_split(data_manager, [num_train, num_test])
 
-        loss_train = running_loss_train/batch[0]
-        plot_train_loss[epoch] = loss_train
-
-        loss_test = running_loss_test/batch[1]
-        plot_test_loss[epoch] = loss_test
-
-        accuracy_train /= total_predictions
-        plot_train_accuracy[epoch] = accuracy_train
-
-        accuracy_test /= total
-        plot_test_accuracy[epoch] = accuracy_test
-
-        print(f'loss (train, test): {loss_train}, {loss_train}')
-        print(f'accuracy (train, test): {accuracy_train}, {accuracy_test}')
-
-
-  # plotting loss, accuracy, and confusion matrix
-    plt.plot(range(epochs), plot_train_accuracy,marker='o',color='red')
-    plt.plot(range(epochs), plot_test_accuracy ,marker='o',color='orange',linestyle='dashed')
-    plt.plot(range(epochs), plot_train_loss ,marker='o',color='blue')
-    plt.plot(range(epochs), plot_test_loss ,marker='o',color='teal',linestyle='dashed')
-    plt.grid()
-    plt.xlabel('epoch')
-    plt.ylabel('loss/accuracy')
-    plt.legend(['accuracy train','accuracy test','loss train','loss test'])
-    plt.show()
-
-
-    cm_test = np.zeros((classes,classes), dtype=int)
-    all_labels = []
-    all_predictions = []
-
-    with torch.no_grad():
-        for inputs, label in loader[1]:  # Assuming loader[1] is your DataLoader for test/validation set
-            peak_images, _ = inputs
-            peak_images = peak_images.to(device)
-            label = label.to(device)
-
-            # Obtain model scores for the batch
-            score = model(peak_images).squeeze()
-
-            # Convert scores to binary predictions
-            predictions = (torch.sigmoid(score) > 0.5).long()
-
-            # Extend the all_labels and all_predictions lists
-            # Convert tensors to CPU numpy arrays for sklearn compatibility
-            all_labels.extend(label.cpu().numpy().flatten())  # Flatten in case it's not already 1D
-            all_predictions.extend(predictions.cpu().numpy().flatten())
-
-    # Convert lists to numpy arrays
-    all_labels = np.array(all_labels)
-    all_predictions = np.array(all_predictions)
-
-    # Calculate the confusion matrix
-    cm_test = confusion_matrix(all_labels, all_predictions)
-
-
-
-    plt.matshow(cm_test,cmap="Blues")
-    plt.title('Confusion matrix')
-    plt.colorbar()
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
-    plt.show()
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)    
+        
+    print("\nData prepared.")
+    print(f"Train size: {len(train_dataset)}")
+    print(f"Test size: {len(test_dataset)}")
+    print(f"Batch size: {batch_size}")
+    print(f"Number of batches in train_loader: {len(train_loader)} \n")
+    
+    return train_loader, test_loader # returns train/test tensor data loaders
+    
