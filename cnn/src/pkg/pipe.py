@@ -3,9 +3,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from pkg import *
+import numpy as np
 
 class ModelPipeline:
-    def __init__(self, peak_model, energy_model, clen_model) -> None:
+    def __init__(self, peak_model_path: str, energy_model_path: str, clen_model_path: str) -> None:
         """
         This class represents a pipeline for analyzing Bragg peak images.
         It combines three models for peak detection, energy estimation, and clen calculation.
@@ -16,13 +17,18 @@ class ModelPipeline:
             clen_model (nn.Module): Convolutional neural network for clen calculation. This model is used when a peak is detected after energy_model.
         """
         
-        self.binary_model = peak_model
-        self.energy_model = energy_model
-        self.clen_model = clen_model
+        self.binary_model = torch.load(peak_model_path)
+        self.energy_model = torch.load(energy_model_path)
+        self.clen_model = torch.load(clen_model_path)
+        
+        self.binary_model.eval()
+        self.energy_model.eval()
+        self.clen_model.eval()
+        
         self.pipeline_results = (0,0)
         self.atributes = (0,0)
 
-    def run_pipeline(self, image) -> tuple:
+    def run_pipeline(self, image: np.ndarray) -> tuple:
         """ 
         This function runs the analysis pipeline on a given image.
 
