@@ -32,7 +32,7 @@ import logging
 import torch
 >>>>>>> progress
 
-# torch.set_printoptions(profile="full")
+
 
 # def load_h5(file_path:str) -> np.ndarray:
 #     with h5.File(file_path, 'r') as file:
@@ -1050,26 +1050,79 @@ class TrainTestModels:
 #         """
 #         return {'train loss': self.plot_train_loss, 'train accuracy': self.plot_train_accuracy, 'test loss': self.plot_test_loss, 'test accuracy': self.plot_test_accuracy}
     
+    # def print_state_dict(self) -> None:
+    #     """
+    #     This function prints the model's state_dict and optimizer's state_dict.
+    #     """
+        
+    #     # Print model's state_dict
+    #     print("Model's state_dict:")
+    #     for param_tensor in self.model.state_dict():
+    #         print(param_tensor, "\t", self.model.state_dict()[param_tensor].size())
+
+    #     # Print optimizer's state_dict
+    #     print("Optimizer's state_dict:")
+    #     for var_name in self.optimizer.state_dict():
+    #         print(var_name, "\t", self.optimizer.state_dict()[var_name])
+    
+    # def save_model(self, path:str) -> None:
+    #     """
+    #     This function saves the model's state_dict to a specified path. This can be used to load the trained model later.
+    #     Save as .pt file.
+    #     root: /cnn/models
+    #     Args:
+    #         path (str): Path to save the model's state_dict.
+    #     """
+    #     torch.save(self.model.state_dict(), path)
+        
+    # def tensor_board(self) -> None:
+    #     with torch.profiler.profile(
+    #         schedule=torch.profiler.schedule(
+    #             wait=2,
+    #             warmup=2,
+    #             active=6,
+    #             repeat=1),
+    #         on_trace_ready=tensorboard_trace_handler,
+    #         with_stack=True
+    #     ) as profiler:
+    #         for step, data in enumerate(self.train_loader, 0):
+    #             print("step:{}".format(step))
+    #             inputs, labels = data[0], data[1]
+    #             peak_images, _ = inputs
+
+    #             outputs = self.model(peak_images)
+    #             loss = self.criterion(peak_images, labels)
+
+    #             self.optimizer.zero_grad()
+    #             loss.backward()
+    #             self.optimizer.step()
+    #             profiler.step()
+
     
     
 # -----------------------------------------------------------------------------------------------------------------------
 
 
 # class ModelPipeline:
-#     def __init__(self, peak_model, energy_model, clen_model) -> None:
+#     def __init__(self, peak_model_path, energy_model_path, clen_model_path) -> None:
 #         """
 #         This class represents a pipeline for analyzing Bragg peak images.
 #         It combines three models for peak detection, energy estimation, and clen calculation.
 
-#         Args:
-#             peak_model (nn.Module): Convolutional neural network for peak detection.
-#             energy_model (nn.Module): Convolutional neural network for energy estimation. This model is used when a peak is detected.
-#             clen_model (nn.Module): Convolutional neural network for clen calculation. This model is used when a peak is detected after energy_model.
-#         """
+# #         Args:
+# #             peak_model (nn.Module): Convolutional neural network for peak detection.
+# #             energy_model (nn.Module): Convolutional neural network for energy estimation. This model is used when a peak is detected.
+# #             clen_model (nn.Module): Convolutional neural network for clen calculation. This model is used when a peak is detected after energy_model.
+# #         """
         
-#         self.binary_model = peak_model
-#         self.energy_model = energy_model
-#         self.clen_model = clen_model
+#         self.binary_model = torch.load(peak_model_path)
+#         self.energy_model = torch.load(energy_model_path)
+#         self.clen_model = torch.load(clen_model_path)
+        
+#         self.binary_model.eval()
+#         self.energy_model.eval()
+#         self.clen_model.eval()
+        
 #         self.pipeline_results = (0,0)
 #         self.atributes = (0,0)
 
