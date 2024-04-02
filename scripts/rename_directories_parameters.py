@@ -1,54 +1,47 @@
 import os
 import re
 
-def extract_parameters(dir_name):
-    """Extracts keV and clen values from directory name."""
-    match = re.match(r'(\d{2})_(0\.\d{2})m_(\d+)keV', dir_name)
-    if match:
-        dataset, clen_meter, keV = match.groups()
-        # Map dataset numbers to clen values as described
-        clen_map = {"01": "01", "02": "01", "03": "01", 
-                    "04": "02", "05": "02", "06": "02",
-                    "07": "03", "08": "03", "09": "03"}
-        clen = clen_map.get(dataset)
-        if clen:
-            return {
-                'dataset': dataset,
-                'clen': clen,
-                'keV': keV
-            }
-    return None
+def parse_directory_name(dir_name):
+    """
+    Parses the directory name to extract keV and clen values.
+    Assumes directory name format: '01_0.15m_6keV'
+    """
+    match = re.match(r"(\d{2})_(0\.\d{2})m_(\d+)keV", dir_name)
+    if not match:
+        return None
 
-def rename_files_in_directory(root_dir):
-    for root, dirs, files in os.walk(root_dir):
-        for dir_name in dirs:
-            parameters = extract_parameters(dir_name)
-            if parameters:
-                dataset_dir = os.path.join(root, dir_name)
-                rename_files(dataset_dir, parameters)
+    dataset, clen_meter, keV = match.groups()
+    # Map clen_meter to clen value
+    clen_map = {"0.15": "01", "0.25": "02", "0.35": "03"}
+    clen = clen_map[clen_meter]
+    return keV, clen
 
-def rename_files(dataset_dir, params):
-    sub_dirs = ['peaks', 'labels', 'peak_water_overlay']
-    for sub_dir in sub_dirs:
-        path = os.path.join(dataset_dir, sub_dir)
-        if os.path.exists(path):
-            for filename in os.listdir(path):
-                if filename.endswith('.h5'):
-                    new_name = generate_new_name(filename, params, sub_dir)
-                    os.rename(os.path.join(path, filename), os.path.join(path, new_name))
-                    print(f'Renamed {filename} to {new_name}')
+def rename_files_in_dir(path, keV, clen):
+    """
+    Renames all .h5 files in the given path according to the keV and clen values.
+    """
+    for filename in os.listdir(path):
+        if filename.endswith('.h5'):
+            # Extract the index from the original filename
+            match = re.search(r"(\d+)\.h5$", filename)
+            if match:
+                index = match.group(1).zfill(5)  # Ensure the index is 5 digits
+                new_filename = f"img_{keV}keV_clen{clen}_{index}.h5"
+                os.rename(os.path.join(path, filename), os.path.join(path, new_filename))
+                print(f"Renamed {filename} to {new_filename}")
 
-def generate_new_name(filename, params, sub_dir):
-    base_name = filename.split('.')[0]
-    index = base_name.split('_')[-1]  # Assuming index is the last part after '_'
-    new_name_format = "{prefix}_img_{keV}keV_clen{clen}_{index}.h5"
-    prefix = ''  # Default for peaks
-    if sub_dir == 'labels':
-        prefix = 'label'
-    elif sub_dir == 'peak_water_overlay':
-        prefix = 'overlay'
-    return new_name_format.format(prefix=prefix, keV=params['keV'], clen=params['clen'], index=index)
+def main():
+    base_path = "../../MASTER_COPY/"
+    for dir_name in os.listdir(base_path):
+        full_path = os.path.join(base_path, dir_name)
+        if os.path.isdir(full_path):  # Ensure it's a directory
+            parsed = parse_directory_name(dir_name)
+            if parsed:
+                keV, clen = parsed
+                print(f"Processing {dir_name} -> keV: {keV}, clen: {clen}")
+                rename_files_in_dir(full_path, keV, clen)
+            else:
+                print(f"Skipping unrecognized directory format: {dir_name}")
 
-# Example usage
-root_directory = '../../MASTER_COPY/'  # Adjust as per your structure
-rename_files_in_directory(root_directory)
+if __name__ == "__main__":
+    main()
