@@ -212,34 +212,33 @@ class Photon_Scattering_CNN1(nn.Module):
     def __init__(self, input_channels=1, input_size=(2163, 2069), output_channels=3):
         super(Photon_Scattering_CNN1, self).__init__()
         
-        self.conv1 = nn.Conv2d(input_channels, 32, kernel_size=3, stride=1, padding=1)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
-        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
-        self.conv4 = nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1)
+        self.conv1 = nn.Conv2d(input_channels, 32, kernel_size=250, stride=50, padding=1)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=10, stride=1, padding=1)
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
         
-        def calc_size(size, layers=4, pool_layers=4):
-            for _ in range(layers):
-                size = [(s - 1) // 2 + 1 for s in size]  
-            return size[0] * size[1] * 256 
+        # Use a dummy input to pass through the conv layers to determine output size
+        dummy_input = torch.autograd.Variable(torch.zeros(1, input_channels, *input_size))
+        output_size = self._get_conv_output(dummy_input)
         
-        convolved_size = calc_size(input_size)
-        
-        self.fc1 = nn.Linear(convolved_size, 512)
+        self.fc1 = nn.Linear(output_size, 512)
         self.fc2 = nn.Linear(512, output_channels)
         
+    def _get_conv_output(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        n_size = x.data.view(1, -1).size(1)
+        return n_size
+    
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
-        x = self.pool(F.relu(self.conv3(x)))
-        x = self.pool(F.relu(self.conv4(x)))
         x = x.view(-1, self.num_flat_features(x))
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return x
     
     def num_flat_features(self, x):
-        size = x.size()[1:] 
+        size = x.size()[1:]  # Excluding the batch dimension
         num_features = 1
         for s in size:
             num_features *= s

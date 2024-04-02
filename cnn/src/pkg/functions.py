@@ -164,8 +164,8 @@ def prepare(data_manager: object, batch_size:int=32) -> tuple:
     num_test = num_items - num_train
     train_dataset, test_dataset = torch.utils.data.random_split(data_manager, [num_train, num_test])
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)    
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, pin_memory=True)    
         
     print("\nData prepared.")
     print(f"Train size: {len(train_dataset)}")
