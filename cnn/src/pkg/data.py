@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 from pkg.functions import load_h5, check_attributes, get_counts
 from pkg.transform import TransformToTensor
+from pkg import *
 
 class DatasetManager(Dataset):
     # for PyTorch DataLoader
@@ -38,13 +39,14 @@ class DatasetManager(Dataset):
         peak_image = load_h5(self.peak_paths[idx])
         water_image = load_h5(self.water_peak_paths[idx])
         label_image = load_h5(self.label_paths[idx])
+        image_attributes_peaks =  f.retrieve_attributes(self.paths.get_peak_image_paths(self.dataset)[idx]) 
             
         if self.transform:
             peak_image = self.transform(peak_image) 
             water_image = self.transform(water_image) # dimensions: C x H x W
             label_image = self.transform(label_image)
             
-        return (peak_image, water_image), label_image
+        return (peak_image, water_image), label_image, image_attributes_peaks
     
     def authenticate_attributes(self) -> None:
         """
