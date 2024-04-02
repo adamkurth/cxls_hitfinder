@@ -8,12 +8,10 @@ Otherwise, it halts with an error message.
 Usage:
     python script_name.py <images_directory> [--force]
 """
-
 import os
 from glob import glob
 import argparse
 from pkg import *
-
 
 def create_and_populate_dirs(target_path):
     """
@@ -84,27 +82,22 @@ def validate_directories(base_path):
         
     return is_valid, proceed_with_processing
 
-def process_data(directory, percent_empty=0.3):
+def process_data(paths:path.PathManager, image_directory:path.PathManager, percent_empty=0.3):
     """
     Processes data in the specified directory.
 
     Parameters:
     - directory: The directory containing data to process.
     """
+    processor = process.Processor(paths=paths, datasets=paths.datasets)
+    parameters = processor.get_parameters()
+    clen, photon_energy = parameters.get('clen'), parameters.get('photon_energy')
     
-    dataset_num = input("Enter dataset number: ")
-    dataset = dataset_num.zfill(2) # string (ex '01')
-    
-    paths = pm.PathManager(dataset=dataset)
-    processor = p.Processor(paths=paths, dataset=dataset)
-    clen, photon_energy = processor.get_parameters()
-
     # Step 0: Remove all existing empty images.
     processor.cleanup()
-    processor.cleanup_authenticator()
     
     # Step 1: Process existing data to generate labels, overlays, and possibly more.
-    processor.process_directory(dataset=dataset, clen=clen, photon_energy=photon_energy)
+    processor.process_directory()
     processor.cleanup_authenticator()
     
     # Step 2: Calculate the number of empty images to add based on the percentage.
@@ -131,7 +124,11 @@ def main(images_dir, force=False, percent_empty: float = 0.3):
             print("Directory structure and image count verification completed successfully. Proceeding with data processing.")
         print("\nProceeding with data processing...")
         # generate labels, overlays, and images, then add empty images
-        process_data(images_dir, percent_empty)
+        
+        datasets = input("Enter dataset numbers (separated by commas): ").split(",")
+        datasets = [str(int(d)).zfill(2) for d in datasets]
+        paths = path.PathManager(datasets=f.convert2str(datasets))
+        process_data(paths=paths,image_directory=images_dir, percent_empty=percent_empty)
     elif is_valid and not proceed_with_processing:
         print("Processing not required. Directories already contain processed data.")
     else:
