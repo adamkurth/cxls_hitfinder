@@ -6,7 +6,7 @@ from glob import glob
 from torch.utils.data import DataLoader
 import torch
 from typing import Union, List
-from pkg.path import PathManager
+
 
 def convert2int(datasets: List[Union[str, int]]) -> List[int]:
     """
