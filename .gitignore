@@ -3,10 +3,6 @@ cnn/src/pkg/__pycache__/*
 # Ignore .h5 files globally
 *.h5
 
-# Re-include .h5 files in the specific directory
-!images/water/**/*.h5
-!images/water/*.h5
-
 # Ignore directories as before
 cnn/src/__pycache__/**
 __pycache__/**
