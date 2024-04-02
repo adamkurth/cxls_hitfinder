@@ -69,6 +69,8 @@ class TrainTestModels:
                 elif self.feature == 'photon_energy':
                     photon_energy_holder = torch.zeros_like(image_attribute, dtype=torch.long).to(self.device)
                     photon_energy_holder[image_attribute == 6e3] = 1
+                    photon_energy_holder[image_attribute == 7e3] = 2
+                    photon_energy_holder[image_attribute == 8e3] = 3
                     image_attribute = photon_energy_holder
                     
                 loss = self.criterion(score, image_attribute.to(self.device))
@@ -127,8 +129,10 @@ class TrainTestModels:
                 elif self.feature == 'photon_energy':
                     photon_energy_holder = torch.zeros_like(image_attribute, dtype=torch.long).to(self.device)
                     photon_energy_holder[image_attribute == 6e3] = 1
+                    photon_energy_holder[image_attribute == 7e3] = 2
+                    photon_energy_holder[image_attribute == 8e3] = 3
                     image_attribute = photon_energy_holder
-
+                    
                 loss = self.criterion(score, image_attribute)
          
                 running_loss_test += loss.item()  # Convert to Python number with .item()
@@ -138,7 +142,7 @@ class TrainTestModels:
                 elif self.feature == 'photon_energy':
                     _, predicted = torch.max(score, 1)
                     
-                accuracy_test += (predicted == predicted).float().sum()
+                accuracy_test += (predicted == image_attribute.to(self.device)).float().sum()
                 total += torch.numel(image_attribute)
 
         loss_test = running_loss_test/self.batch
@@ -183,14 +187,16 @@ class TrainTestModels:
                 # Flatten and append labels to all_labels
                 image_attribute = attributes[self.feature].reshape(-1).cpu().numpy()
                 all_labels.extend(image_attribute)
-
-                # Calculate predictions, flatten, and append to all_predictions
+                
                 if self.feature == 'peak':
                     predicted = (torch.sigmoid(score) > self.threshold).long().cpu()  # Assuming 'score' is the output of your model
                 elif self.feature == 'photon_energy':
                     _, predicted = torch.max(score, 1)
                     predicted = predicted.cpu()
-                    
+                    predicted = torch.where(predicted == 1, torch.tensor(6000), predicted)
+                    predicted = torch.where(predicted == 2, torch.tensor(7000), predicted)
+                    predicted = torch.where(predicted == 3, torch.tensor(8000), predicted)
+                                        
                 all_predictions.extend(predicted)
 
         # No need to reshape - arrays should already be flat
