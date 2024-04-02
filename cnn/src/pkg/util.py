@@ -25,7 +25,7 @@
 #     with h5.File(file_path, 'w') as file:
 #         file.create_dataset('entry/data/data', data=data)
 #     if save_parameters:
-#         assign_attributes(file_path=file_path, clen=params[0], photon_energy=params[1])
+#         assign_attributes(file_path=file_path, clen=params[0]s, photon_energy=params[1])
 #     print(f"File saved: {file_path}")
 
 # def parameter_matrix(clen_values: list, photon_energy_values: list) -> None:
