@@ -1,28 +1,44 @@
 import os
 import re
 from functools import lru_cache
+from glob import glob
+from typing import Union, List
+from collections import namedtuple
 
 class PathManager:
-    def __init__(self, dataset:str, root_dir=None) -> None:
+    def __init__(self, datasets:List[int], root_dir=None) -> None:
         if root_dir is None:
             self.current_path = os.getcwd()  # Using the current working directory as a fallback
             self.root = self.re_root(self.current_path)
         else:
             self.root = root_dir  # Directly using the provided root directory
-        self.dataset = dataset
+        self.datasets = [str(num).zfill(2) for num in datasets]
         self.setup_directories()
         
     def setup_directories(self) -> None:
-        # Setup directories based on the root
+        # self.datasets = [str(num).zfill(2) for num in self.datasets]
         self.images_dir = os.path.join(self.root, 'images')
-        self.peaks_dir = os.path.join(self.images_dir, 'peaks') 
+        self.peaks_dir = os.path.join(self.images_dir, 'peaks')
         self.labels_dir = os.path.join(self.images_dir, 'labels')
         self.peaks_water_overlay_dir = os.path.join(self.images_dir, 'peaks_water_overlay')
         self.water_background_dir = os.path.join(self.images_dir, 'water')
         self.temp = os.path.join(self.images_dir, 'temp')
-        self.select_dataset(dataset=self.dataset) # calls init_lists()
+        self.total_paths = self.selected_datasets()
         
-    def init_lists(self, dataset:str) -> None:
+    def selected_datasets(self):
+        Paths = namedtuple('Paths', ['peaks', 'overlays', 'labels', 'water_background'])
+        peaks, overlays,  labels, water_background = [], [], [], []
+        
+        for dataset in self.datasets:
+            # Ensure correct paths are appended to their respective lists
+            peaks += glob(os.path.join(self.peaks_dir, dataset, '*.h5'))
+            overlays += glob(os.path.join(self.peaks_water_overlay_dir, dataset, '*.h5'))
+            labels += glob(os.path.join(self.labels_dir, dataset, '*.h5'))
+            water_background += glob(os.path.join(self.water_background_dir, dataset, '*.h5'))
+            
+        return Paths(peaks=peaks, overlays=overlays, labels=labels, water_background=water_background)
+
+    def init_lists(self, dataset:str) -> list: 
         self.peak_list = self.get_peak_image_paths(self.dataset)
         self.water_peak_list = self.get_peaks_water_overlay_image_paths(self.dataset)
         self.label_list = self.get_label_images_paths(self.dataset)
@@ -53,11 +69,11 @@ class PathManager:
         self.get_peaks_water_overlay_image_paths.cache_clear()
         self.get_label_images_paths.cache_clear()
         self.get_water_background.cache_clear()
-
-        # Reinitialize the lists with current directory contents
-        self.peak_list, self.water_peak_list, self.label_list, self.water_background_list = self.select_dataset(self.dataset)
+        self.total_paths = self.selected_datasets()
+        # # Reinitialize the lists with current directory contents
+        # self.peak_list, self.water_peak_list, self.label_list, self.water_background_list = self.init_lists(self.dataset)
         
-        print(f"Paths refreshed for dataset {self.dataset}.")
+        print(f"Paths refreshed for dataset {self.datasets}.")
     
     def re_root(self, current_path: str) -> str:
         match = re.search("cxls_hitfinder", current_path)
@@ -67,10 +83,6 @@ class PathManager:
         else:
             raise Exception("Could not find the root directory. (cxls_hitfinder)\n", "Current working dir:", self.current_path)
         
-    def select_dataset(self, dataset:str) -> tuple:    
-        self.dataset = dataset # select dataset 01 through 09
-        return self.init_lists(self.dataset)  #peak_paths, water_peak_paths, label_paths, water_background
-    
     def get_path(self, path_name:str) -> str:
             paths_dict = {
                 'root': self.root,
@@ -123,13 +135,13 @@ class PathManager:
         """
         target_list = None
         if dir_type == 'peak':
-            target_list = self.peak_list
+            target_list = self.total_paths.peaks
         elif dir_type == 'overlay':
-            target_list = self.water_peak_list
+            target_list = self.total_paths.overlays
         elif dir_type == 'label':
-            target_list = self.label_list
+            target_list = self.total_paths.labels
         elif dir_type == 'background':
-            target_list = self.water_background_list
+            target_list = self.total_paths.water_background
         
         if target_list is not None:
             target_list.append(file_path)
