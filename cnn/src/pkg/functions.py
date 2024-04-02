@@ -195,6 +195,7 @@ def get_counts(paths: object, datasets:List[int]) -> None:
     
     for dataset in datasets:
         # Loop through each directory type and count files
+        dataset = '0' +  str(dataset)
         for directory_type in directory_types:
             directory_path = os.path.join(paths.images_dir, directory_type, dataset)
             all_files = glob(os.path.join(directory_path, '*.h5'))  # Corrected usage here
