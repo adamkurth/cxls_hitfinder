@@ -155,6 +155,7 @@ class TrainTestModels:
                     _, predicted = torch.max(score, 1)
                     
                 accuracy_test += (predicted == image_attribute.to(self.device)).float().sum()
+                accuracy_test += (predicted == image_attribute.to(self.device)).float().sum()
                 total += torch.numel(image_attribute)
 
         loss_test = running_loss_test/self.batch
@@ -199,6 +200,7 @@ class TrainTestModels:
                 # Flatten and append labels to all_labels
                 image_attribute = attributes[self.feature].reshape(-1).cpu().numpy()
                 all_labels.extend(image_attribute)
+                
                 
                 if self.feature == 'peak':
                     predicted = (torch.sigmoid(score) > self.threshold).long().cpu()  # Assuming 'score' is the output of your model
