@@ -33,6 +33,7 @@ class TrainTestModels:
         self.epochs = cfg['num_epochs']
         self.device = cfg['device']
         self.batch = cfg['batch_size']
+        
         self.feature_class = feature_class()
         self.model = feature_class.get_model().to(self.device)
         self.criterion = feature_class.get_criterion()
