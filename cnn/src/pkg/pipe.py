@@ -27,7 +27,7 @@ class ModelPipeline:
         self.pipeline_results = (0,0)
         self.atributes = (0,0)
 
-    def run_pipeline(self, image: torch.tensor) -> tuple:
+    def run(self, image: torch.tensor) -> tuple:
         """ 
         This function runs the analysis pipeline on a given image.
 
