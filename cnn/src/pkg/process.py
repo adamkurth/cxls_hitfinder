@@ -31,8 +31,8 @@ class Processor:
         water_dict = {}
         for path in self.water_backgrounds:
             # Extract dataset identifier from the path  
-            # dataset_id = path.split('/')[-2]  # Assuming the format always has the dataset ID as the second last part of the path
-            dataset_id = str(path.split('/'))[-2]
+            dataset_id = path.split('/')[0]
+            dataset_id = [dataset_id[i:i+2] for i in range(len(dataset_id)-1) if dataset_id[i] == '0'][0]
             water_dict[dataset_id] = path
         return water_dict
             
