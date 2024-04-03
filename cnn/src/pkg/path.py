@@ -45,7 +45,7 @@ class PathManager:
         self.label_list = self.get_label_images_paths(self.dataset)
         self.water_background_list = [self.get_water_background(self.dataset)] # expecting 1 image
         return self.peak_list, self.water_peak_list, self.label_list, self.water_background_list
-    
+
     def fetch_paths_by_type(self, dataset:str, dir_type:str) -> list:
         """
         Fetches and returns a list of file paths based on the specified directory type.
