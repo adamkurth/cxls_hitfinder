@@ -41,7 +41,7 @@ class TrainTestModels:
         self.plot_test_loss = np.zeros(self.epochs)
 
         self.cm = np.zeros((self.classes,self.classes), dtype=int)
-        self.threshold = 0.5
+        self.threshold = cfg['threshold']
         self.logger = logging.getLogger(__name__)
         self.feature = feature # peak, photon_energy, clen
         self.labels = labels

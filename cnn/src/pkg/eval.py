@@ -76,7 +76,7 @@ class Photon_Energy_Configuration(Get_Configuration_Details):
 
     Args:
         Get_Configuration_Details (class): Class used for retreiving configuration details.
-    """
+    """ 
     def __init__(self):
         super().__init__()
         self._model = m.Photon_Scattering_CNN1()
@@ -95,7 +95,7 @@ class Photon_Energy_Configuration(Get_Configuration_Details):
         
 class Camera_Length_Configureation(Get_Configuration_Details):
     """
-    This class is the specific configureation for the camera length model.
+    This class is the specific configureation for the camera length  model.
 
     Args:
         Get_Configuration_Details (class): Class used for retreiving configuration details.
@@ -106,7 +106,7 @@ class Camera_Length_Configureation(Get_Configuration_Details):
         self._criterion = nn.CrossEntropyLoss()
         self._feature = "clen"
         self._classes = 3
-        self._labels = [1.5, 2.5, 3.5]
+        self._labels = [0.15, 0.25, 0.35]
         self.attribute_mapping = {
             1: 1.5,
             2: 2.5,
