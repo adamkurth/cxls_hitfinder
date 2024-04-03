@@ -103,7 +103,7 @@ class TrainTestModels:
         running_loss_test = accuracy_test = predicted = total = 0.0
         self.model.eval()
         with torch.no_grad(), autocast():
-            for inputs, labels, attributes in self.loader[1]:
+            for inputs, labels, attributes in self.train_loader:
                 peak_images, _ = inputs
                 peak_images = peak_images.to(self.device)
                 labels = labels.to(self.device)
@@ -124,7 +124,6 @@ class TrainTestModels:
                 self.feature_class.format_prediction(score)
                 predictions = self.feature_class.get_formatted_prediction()
                     
-                accuracy_test += (predictions == image_attribute.to(self.device)).float().sum()
                 accuracy_test += (predictions == image_attribute.to(self.device)).float().sum()
                 total += torch.numel(image_attribute)
 
@@ -162,7 +161,7 @@ class TrainTestModels:
         all_predictions = []
 
         with torch.no_grad(), autocast():
-            for inputs, labels, attributes in self.loader[1]:  # Assuming self.loader[1] is the testing data loader
+            for inputs, labels, attributes in self.train_loader:  # Assuming self.loader[1] is the testing data loader
                 peak_images, _ = inputs
                 peak_images = peak_images.to(self.device)
                 score = self.model(peak_images.to(self.device))
