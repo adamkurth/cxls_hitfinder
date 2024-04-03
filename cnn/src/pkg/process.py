@@ -19,6 +19,7 @@ class Processor:
 
     def init_water_background(self) -> list:
         self.water_backgrounds = self.paths.total_paths.water_background
+        print(f"Water backgrounds initialized: {len(self.water_backgrounds)}")
         return self.water_backgrounds        
     
     def convert_water_backgrounds_to_dict(self) -> dict:
@@ -30,10 +31,10 @@ class Processor:
         """
         water_dict = {}
         for path in self.water_backgrounds:
-            # Extract dataset identifier from the path  
-            # dataset_id = path.split('/')[-2]  # Assuming the format always has the dataset ID as the second last part of the path
-            dataset_id = str(path.split('/'))[-2]
+            # works for macOS and Linux paths
+            dataset_id = path.split('/')[-2]
             water_dict[dataset_id] = path
+            # print(water_dict)
         return water_dict
             
     def selected_datasets(self) -> dict:
@@ -326,3 +327,4 @@ class Processor:
         print(f"Number of peak files: {len(self.paths.get_peak_image_paths(dataset))}")
         print(f"Number of label files: {len(self.paths.get_label_images_paths(dataset))}")
         print(f"Number of overlay files: {len(self.paths.get_peaks_water_overlay_image_paths(dataset))}")        
+        
