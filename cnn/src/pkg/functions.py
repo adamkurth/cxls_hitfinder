@@ -106,7 +106,7 @@ def parse_attributes(paths: object, params:list) -> dict:
     """
     paths.refresh_all()
     dataset = paths.dataset
-    
+
     # Initialize the lists of file paths for each directory type
     peak_path_list, overlay_path_list, label_path_list, background_path_list = paths.init_lists(dataset)
     
@@ -127,9 +127,9 @@ def parse_attributes(paths: object, params:list) -> dict:
 # If the input is a string, the file path in this case, it will use the string case. 
 # If given the file directly, it will use the default case, since a special case does not exist for it.
 
-def get_params(dataset):
+def get_params(datasets:List[int]) -> dict:
+    datasets = convert2str(datasets=datasets)
     clen_values, photon_energy_values = [1.5, 2.5, 3.5], [6000, 7000, 8000]
-    param_matrix = parameter_matrix(clen_values, photon_energy_values)
     dataset_dict = {
         '01': [clen_values[0], photon_energy_values[0]],
         '02': [clen_values[0], photon_energy_values[1]],
@@ -141,7 +141,13 @@ def get_params(dataset):
         '08': [clen_values[2], photon_energy_values[1]],
         '09': [clen_values[2], photon_energy_values[2]],
     }
-    return dataset_dict.get(dataset, None)
+    params_dict = {}
+    for dataset in datasets:
+        params_dict[dataset] = {
+            'clen': dataset_dict[dataset][0],
+            'photon_energy': dataset_dict[dataset][1]
+        }
+    return params_dict
 
 def retrieve_attributes(file_path: str):
     """
@@ -166,21 +172,29 @@ def retrieve_attributes(file_path: str):
                 
     return attributes
 
-def check_attributes(paths: object, dataset: str, type: str, **expected_attrs) -> bool:
+def check_attributes(paths: object, dataset: str, dir_type: str, **expected_attrs) -> bool:
     """
     Checks that specified attributes for all files in a specified type within a dataset
     match expected values. Expected attributes are passed as keyword arguments.
     """
-    path_list = paths.fetch_paths_by_type(dataset=dataset, dir_type=type)
-    for f in path_list: 
-        attributes = retrieve_attributes(file_path=f)
+    path_list = paths.fetch_paths_by_type(dataset=dataset, dir_type=dir_type)
+    all_match = True
+
+    for file_path in path_list:
+        attributes = retrieve_attributes(file_path=file_path)  # Ensure this function returns a dict with attribute values
         for attr, expected_value in expected_attrs.items():
-            if attributes.get(attr) != expected_value:
-                print(f"File {f} has mismatching {attr}: expected={expected_value}, found={attributes.get(attr)}")
-                return False
-    
-    print(f"All files in dataset {dataset} of type '{type}' have matching attributes.")
-    return True
+            actual_value = attributes.get(attr)
+            if actual_value != expected_value:
+                print(f"File {file_path} has mismatching '{attr}': expected={expected_value}, found={actual_value}")
+                all_match = False
+            else:
+                print(f"File {file_path} correctly has '{attr}': expected={expected_value}, actual={actual_value}")
+
+    if all_match:
+        print(f"All files in dataset {dataset} of type '{dir_type}' have matching attributes.")
+    else:
+        print(f"Mismatches found in dataset {dataset} of type '{dir_type}'.")
+    return all_match
 
 def get_counts(paths: object, datasets:List[int]) -> None:
     """
