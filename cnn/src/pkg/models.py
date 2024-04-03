@@ -208,9 +208,9 @@ class BasicCNN3(nn.Module):
         return x
 
 
-class Photon_Scattering_CNN1(nn.Module):
+class Multi_Class_CNN1(nn.Module):
     def __init__(self, input_channels=1, input_size=(2163, 2069), output_channels=3):
-        super(Photon_Scattering_CNN1, self).__init__()
+        super(Multi_Class_CNN1, self).__init__()
         
         self.conv1 = nn.Conv2d(input_channels, 32, kernel_size=250, stride=50, padding=1)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=10, stride=1, padding=1)

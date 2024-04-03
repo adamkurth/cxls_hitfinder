@@ -29,6 +29,12 @@ class Get_Configuration_Details:
         return self._labels
     
     def format_image_attributes(self, image_attribute: torch.Tensor) -> None:
+        """
+        Formats the image attributes based on the attribute mapping.
+
+        Args:
+            image_attribute (torch.Tensor): The image attribute tensor.
+        """
         if not self.attribute_mapping:  # Directly use the image attribute if no mapping is needed
             self._formatted_image_attribute = image_attribute.reshape(-1, 1).float()
             return
@@ -39,6 +45,13 @@ class Get_Configuration_Details:
         self._formatted_image_attribute = holder
 
     def format_prediction(self, score: torch.Tensor, threshold: float = None) -> None:
+        """
+        Formats the prediction based on the score and threshold.
+
+        Args:
+            score (torch.Tensor): The score tensor.
+            threshold (float, optional): Peak threshold. Defaults to None.
+        """
         if threshold is not None:  # For binary classification cases
             self._formatted_prediction = (torch.sigmoid(score) > threshold).long()
         else:  # For multi-class cases
@@ -79,7 +92,7 @@ class Photon_Energy_Configuration(Get_Configuration_Details):
     """ 
     def __init__(self):
         super().__init__()
-        self._model = m.Photon_Scattering_CNN1()
+        self._model = m.Multi_Class_CNN1()
         self._criterion = nn.CrossEntropyLoss()
         self._feature = "photon_energy"
         self._classes = 3
@@ -102,7 +115,7 @@ class Camera_Length_Configureation(Get_Configuration_Details):
     """
     def __init__(self):
         super().__init__()
-        self._model = m.Camera_Length_CNN1()
+        self._model = m.Multi_Class_CNN1()
         self._criterion = nn.CrossEntropyLoss()
         self._feature = "clen"
         self._classes = 3
