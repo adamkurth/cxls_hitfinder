@@ -50,7 +50,7 @@ class ModelPipeline:
             else:
                 return None 
 
-    def compare_results(self, image_path: str) -> None:
+    def evaluate_results(self, image_path: str) -> None:
         """
         This function compares the pipeline results with the true attributes of the image.
 
