@@ -123,10 +123,6 @@ def parse_attributes(paths: object, params:list) -> dict:
             print(f"Attributes assigned to {f}")
     print("Attributes assigned to all files.")
     
-# This singledispatch is funtioning like overriding an function, which is not normally supported due to dynamic data types. 
-# If the input is a string, the file path in this case, it will use the string case. 
-# If given the file directly, it will use the default case, since a special case does not exist for it.
-
 def get_params(datasets:List[int]) -> dict:
     datasets = convert2str(datasets=datasets)
     clen_values, photon_energy_values = [1.5, 2.5, 3.5], [6000, 7000, 8000]
@@ -172,29 +168,44 @@ def retrieve_attributes(file_path: str):
                 
     return attributes
 
-def check_attributes(paths: object, dataset: str, dir_type: str, **expected_attrs) -> bool:
-    """
-    Checks that specified attributes for all files in a specified type within a dataset
-    match expected values. Expected attributes are passed as keyword arguments.
-    """
-    path_list = paths.fetch_paths_by_type(dataset=dataset, dir_type=dir_type)
-    all_match = True
+# def check_attributes(paths: object, dataset: str, dir_type: str, **expected_attrs) -> bool:
+#     """
+#     Checks that specified attributes for all files in a specified type within a dataset
+#     match expected values. Expected attributes are passed as keyword arguments.
+#     """
+#     path_list = paths.fetch_paths_by_type(dataset=dataset, dir_type=dir_type)
+#     all_match = True
+    
+#     # Extract expected values for 'clen' and 'photon_energy' from expected_attrs
+#     expected_clen = expected_attrs.get('clen')
+#     expected_photon_energy = expected_attrs.get('photon_energy')
+    
+#     for file_path in path_list:
+#         attributes = retrieve_attributes(file_path=file_path)
+        
+#         # Extract actual values for 'clen' and 'photon_energy' from attributes
+#         actual_clen = attributes.get('clen')
+#         actual_photon_energy = attributes.get('photon_energy')
+        
+#         # Check 'clen' attribute
+#         if actual_clen != expected_clen:
+#             print(f"File {file_path} has mismatching 'clen': expected={expected_clen}, found={actual_clen}")
+#             all_match = False
+#         else:
+#             print(f"File {file_path} correctly has 'clen': expected={expected_clen}, actual={actual_clen}")
 
-    for file_path in path_list:
-        attributes = retrieve_attributes(file_path=file_path)  # Ensure this function returns a dict with attribute values
-        for attr, expected_value in expected_attrs.items():
-            actual_value = attributes.get(attr)
-            if actual_value != expected_value:
-                print(f"File {file_path} has mismatching '{attr}': expected={expected_value}, found={actual_value}")
-                all_match = False
-            else:
-                print(f"File {file_path} correctly has '{attr}': expected={expected_value}, actual={actual_value}")
+#         # Check 'photon_energy' attribute
+#         if actual_photon_energy != expected_photon_energy:
+#             print(f"File {file_path} has mismatching 'photon_energy': expected={expected_photon_energy}, found={actual_photon_energy}")
+#             all_match = False
+#         else:
+#             print(f"File {file_path} correctly has 'photon_energy': expected={expected_photon_energy}, actual={actual_photon_energy}")
 
-    if all_match:
-        print(f"All files in dataset {dataset} of type '{dir_type}' have matching attributes.")
-    else:
-        print(f"Mismatches found in dataset {dataset} of type '{dir_type}'.")
-    return all_match
+#     if all_match:
+#         print(f"All files in dataset {dataset} of type '{dir_type}' have matching attributes.")
+#     else:
+#         print(f"Mismatches found in dataset {dataset} of type '{dir_type}'.")
+#     return all_match
 
 def get_counts(paths: object, datasets:List[int]) -> None:
     """

@@ -6,7 +6,7 @@ from glob import glob
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 from typing import Tuple, List, Dict, Union
-from pkg.functions import load_h5, check_attributes, get_counts, get_params, convert2int, convert2str
+from pkg.functions import load_h5, get_counts, get_params, convert2int, convert2str
 
 class DatasetManager(Dataset):
     # for PyTorch DataLoader
@@ -35,12 +35,10 @@ class DatasetManager(Dataset):
         return len(self.peak_paths)
     
     def __getitem__(self, idx:int) -> tuple:
-        # peak_image = load_h5(self.peak_paths[idx])
         water_image = load_h5(self.water_peak_paths[idx])
         label_image = load_h5(self.label_paths[idx])
             
         if self.transform:
-            # peak_image = self.transform(peak_image) 
             water_image = self.transform(water_image) # dimensions: C x H x W
             label_image = self.transform(label_image)
             
@@ -56,7 +54,7 @@ class DatasetManager(Dataset):
     #             raise ValueError(f"Found no parameters found for dataset {dataset}.")
             
     #         exp_clen, exp_photon_energy = params
-    #         # paths, dataset: str, type: str, **expected_attrs
+    #         # paths, dataset: str, dir_type: str, **expected_attrs
     #         unif_peaks = check_attributes(paths=self.paths, dataset=dataset, dir_type='peak', clen=exp_clen, photon_energy=exp_photon_energy)
     #         unif_label = check_attributes(paths=self.paths, dataset=dataset, dir_type='label', clen=exp_clen, photon_energy=exp_photon_energy)
     #         unif_overlay = check_attributes(paths=self.paths, dataset=dataset, dir_type='overlay', clen=exp_clen, photon_energy=exp_photon_energy)
