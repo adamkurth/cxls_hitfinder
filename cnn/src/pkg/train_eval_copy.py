@@ -20,7 +20,7 @@ class TrainTestModels:
     There are two methods for training: test_model_no_freeze and test_model_freeze.
     """
     
-    def __init__(self, cfg, feature_class) -> None:
+    def __init__(self, cfg: dict, feature_class: object) -> None:
         """ 
         Takes the arguments for training and testing and makes them available to the class.
 
@@ -43,11 +43,10 @@ class TrainTestModels:
         self.plot_train_loss = np.zeros(self.epochs)
         self.plot_test_accuracy = np.zeros(self.epochs)
         self.plot_test_loss = np.zeros(self.epochs)
-
         self.cm = np.zeros((self.classes,self.classes), dtype=int)
+        
         self.logger = logging.getLogger(__name__)
         self.scaler = GradScaler()
-
            
     def train(self, epoch:int) -> None:
         running_loss_train = accuracy_train = predictions = total_predictions = 0.0
