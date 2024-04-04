@@ -6,7 +6,7 @@ from glob import glob
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 from typing import Tuple, List, Dict, Union
-from pkg.functions import load_h5, get_counts, get_params, convert2int, convert2str, check_attributes
+from pkg.functions import load_h5, get_counts, get_params, convert2int, convert2str, check_attributes, retrieve_attributes
 from pkg.transform import TransformToTensor
 
 # for PyTorch DataLoader
@@ -18,7 +18,7 @@ class DatasetManager(Dataset):
         self.setup_datasets()
         self.transform = transform if transform is not None else TransformToTensor()
         self.count_empty_images()
-        self.authenticate_attributes()
+        # self.authenticate_attributes()
         print(f"Final dataset sizes - Peaks: {len(self.peak_paths)}, Labels: {len(self.label_paths)}, Overlays: {len(self.water_peak_paths)}")
     
     def setup_datasets(self):
@@ -34,12 +34,13 @@ class DatasetManager(Dataset):
     def __getitem__(self, idx:int) -> tuple:
         water_image = load_h5(self.water_peak_paths[idx])
         label_image = load_h5(self.label_paths[idx])
+        image_attributes =  retrieve_attributes(self.water_peak_paths[idx]) 
             
         if self.transform:
             water_image = self.transform(water_image) # dimensions: C x H x W
             label_image = self.transform(label_image)
             
-        return water_image, label_image
+        return water_image, label_image, image_attributes
     
     def authenticate_attributes(self) -> None:
         """
