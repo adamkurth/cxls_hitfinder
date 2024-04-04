@@ -125,7 +125,7 @@ def parse_attributes(paths: object, params:list) -> dict:
     
 def get_params(datasets:List[int]) -> dict:
     datasets = convert2str(datasets=datasets)
-    clen_values, photon_energy_values = [1.5, 2.5, 3.5], [6000, 7000, 8000]
+    clen_values, photon_energy_values = [0.15, 0.25, 0.35], [6000, 7000, 8000]
     dataset_dict = {
         '01': [clen_values[0], photon_energy_values[0]],
         '02': [clen_values[0], photon_energy_values[1]],
@@ -177,9 +177,7 @@ def check_attributes(paths: object, datasets: List[str], dir_type: str) -> bool:
         for path in files:
             attributes = retrieve_attributes(path)
             act_clen, act_photon_energy = attributes['clen'], attributes['photon_energy']
-            if act_clen == exp_clen or act_photon_energy == exp_photon_energy:
-                pass
-            else:
+            if act_clen != exp_clen or act_photon_energy != exp_photon_energy:
                 conform = False
                 print(f'Error: {path} does not match expected attributes')
                 print(f'Expected: clen={exp_clen}, photon_energy={exp_photon_energy}')
