@@ -34,13 +34,16 @@ class DatasetManager(Dataset):
     def __getitem__(self, idx:int) -> tuple:
         water_image = load_h5(self.water_peak_paths[idx])
         label_image = load_h5(self.label_paths[idx])
-        image_attributes =  retrieve_attributes(self.water_peak_paths[idx]) 
+        # image_attributes =  retrieve_attributes(self.water_peak_paths[idx]) 
+        """
+        THIS NEEDS TO BE ADDED AS THE THIRD RETURN ELEMENT, CURRENTLY DOES NOT WORK IF ADDED.
+        """
             
         if self.transform:
             water_image = self.transform(water_image) # dimensions: C x H x W
             label_image = self.transform(label_image)
             
-        return water_image, label_image, image_attributes
+        return water_image, label_image
     
     def authenticate_attributes(self) -> None:
         """

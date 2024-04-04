@@ -52,7 +52,7 @@ class TrainTestModels:
         running_loss_train = accuracy_train = predictions = total_predictions = 0.0
 
         self.model.train()
-        for inputs, labels, attributes in self.loader[0]:  # Assuming self.loader[0] is the training data loader
+        for inputs, labels in self.loader[0]:  # Assuming self.loader[0] is the training data loader
             # peak_images, overlay_images = inputs
             # peak_images, overlay_images, labels = peak_images.to(self.device), overlay_images.to(self.device), labels.to(self.device)
             inputs, labels = inputs.to(self.device), labels.to(self.device)
