@@ -5,7 +5,7 @@ from typing import Any
 from glob import glob
 from torch.utils.data import DataLoader
 import torch
-from typing import Union, List
+from typing import Union, List, Dict
 
 
 def convert2int(datasets: List[Union[str, int]]) -> List[int]:
@@ -168,45 +168,24 @@ def retrieve_attributes(file_path: str):
                 
     return attributes
 
-# def check_attributes(paths: object, dataset: str, dir_type: str, **expected_attrs) -> bool:
-#     """
-#     Checks that specified attributes for all files in a specified type within a dataset
-#     match expected values. Expected attributes are passed as keyword arguments.
-#     """
-#     path_list = paths.fetch_paths_by_type(dataset=dataset, dir_type=dir_type)
-#     all_match = True
+def check_attributes(paths: object, datasets: List[str], dir_type: str) -> bool:
+    conform = True
+    params = get_params(datasets=datasets)
+    for dataset in datasets:
+        files = paths.fetch_paths_by_type(dataset=dataset, dir_type=dir_type)
+        exp_clen, exp_photon_energy = params.get(dataset)['clen'], params.get(dataset)['photon_energy']
+        for path in files:
+            attributes = retrieve_attributes(path)
+            act_clen, act_photon_energy = attributes['clen'], attributes['photon_energy']
+            if act_clen == exp_clen or act_photon_energy == exp_photon_energy:
+                pass
+            else:
+                conform = False
+                print(f'Error: {path} does not match expected attributes')
+                print(f'Expected: clen={exp_clen}, photon_energy={exp_photon_energy}')
+                print(f'Actual: clen={act_clen}, photon_energy={act_photon_energy}')
+        return conform
     
-#     # Extract expected values for 'clen' and 'photon_energy' from expected_attrs
-#     expected_clen = expected_attrs.get('clen')
-#     expected_photon_energy = expected_attrs.get('photon_energy')
-    
-#     for file_path in path_list:
-#         attributes = retrieve_attributes(file_path=file_path)
-        
-#         # Extract actual values for 'clen' and 'photon_energy' from attributes
-#         actual_clen = attributes.get('clen')
-#         actual_photon_energy = attributes.get('photon_energy')
-        
-#         # Check 'clen' attribute
-#         if actual_clen != expected_clen:
-#             print(f"File {file_path} has mismatching 'clen': expected={expected_clen}, found={actual_clen}")
-#             all_match = False
-#         else:
-#             print(f"File {file_path} correctly has 'clen': expected={expected_clen}, actual={actual_clen}")
-
-#         # Check 'photon_energy' attribute
-#         if actual_photon_energy != expected_photon_energy:
-#             print(f"File {file_path} has mismatching 'photon_energy': expected={expected_photon_energy}, found={actual_photon_energy}")
-#             all_match = False
-#         else:
-#             print(f"File {file_path} correctly has 'photon_energy': expected={expected_photon_energy}, actual={actual_photon_energy}")
-
-#     if all_match:
-#         print(f"All files in dataset {dataset} of type '{dir_type}' have matching attributes.")
-#     else:
-#         print(f"Mismatches found in dataset {dataset} of type '{dir_type}'.")
-#     return all_match
-
 def get_counts(paths: object, datasets:List[int]) -> None:
     """
     Counts and reports the number of 'normal' and 'empty' images in the specified directories

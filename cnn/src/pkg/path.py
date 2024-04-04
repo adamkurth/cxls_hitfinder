@@ -51,13 +51,13 @@ class PathManager:
         Fetches and returns a list of file paths based on the specified directory type.
         """
         if dir_type == 'peak':
-            return self.get_peak_image_paths(dataset)
+            return self.get_peak_image_paths(dataset=dataset)
         elif dir_type == 'overlay':
-            return self.get_peaks_water_overlay_image_paths(dataset)
+            return self.get_peaks_water_overlay_image_paths(dataset=dataset)
         elif dir_type == 'label':
-            return self.get_label_images_paths(dataset)
+            return self.get_label_images_paths(dataset=dataset)
         elif dir_type == 'background':
-            return [self.get_water_background(dataset)]
+            return [self.get_water_background(dataset=dataset)]
         else:
             raise ValueError("Invalid directory type specified.")
     
