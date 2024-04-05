@@ -84,7 +84,6 @@ class BasicCNN1(nn.Module):
 
         return x
 
-
 class BasicCNN2(nn.Module):
     def __init__(self, input_channels=1, output_channels=1, heatmap_size=(2163, 2069)):
         super(BasicCNN2, self).__init__()
