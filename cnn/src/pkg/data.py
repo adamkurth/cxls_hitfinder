@@ -18,7 +18,6 @@ class DatasetManager(Dataset):
         self.setup_datasets()
         self.transform = transform if transform is not None else TransformToTensor()
         self.count_empty_images()
-        # self.authenticate_attributes()
         print(f"Final dataset sizes - Peaks: {len(self.peak_paths)}, Labels: {len(self.label_paths)}, Overlays: {len(self.water_peak_paths)}")
     
     def setup_datasets(self):
@@ -49,7 +48,6 @@ class DatasetManager(Dataset):
         """
         Authenticates the attributes of the dataset by verifying the parameters of a sample from each path category.
         """
-        
         # def check_attributes(paths: object, datasets: List[str], dir_type: str) -> bool:
         unif_peaks = check_attributes(paths=self.paths, datasets=self.datasets, dir_type='peak')
         unif_label = check_attributes(paths=self.paths, datasets=self.datasets, dir_type='label')
