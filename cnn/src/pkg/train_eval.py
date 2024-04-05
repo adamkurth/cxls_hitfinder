@@ -52,15 +52,16 @@ class TrainTestModels:
         running_loss_train = accuracy_train = predictions = total_predictions = 0.0
 
         self.model.train()
-        for inputs, labels, attributes in self.loader[0]:  # Assuming self.loader[0] is the training data loader
-            peak_images, overlay_images = inputs
-            peak_images, overlay_images, labels = peak_images.to(self.device), overlay_images.to(self.device), labels.to(self.device)
+        for inputs, labels, attributes  in self.loader[0]:  # Assuming self.loader[0] is the training data loader
+            # peak_images, overlay_images = inputs
+            # peak_images, overlay_images, labels = peak_images.to(self.device), overlay_images.to(self.device), labels.to(self.device)
+            inputs, labels = inputs.to(self.device), labels.to(self.device)
 
             self.optimizer.zero_grad()
             
             # Encapsulating the forward pass and loss calculation inside the autocast context
             with autocast():
-                score = self.model(peak_images.to(self.device))
+                score = self.model(inputs)
                 image_attribute = attributes[self.feature]
                 
                 if self.feature == 'peak':
@@ -119,13 +120,14 @@ class TrainTestModels:
         self.model.eval()
         with torch.no_grad(), autocast():
             for inputs, labels, attributes in self.loader[1]:
-                peak_images, _ = inputs
-                peak_images = peak_images.to(self.device)
-                labels = labels.to(self.device)
-                score = self.model(peak_images.to(self.device))
+                # peak_images, _ = inputs
+                # peak_images = peak_images.to(self.device)
+                # labels = labels.to(self.device)
+                
+                inputs, labels = inputs.to(self.device), labels.to(self.device)
 
                 self.optimizer.zero_grad()
-                score = self.model(peak_images.to(self.device))
+                score = self.model(inputs)
                                                 
                 image_attribute = attributes[self.feature]
                 
@@ -193,9 +195,11 @@ class TrainTestModels:
 
         with torch.no_grad(), autocast():
             for inputs, labels, attributes in self.loader[1]:  # Assuming self.loader[1] is the testing data loader
-                peak_images, _ = inputs
-                peak_images = peak_images.to(self.device)
-                score = self.model(peak_images.to(self.device))
+                # peak_images, _ = inputs
+                # peak_images = peak_images.to(self.device)
+                inputs, labels = inputs.to(self.device), labels.to(self.device)
+                
+                score = self.model(inputs)
 
                 # Flatten and append labels to all_labels
                 image_attribute = attributes[self.feature].reshape(-1).cpu().numpy()
