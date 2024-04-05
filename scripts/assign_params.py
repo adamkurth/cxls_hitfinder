@@ -29,22 +29,35 @@ def get_params() -> Dict[str, Dict[str, Any]]:
 def process_directory(directory: str):
     """Goes through the specified directory, confirms attribute assignment once per dataset directory."""
     dataset_params = get_params()
+    dir_type = os.path.basename(directory)
     
+    # Ask for user confirmation once for the entire directory
+    user_confirmation = input(f"Proceed with assigning attributes for all files in '{directory}'? (y/n): ")
+    if user_confirmation.lower() != 'y':
+        print("Attribute assignment canceled.")
+        return
+
     for dataset, params in dataset_params.items():
         dataset_dir = os.path.join(directory, dataset)
         if os.path.exists(dataset_dir):
-            print(f"Attributes to be assigned for dataset {dataset}: {params}")
-            confirmation = input(f"Proceed with assigning attributes for dataset {dataset}? (y/n): ")
-            if confirmation.lower() == 'y':
-                for file in os.listdir(dataset_dir):
-                    if file.endswith('.h5'):
-                        file_path = os.path.join(dataset_dir, file)
-                        assign_attributes(file_path, **params)
-                print(f"\nCompleted processing for dataset {dataset} in {directory}.")
-            else:
-                print(f"Skipped attribute assignment for dataset {dataset}.")
+            files = [f for f in os.listdir(dataset_dir) if f.endswith('.h5')]
+            
+            # Ensure there are files to process
+            if not files:
+                print(f"No HDF5 files found in {dataset_dir}. Skipping.")
+                continue
+            
+            for file in files:
+                file_path = os.path.join(dataset_dir, file)
+                # Determine if the file should be marked with a peak attribute
+                peak_value = not file.startswith("empty")
+                modified_params = params.copy()
+                modified_params['peak'] = peak_value
+                assign_attributes(file_path, **modified_params)
+            print(f"Completed processing for dataset {dataset} in {directory}.")
         else:
             print(f"Dataset directory {dataset} not found in {directory}.")
+ 
 
 if __name__ == "__main__":
     import argparse
