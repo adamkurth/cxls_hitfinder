@@ -243,7 +243,7 @@ class TrainTestModels:
         """
         This function loops through the number of epochs and trains and tests the model.
         """
-        
+
         self.logger.info(f'Model training and testing: {self.model.__class__.__name__}')
         print(f'Model testing and validating: {self.model.__class__.__name__}')     
         print(f'Looking for the feature: {self.feature}')  
