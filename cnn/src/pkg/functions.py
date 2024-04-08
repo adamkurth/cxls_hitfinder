@@ -122,6 +122,7 @@ def parse_attributes(paths: object, params:list) -> dict:
             assign_attributes(file_path=f, clen=params[0], photon_energy=params[1], peak=is_relavant)
             print(f"Attributes assigned to {f}")
     print("Attributes assigned to all files.")
+
     
 def get_params(datasets:List[int]) -> dict:
     datasets = convert2str(datasets=datasets)

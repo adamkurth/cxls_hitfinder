@@ -58,7 +58,8 @@ class TrainTestModels:
             inputs, labels = inputs.to(self.device), labels.to(self.device)
 
             self.optimizer.zero_grad()
-            
+            print(attributes)
+        
             # Encapsulating the forward pass and loss calculation inside the autocast context
             with autocast():
                 score = self.model(inputs)

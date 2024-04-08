@@ -180,7 +180,6 @@ class Processor:
         peak_paths = self.paths.get_peak_image_paths(dataset=dataset)
         water_background_path = self.water_background_dict.get(dataset)
         self.water_background = f.load_h5(file_path=water_background_path)
-        
         for peak_path in peak_paths:
             # derive a unique basename for each peak image
             basename = os.path.basename(peak_path)
@@ -188,11 +187,10 @@ class Processor:
             # unique filenames for the overlay and label images based on the current peak image's basename
             out_overlay_path = os.path.join(self.paths.peaks_water_overlay_dir, dataset, f'overlay_{basename}')
             out_label_path = os.path.join(self.paths.labels_dir, dataset, f'label_{basename}')
-            
             peak_image = f.load_h5(file_path=peak_path)
             labeled_array = self.heatmap(peak_image_array=peak_image)
             peak_water_overlay_image = self.apply_water_background(peak_image_array=peak_image)
-            
+
            # Save the processed peak image and labeled image to their respective unique paths
             f.save_h5(file_path=out_overlay_path, data=peak_water_overlay_image, save_parameters=True, params=[clen, photon_energy])
             f.save_h5(file_path=out_label_path, data=labeled_array, save_parameters=True, params=[clen, photon_energy])
@@ -316,9 +314,12 @@ class Processor:
             self.paths.update_path(file_path=empty_overlay_path, dir_type='overlay')
             
             empty = False
-            f.assign_attributes(file_path=empty_label_path, clen=clen, photon_energy=photon_energy, peak=empty)
-            f.assign_attributes(empty_peak_path, clen=clen, photon_energy=photon_energy, peak=empty)
-            f.assign_attributes(empty_overlay_path, sclen=clen, photon_energy=photon_energy, peak=empty)
+            # f.assign_attributes(file_path=empty_label_path, clen=clen, photon_energy=photon_energy, peak=empty)
+            # f.assign_attributes(empty_peak_path, clen=clen, photon_energy=photon_energy, peak=empty)
+            # f.assign_attributes(empty_overlay_path, clen=clen, photon_energy=photon_energy, peak=empty)
+            f.update_attributes(file_path=empty_label_path, clen=clen, photon_energy=photon_energy, peak=empty)
+            f.update_attributes(empty_peak_path, clen=clen, photon_energy=photon_energy, peak=empty)
+            f.update_attributes(empty_overlay_path, clen=clen, photon_energy=photon_energy, peak=empty)
             
             print(f"\nEmpty label file created: {empty_label_path}")
             print(f"Empty peak file created: {empty_peak_path}")
