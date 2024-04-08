@@ -80,8 +80,6 @@ class TrainTestModels:
                     photon_energy_holder[image_attribute == 0.35] = 3
                     image_attribute = photon_energy_holder
                     
-                print(f'score: {score}')
-                print(f'image_attribute: {image_attribute}')
                 loss = self.criterion(score, image_attribute.to(self.device))
             
             # Scales loss. Calls backward to create scaled gradients
@@ -202,10 +200,26 @@ class TrainTestModels:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
                 
                 score = self.model(inputs)
-
+                image_attribute = attributes[self.feature]
                 # Flatten and append labels to all_labels
-                image_attribute = attributes[self.feature].reshape(-1).cpu().numpy()                    
-                all_labels.extend(image_attribute)
+                # image_attribute = attributes[self.feature].reshape(-1).cpu().numpy()   
+                if self.feature == 'peak':
+                    image_attribute = image_attribute.reshape(-1, 1).to(self.device)
+                    image_attribute = image_attribute.float()  # Convert target to float
+                elif self.feature == 'photon_energy':
+                    photon_energy_holder = torch.zeros_like(image_attribute, dtype=torch.long).to(self.device)
+                    photon_energy_holder[image_attribute == 6e3] = 1
+                    photon_energy_holder[image_attribute == 7e3] = 2
+                    photon_energy_holder[image_attribute == 8e3] = 3
+                    image_attribute = photon_energy_holder
+                elif self.feature == 'clen':
+                    photon_energy_holder = torch.zeros_like(image_attribute, dtype=torch.long).to(self.device)
+                    photon_energy_holder[image_attribute == 0.15] = 1
+                    photon_energy_holder[image_attribute == 0.25] = 2
+                    photon_energy_holder[image_attribute == 0.35] = 3
+                    image_attribute = photon_energy_holder
+                                 
+                all_labels.extend(image_attribute.cpu())
                 
                 
                 if self.feature == 'peak':
@@ -213,15 +227,15 @@ class TrainTestModels:
                 elif self.feature == 'photon_energy':
                     _, predicted = torch.max(score, 1)
                     predicted = predicted.cpu()
-                    predicted = torch.where(predicted == 1, torch.tensor(6000), predicted)
-                    predicted = torch.where(predicted == 2, torch.tensor(7000), predicted)
-                    predicted = torch.where(predicted == 3, torch.tensor(8000), predicted)
+                    # predicted = torch.where(predicted == 1, torch.tensor(6000), predicted)
+                    # predicted = torch.where(predicted == 2, torch.tensor(7000), predicted)
+                    # predicted = torch.where(predicted == 3, torch.tensor(8000), predicted)
                 elif self.feature == 'clen':
                     _, predicted = torch.max(score, 1)
                     predicted = predicted.cpu()
-                    predicted = torch.where(predicted == 1, torch.tensor(0.15), predicted)
-                    predicted = torch.where(predicted == 2, torch.tensor(0.25), predicted)
-                    predicted = torch.where(predicted == 3, torch.tensor(0.35), predicted)
+                    # predicted = torch.where(predicted == 1, torch.tensor(0.15), predicted)
+                    # predicted = torch.where(predicted == 2, torch.tensor(0.25), predicted)
+                    # predicted = torch.where(predicted == 3, torch.tensor(0.35), predicted)
                                         
                 all_predictions.extend(predicted)
 
