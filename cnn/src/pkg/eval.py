@@ -121,9 +121,9 @@ class Camera_Length_Configureation(Get_Configuration_Details):
         self._classes = 3
         self._labels = [0.15, 0.25, 0.35]
         self.attribute_mapping = {
-            1: 1.5,
-            2: 2.5,
-            3: 3.5
+            1: 0.15,
+            2: 0.25,
+            3: 0.35
         }
             
 

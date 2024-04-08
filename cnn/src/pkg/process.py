@@ -314,12 +314,9 @@ class Processor:
             self.paths.update_path(file_path=empty_overlay_path, dir_type='overlay')
             
             empty = False
-            # f.assign_attributes(file_path=empty_label_path, clen=clen, photon_energy=photon_energy, peak=empty)
-            # f.assign_attributes(empty_peak_path, clen=clen, photon_energy=photon_energy, peak=empty)
-            # f.assign_attributes(empty_overlay_path, clen=clen, photon_energy=photon_energy, peak=empty)
-            f.update_attributes(file_path=empty_label_path, clen=clen, photon_energy=photon_energy, peak=empty)
-            f.update_attributes(empty_peak_path, clen=clen, photon_energy=photon_energy, peak=empty)
-            f.update_attributes(empty_overlay_path, clen=clen, photon_energy=photon_energy, peak=empty)
+            f.assign_attributes(file_path=empty_label_path, clen=clen, photon_energy=photon_energy, peak=empty)
+            f.assign_attributes(empty_peak_path, clen=clen, photon_energy=photon_energy, peak=empty)
+            f.assign_attributes(empty_overlay_path, clen=clen, photon_energy=photon_energy, peak=empty)
             
             print(f"\nEmpty label file created: {empty_label_path}")
             print(f"Empty peak file created: {empty_peak_path}")
