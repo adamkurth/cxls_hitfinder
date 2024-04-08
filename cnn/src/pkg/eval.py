@@ -96,7 +96,7 @@ class Photon_Energy_Configuration(Get_Configuration_Details):
         self._criterion = nn.CrossEntropyLoss()
         self._feature = "photon_energy"
         self._classes = 3
-        self._labels = [6000, 7000, 8000]
+        self._labels = [1,2,3]
         self._attribute_mapping = {
             1: 6e3,
             2: 7e3,
@@ -119,7 +119,7 @@ class Camera_Length_Configureation(Get_Configuration_Details):
         self._criterion = nn.CrossEntropyLoss()
         self._feature = "clen"
         self._classes = 3
-        self._labels = [0.15, 0.25, 0.35]
+        self._labels = [1,2,3]
         self.attribute_mapping = {
             1: 0.15,
             2: 0.25,
