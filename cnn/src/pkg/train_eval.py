@@ -58,7 +58,6 @@ class TrainTestModels:
             inputs, labels = inputs.to(self.device), labels.to(self.device)
 
             self.optimizer.zero_grad()
-            print(attributes)
         
             # Encapsulating the forward pass and loss calculation inside the autocast context
             with autocast():
@@ -76,11 +75,13 @@ class TrainTestModels:
                     image_attribute = photon_energy_holder
                 elif self.feature == 'clen':
                     photon_energy_holder = torch.zeros_like(image_attribute, dtype=torch.long).to(self.device)
-                    photon_energy_holder[image_attribute == 1.5] = 1
-                    photon_energy_holder[image_attribute == 2.5] = 2
-                    photon_energy_holder[image_attribute == 3.5] = 3
+                    photon_energy_holder[image_attribute == 0.15] = 1
+                    photon_energy_holder[image_attribute == 0.25] = 2
+                    photon_energy_holder[image_attribute == 0.35] = 3
                     image_attribute = photon_energy_holder
                     
+                print(f'score: {score}')
+                print(f'image_attribute: {image_attribute}')
                 loss = self.criterion(score, image_attribute.to(self.device))
             
             # Scales loss. Calls backward to create scaled gradients
@@ -143,9 +144,9 @@ class TrainTestModels:
                     image_attribute = photon_energy_holder
                 elif self.feature == 'clen':
                     photon_energy_holder = torch.zeros_like(image_attribute, dtype=torch.long).to(self.device)
-                    photon_energy_holder[image_attribute == 1.5] = 1
-                    photon_energy_holder[image_attribute == 2.5] = 2
-                    photon_energy_holder[image_attribute == 3.5] = 3
+                    photon_energy_holder[image_attribute == 0.15] = 1
+                    photon_energy_holder[image_attribute == 0.25] = 2
+                    photon_energy_holder[image_attribute == 0.35] = 3
                     image_attribute = photon_energy_holder
                     
                 loss = self.criterion(score, image_attribute)
@@ -203,7 +204,7 @@ class TrainTestModels:
                 score = self.model(inputs)
 
                 # Flatten and append labels to all_labels
-                image_attribute = attributes[self.feature].reshape(-1).cpu().numpy()
+                image_attribute = attributes[self.feature].reshape(-1).cpu().numpy()                    
                 all_labels.extend(image_attribute)
                 
                 
@@ -217,9 +218,10 @@ class TrainTestModels:
                     predicted = torch.where(predicted == 3, torch.tensor(8000), predicted)
                 elif self.feature == 'clen':
                     _, predicted = torch.max(score, 1)
-                    predicted - torch.where(predicted == 1, torch.tensor(1.5), predicted)
-                    predicted - torch.where(predicted == 2, torch.tensor(2.5), predicted)
-                    predicted - torch.where(predicted == 3, torch.tensor(3.5), predicted)
+                    predicted = predicted.cpu()
+                    predicted = torch.where(predicted == 1, torch.tensor(0.15), predicted)
+                    predicted = torch.where(predicted == 2, torch.tensor(0.25), predicted)
+                    predicted = torch.where(predicted == 3, torch.tensor(0.35), predicted)
                                         
                 all_predictions.extend(predicted)
 
@@ -228,6 +230,8 @@ class TrainTestModels:
         all_predictions = np.array(all_predictions)
 
         # Compute confusion matrix
+        print(f'Labels: {all_labels}')
+        print(f'Predictions: {all_predictions}')
         self.cm = confusion_matrix(all_labels, all_predictions, labels=self.labels, normalize='true')
 
         # Plotting the confusion matrix
