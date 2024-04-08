@@ -44,6 +44,8 @@ class DatasetManager(Dataset):
             
         return water_image, label_image, image_attributes
     
+    
+    
     def authenticate_attributes(self) -> None:
         """
         Authenticates the attributes of the dataset by verifying the parameters of a sample from each path category.
