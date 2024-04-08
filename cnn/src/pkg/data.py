@@ -34,7 +34,7 @@ class DatasetManager(Dataset):
         water_image = load_h5(self.water_peak_paths[idx])
         label_image = load_h5(self.label_paths[idx])
         image_attributes =  retrieve_attributes(self.water_peak_paths[idx]) 
-            
+        
         if self.transform:
             water_image = self.transform(water_image) # dimensions: C x H x W
             label_image = self.transform(label_image)
