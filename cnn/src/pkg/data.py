@@ -34,9 +34,6 @@ class DatasetManager(Dataset):
         water_image = load_h5(self.water_peak_paths[idx])
         label_image = load_h5(self.label_paths[idx])
         image_attributes =  retrieve_attributes(self.water_peak_paths[idx]) 
-        """
-        IMAGE_ATTRIBUTES NEEDS TO BE ADDED AS THE THIRD RETURN ELEMENT, CURRENTLY DOES NOT WORK IF ADDED.
-        """
             
         if self.transform:
             water_image = self.transform(water_image) # dimensions: C x H x W
