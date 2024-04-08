@@ -49,10 +49,10 @@ class TrainTestModels:
         self.scaler = GradScaler()
            
     def train(self, epoch:int) -> None:
-        running_loss_train = accuracy_train = predictions = total_predictions = 0.0
+        running_loss_train, accuracy_train, predictions, total_predictions = 0.0, 0.0, 0.0, 0.0
 
         self.model.train()
-        for inputs, labels, attributes in self.test_loader:  # Assuming self.loader[0] is the training data loader
+        for inputs, labels, attributes in self.test_loader:
             inputs, labels = inputs.to(self.device), labels.to(self.device)
 
             self.optimizer.zero_grad()
@@ -98,7 +98,8 @@ class TrainTestModels:
         This function test the model and prints the loss and accuracy of the testing sets per epoch.
         """
 
-        running_loss_test = accuracy_test = predicted = total = 0.0
+        running_loss_test, accuracy_test, predicted, total = 0.0, 0.0, 0.0, 0.0
+        
         self.model.eval()
         with torch.no_grad(), autocast():
             for inputs, labels, attributes in self.train_loader:
