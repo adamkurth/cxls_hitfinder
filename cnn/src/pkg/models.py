@@ -8,6 +8,20 @@ from torchvision.models.densenet import DenseNet121_Weights
 import os
 import torch.nn.functional as F
 
+def get_models():
+    """
+    Returns a dictionary of available models.
+    """
+    models = {
+        "ResNet50BraggPeakClassifier": ResNet50BraggPeakClassifier,
+        "BasicCNN1": BasicCNN1,
+        "BasicCNN2": BasicCNN2,
+        "DenseNetBraggPeakClassifier": DenseNetBraggPeakClassifier,
+        "BasicCNN3": BasicCNN3,
+        "Multi_Class_CNN1": Multi_Class_CNN1
+    }
+    return models
+
 class ResNet50BraggPeakClassifier(nn.Module):
     """
     Simplified model for detecting Bragg peaks in crystallography images using ResNet.
