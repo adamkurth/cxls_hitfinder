@@ -14,11 +14,6 @@ class PathManager:
         else:
             self.root = root_dir  # Directly using the provided root directory
         self.datasets = [str(num).zfill(2) for num in datasets]
-        print(self.datasets)
-        self.setup_directories()
-        
-    def setup_directories(self) -> None:
-        # self.datasets = [str(num).zfill(2) for num in self.datasets]
         self.images_dir = os.path.join(self.root, 'images')
         self.peaks_dir = os.path.join(self.images_dir, 'peaks')
         self.labels_dir = os.path.join(self.images_dir, 'labels')

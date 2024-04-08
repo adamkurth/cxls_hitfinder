@@ -49,10 +49,10 @@ class TrainTestModels:
 
            
     def train(self, epoch:int) -> None:
-        running_loss_train = accuracy_train = predictions = total_predictions = 0.0
+        running_loss_train, accuracy_train, predictions, total_predictions = 0.0, 0.0, 0.0, 0.0 # assignment fix
 
         self.model.train()
-        for inputs, labels, attributes  in self.loader[0]:  # Assuming self.loader[0] is the training data loader
+        for inputs, labels, attributes  in self.loader[0]:
             # peak_images, overlay_images = inputs
             # peak_images, overlay_images, labels = peak_images.to(self.device), overlay_images.to(self.device), labels.to(self.device)
             inputs, labels = inputs.to(self.device), labels.to(self.device)
@@ -248,7 +248,7 @@ class TrainTestModels:
         """
         This function loops through the number of epochs and trains and tests the model.
         """
-        
+
         self.logger.info(f'Model training and testing: {self.model.__class__.__name__}')
         print(f'Model testing and validating: {self.model.__class__.__name__}')     
         print(f'Looking for the feature: {self.feature}')  
