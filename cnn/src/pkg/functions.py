@@ -175,15 +175,28 @@ def check_attributes(paths: object, datasets: List[str], dir_type: str) -> bool:
     for dataset in datasets:
         files = paths.fetch_paths_by_type(dataset=dataset, dir_type=dir_type)
         exp_clen, exp_photon_energy = params.get(dataset)['clen'], params.get(dataset)['photon_energy']
+        
         for path in files:
+            # Reset exp_peak for each file based on dir_type and filename.
+            # For 'water', exp_peak remains False for all files.
+            if dir_type == 'water':
+                exp_peak = False
+            else:
+                exp_peak = not 'empty' in path.split('/')[-1]
+                
             attributes = retrieve_attributes(path)
-            act_clen, act_photon_energy = attributes['clen'], attributes['photon_energy']
+            act_clen, act_photon_energy, act_peak = attributes['clen'], attributes['photon_energy'], attributes['peak'] if dir_type != 'water' else False
             if act_clen != exp_clen or act_photon_energy != exp_photon_energy:
                 conform = False
                 print(f'Error: {path} does not match expected attributes')
                 print(f'Expected: clen={exp_clen}, photon_energy={exp_photon_energy}')
                 print(f'Actual: clen={act_clen}, photon_energy={act_photon_energy}')
-        return conform
+            else:
+                print(f'{path} conforms to expected attributes.')
+
+            print(f'{path}:\nExpected Peak: {exp_peak}, Actual Peak: {act_peak}')
+            
+    return conform
     
 def get_counts(paths: object, datasets:List[int]) -> None:
     """
