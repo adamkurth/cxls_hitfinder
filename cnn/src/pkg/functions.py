@@ -223,6 +223,43 @@ def get_counts(paths: object, datasets:List[int]) -> None:
             print(f"\tTotal files: {len(all_files)}")
             print(f"\tNormal images: {len(normal_files)}")
             print(f"\tEmpty images: {len(empty_files)}")
+            
+def get_counts_weights(paths: object, datasets: list, classes: int) -> torch.Tensor:
+    """
+    This function calcuates the weights for each dataset based on the number of images in the peaks_water_overlay directory.
+    
+    Args:
+        paths (object): An instance of PathManager.
+        datasets (list): A list of datasets to calculate weights for.
+
+    Returns:
+        torch.Tensor: weight tensor to use as an argument for the loss function.
+    """
+    
+    weights = torch.zeros(classes)
+    
+    paths.refresh_all()
+
+    # Directories to check
+    directory_types = ['peaks', 'labels', 'peaks_water_overlay']
+    
+    for index, dataset in enumerate(datasets):
+        # Loop through each directory type and count files
+        dataset = convert2str_single(dataset)
+        for directory_type in directory_types:
+            directory_path = os.path.join(paths.images_dir, directory_type, dataset)
+            all_files = glob(os.path.join(directory_path, '*.h5'))  # Corrected usage here
+            normal_files = [file for file in all_files if 'empty' not in os.path.basename(file)]
+            empty_files = [file for file in all_files if 'empty' in os.path.basename(file)]
+            
+            if directory_type == 'peaks_water_overlay':
+                print(index)
+                weights[index] = len(all_files)
+    
+    weights = 1. / weights
+    weights = weights / weights.min()
+    weights = torch.where(weights == 'inf', torch.tensor(0), weights)
+    return  weights
 
 def prepare(data_manager: object, batch_size:int=32) -> tuple:
     """
