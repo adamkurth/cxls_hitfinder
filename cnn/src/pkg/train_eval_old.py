@@ -79,8 +79,10 @@ class TrainTestModels:
                     photon_energy_holder[image_attribute == 0.25] = 2
                     photon_energy_holder[image_attribute == 0.35] = 3
                     image_attribute = photon_energy_holder
+                
                     
                 loss = self.criterion(score, image_attribute.to(self.device))
+                
             
             # Scales loss. Calls backward to create scaled gradients
             self.scaler.scale(loss).backward()

@@ -6,6 +6,8 @@ import logging
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 from pkg import *
+from torch.cuda.amp import GradScaler, autocast
+
 
 
 """
@@ -32,6 +34,7 @@ class TrainTestModels:
         self.epochs = cfg['num_epochs']
         self.device = cfg['device']
         self.batch = cfg['batch_size']
+        self.learning_rate = cfg['learning_rate']
         
         self.feature_class = feature_class
         self.model = feature_class.get_model().to(self.device)
@@ -40,6 +43,8 @@ class TrainTestModels:
         self.feature = feature_class.get_feature()
         self.labels = feature_class.get_labels()
         
+        self.optimizer = self.optimizer(self.model.parameters(), lr=self.learning_rate)
+        
         self.plot_train_accuracy = np.zeros(self.epochs)
         self.plot_train_loss = np.zeros(self.epochs)
         self.plot_test_accuracy = np.zeros(self.epochs)
@@ -47,8 +52,15 @@ class TrainTestModels:
         self.cm = np.zeros((self.classes,self.classes), dtype=int)
         
         self.logger = logging.getLogger(__name__)
+        self.scaler = GradScaler()
+
            
     def train(self, epoch:int) -> None:
+        
+        """
+        This function trains the model and prints the loss and accuracy of the training sets per epoch.
+        """
+        
         running_loss_train, accuracy_train, predictions, total_predictions = 0.0, 0.0, 0.0, 0.0
 
         self.model.train()
@@ -57,19 +69,18 @@ class TrainTestModels:
 
             self.optimizer.zero_grad()
             
-            score = self.model(inputs)
-            image_attribute = attributes[self.feature]
-            
-            self.feature_class.format_image_attributes(image_attribute)
-            image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
-
-            # print(f'-- score: {score}')
-            # print(f'-- image_attribute: {image_attribute}')
-            
-            loss = self.criterion(score, image_attribute)
-            
-            loss.backward()
-            self.optimizer.step()
+            with autocast():
+                score = self.model(inputs)
+                image_attribute = attributes[self.feature]
+                
+                self.feature_class.format_image_attributes(image_attribute)
+                image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
+                
+                loss = self.criterion(score, image_attribute)
+                
+            self.scaler.scale(loss).backward()
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
 
             running_loss_train += loss.item()
 
@@ -91,10 +102,11 @@ class TrainTestModels:
         
         
     def test(self, epoch:int) -> None:
+        
         """ 
         This function test the model and prints the loss and accuracy of the testing sets per epoch.
         """
-
+        
         running_loss_test, accuracy_test, predicted, total = 0.0, 0.0, 0.0, 0.0
         
         self.model.eval()
@@ -102,16 +114,16 @@ class TrainTestModels:
             for inputs, labels, attributes in self.test_loader:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-                self.optimizer.zero_grad()
-                score = self.model(inputs)
-                                                
-                image_attribute = attributes[self.feature]
-                
-                self.feature_class.format_image_attributes(image_attribute)
-                image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
+                with autocast():
+                    score = self.model(inputs)
+                                                        
+                    image_attribute = attributes[self.feature]
                     
-                loss = self.criterion(score, image_attribute)
-         
+                    self.feature_class.format_image_attributes(image_attribute)
+                    image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
+                        
+                    loss = self.criterion(score, image_attribute)
+            
                 running_loss_test += loss.item()  # Convert to Python number with .item()
                 
                 self.feature_class.format_prediction(score)
@@ -157,7 +169,8 @@ class TrainTestModels:
             for inputs, labels, attributes in self.test_loader:  # Assuming self.loader[1] is the testing data loader
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-                score = self.model(inputs)
+                with autocast():
+                    score = self.model(inputs)
 
                 # Flatten and append labels to all_labels
                 image_attribute = attributes[self.feature].reshape(-1)
@@ -166,9 +179,9 @@ class TrainTestModels:
                 all_labels.extend(image_attribute)
                                 
                 self.feature_class.format_prediction(score)
-                predictions = self.feature_class.get_formatted_prediction()
+                predictions = self.feature_class.get_formatted_prediction().cpu()
                                         
-                all_predictions.extend(predictions.cpu())
+                all_predictions.extend(predictions)
 
         # No need to reshape - arrays should already be flat
         all_labels = np.array(all_labels)
@@ -186,6 +199,7 @@ class TrainTestModels:
         plt.ylabel('True Label')
         plt.xlabel('Predicted Label')
         plt.show()
+
 
     def get_confusion_matrix(self) -> np.ndarray:
         """ 
