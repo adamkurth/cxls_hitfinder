@@ -28,13 +28,17 @@ class DatasetManager(Dataset):
         self.water_background = self.total_paths.water_background
         
     def __len__(self) -> int:
-        return len(self.peak_paths)
+        # return len(self.peak_paths)
+        return len(self.water_peak_paths)
     
     def __getitem__(self, idx:int) -> tuple:
         water_image = load_h5(self.water_peak_paths[idx])
         label_image = load_h5(self.label_paths[idx])
         image_attributes =  retrieve_attributes(self.water_peak_paths[idx]) 
-        
+        # print(f'path : {self.water_peak_paths[idx]}')
+        # print(f'water_image length : {len(self.water_peak_paths)}')
+        # print(f'label_image length : {len(self.label_paths)}')
+        # print(f'idx : {idx}')
         if self.transform:
             water_image = self.transform(water_image) # dimensions: C x H x W
             label_image = self.transform(label_image)

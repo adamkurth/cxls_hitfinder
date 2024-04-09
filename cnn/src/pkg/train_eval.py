@@ -63,7 +63,6 @@ class TrainTestModels:
             with autocast():
                 score = self.model(inputs)
                 image_attribute = attributes[self.feature]
-                print(f'Image attribute: {image_attribute}')
                 
                 if self.feature == 'peak':
                     image_attribute = image_attribute.reshape(-1, 1).to(self.device)
@@ -131,7 +130,6 @@ class TrainTestModels:
                 score = self.model(inputs)
                                                 
                 image_attribute = attributes[self.feature]
-                print(f'Image attribute: {image_attribute}')
                 
                 if self.feature == 'peak':
                     image_attribute = image_attribute.reshape(-1, 1).to(self.device)
