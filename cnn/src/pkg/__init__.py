@@ -9,6 +9,3 @@ from pkg import transform
 from pkg import train_eval
 from pkg import eval
 
-
-# This is temp
-from pkg import train_eval_old
