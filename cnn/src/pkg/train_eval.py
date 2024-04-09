@@ -6,7 +6,12 @@ import logging
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 from pkg import *
-from torch.cuda.amp import GradScaler, autocast
+
+
+"""
+This file is for creating the new train_eval file using the new inputs and class structure for each specific feature. 
+"""
+
 
 class TrainTestModels:
     """ 
@@ -14,92 +19,64 @@ class TrainTestModels:
     There are two methods for training: test_model_no_freeze and test_model_freeze.
     """
     
-    def __init__(self, model: nn.Module, loader: list, criterion, optimizer, device, cfg: dict, feature: str, labels: list) -> None:
+    def __init__(self, cfg: dict, feature_class: object) -> None:
         """ 
         Takes the arguments for training and testing and makes them available to the class.
 
         Args:
-            model: PyTorch model
-            loader: list of torch.utils.data.DataLoader where loader[0] is the training set and loader[1] is the testing set
-            criterion: PyTorch loss function
-            optimizer: PyTorch optimizer
-            device: torch.device which is either 'cuda' or 'cpu'
-            cfg: dict which holds the configuration parameters num_epochs, batch_size, and num_classes
+            cfg: dict which holds shared configuration details.
+            feature_class: class which holds the feature specific configuration details.
         """
-        self.model = model
-        self.loader = loader
-        self.train_loader, self.test_loader = loader[0], loader[1]
-        self.criterion = criterion
-        self.optimizer = optimizer
+        self.train_loader, self.test_loader = cfg['loader']
+        self.optimizer = cfg['optimizer']
         self.epochs = cfg['num_epochs']
-        self.device = device
+        self.device = cfg['device']
         self.batch = cfg['batch_size']
-        self.classes = cfg['num_classes']
+        
+        self.feature_class = feature_class
+        self.model = feature_class.get_model().to(self.device)
+        self.criterion = feature_class.get_criterion()
+        self.classes = feature_class.get_classes()
+        self.feature = feature_class.get_feature()
+        self.labels = feature_class.get_labels()
+        
         self.plot_train_accuracy = np.zeros(self.epochs)
         self.plot_train_loss = np.zeros(self.epochs)
         self.plot_test_accuracy = np.zeros(self.epochs)
         self.plot_test_loss = np.zeros(self.epochs)
-
         self.cm = np.zeros((self.classes,self.classes), dtype=int)
-        self.threshold = cfg['threshold']
+        
         self.logger = logging.getLogger(__name__)
-        self.feature = feature # peak, photon_energy, clen
-        self.labels = labels
-        self.scaler = GradScaler()
-
            
     def train(self, epoch:int) -> None:
-        running_loss_train, accuracy_train, predictions, total_predictions = 0.0, 0.0, 0.0, 0.0 # assignment fix
+        running_loss_train, accuracy_train, predictions, total_predictions = 0.0, 0.0, 0.0, 0.0
 
         self.model.train()
-        for inputs, labels, attributes  in self.loader[0]:
-            # peak_images, overlay_images = inputs
-            # peak_images, overlay_images, labels = peak_images.to(self.device), overlay_images.to(self.device), labels.to(self.device)
+        for inputs, labels, attributes in self.test_loader:
             inputs, labels = inputs.to(self.device), labels.to(self.device)
 
             self.optimizer.zero_grad()
-        
-            # Encapsulating the forward pass and loss calculation inside the autocast context
-            with autocast():
-                score = self.model(inputs)
-                image_attribute = attributes[self.feature]
-                
-                if self.feature == 'peak':
-                    image_attribute = image_attribute.reshape(-1, 1).to(self.device)
-                    image_attribute = image_attribute.float()  # Convert target to float
-                elif self.feature == 'photon_energy':
-                    photon_energy_holder = torch.zeros_like(image_attribute, dtype=torch.long).to(self.device)
-                    photon_energy_holder[image_attribute == 6e3] = 1
-                    photon_energy_holder[image_attribute == 7e3] = 2
-                    photon_energy_holder[image_attribute == 8e3] = 3
-                    image_attribute = photon_energy_holder
-                elif self.feature == 'clen':
-                    photon_energy_holder = torch.zeros_like(image_attribute, dtype=torch.long).to(self.device)
-                    photon_energy_holder[image_attribute == 0.15] = 1
-                    photon_energy_holder[image_attribute == 0.25] = 2
-                    photon_energy_holder[image_attribute == 0.35] = 3
-                    image_attribute = photon_energy_holder
-                    
-                loss = self.criterion(score, image_attribute.to(self.device))
             
-            # Scales loss. Calls backward to create scaled gradients
-            self.scaler.scale(loss).backward()
-            # Unscales gradients and calls or skips optimizer.step()
-            self.scaler.step(self.optimizer)
-            # Updates the scale for next iteration
-            self.scaler.update()
+            score = self.model(inputs)
+            image_attribute = attributes[self.feature]
+            
+            self.feature_class.format_image_attributes(image_attribute)
+            image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
+
+            loss = self.criterion(score, image_attribute)
+            
+            loss.backward()
+            self.optimizer.step()
 
             running_loss_train += loss.item()
 
-            if self.feature == 'peak':
-                predicted = (torch.sigmoid(score) > self.threshold).long()  # Assuming 'score' is the output of your model
-            elif self.feature == 'photon_energy' or 'clen':
-                _, predicted = torch.max(score, 1)
+            self.feature_class.format_prediction(score)
+            predictions = self.feature_class.get_formatted_prediction()
                     
-            accuracy_train += (predicted == image_attribute.to(self.device)).float().sum()
+            accuracy_train += (predictions == image_attribute.to(self.device)).float().sum()
             total_predictions += torch.numel(image_attribute)
             
-        loss_train = running_loss_train / len(self.loader[0])  # Assuming you want to average over all batches
+        loss_train = running_loss_train / len(self.train_loader)  # Assuming you want to average over all batches
         self.plot_train_loss[epoch] = loss_train
         self.logger.info(f'Train loss: {loss_train}')
         print(f'Train loss: {loss_train}')
@@ -114,16 +91,12 @@ class TrainTestModels:
         """ 
         This function test the model and prints the loss and accuracy of the testing sets per epoch.
         """
-        # print(f'Model testing: {self.model.__class__.__name__}')
-            
-        running_loss_test = accuracy_test = predicted = total = 0.0
+
+        running_loss_test, accuracy_test, predicted, total = 0.0, 0.0, 0.0, 0.0
+        
         self.model.eval()
-        with torch.no_grad(), autocast():
-            for inputs, labels, attributes in self.loader[1]:
-                # peak_images, _ = inputs
-                # peak_images = peak_images.to(self.device)
-                # labels = labels.to(self.device)
-                
+        with torch.no_grad():
+            for inputs, labels, attributes in self.train_loader:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
                 self.optimizer.zero_grad()
@@ -131,33 +104,17 @@ class TrainTestModels:
                                                 
                 image_attribute = attributes[self.feature]
                 
-                if self.feature == 'peak':
-                    image_attribute = image_attribute.reshape(-1, 1).to(self.device)
-                    image_attribute = image_attribute.float()  # Convert target to float
-                elif self.feature == 'photon_energy':
-                    photon_energy_holder = torch.zeros_like(image_attribute, dtype=torch.long).to(self.device)
-                    photon_energy_holder[image_attribute == 6e3] = 1
-                    photon_energy_holder[image_attribute == 7e3] = 2
-                    photon_energy_holder[image_attribute == 8e3] = 3
-                    image_attribute = photon_energy_holder
-                elif self.feature == 'clen':
-                    photon_energy_holder = torch.zeros_like(image_attribute, dtype=torch.long).to(self.device)
-                    photon_energy_holder[image_attribute == 0.15] = 1
-                    photon_energy_holder[image_attribute == 0.25] = 2
-                    photon_energy_holder[image_attribute == 0.35] = 3
-                    image_attribute = photon_energy_holder
+                self.feature_class.format_image_attributes(image_attribute)
+                image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
                     
                 loss = self.criterion(score, image_attribute)
          
                 running_loss_test += loss.item()  # Convert to Python number with .item()
                 
-                if self.feature == 'peak':
-                    predicted = (torch.sigmoid(score) > self.threshold).long()  # Assuming 'score' is the output of your model
-                elif self.feature == 'photon_energy' or 'clen':
-                    _, predicted = torch.max(score, 1)
+                self.feature_class.format_prediction(score)
+                predictions = self.feature_class.get_formatted_prediction()
                     
-                accuracy_test += (predicted == image_attribute.to(self.device)).float().sum()
-                accuracy_test += (predicted == image_attribute.to(self.device)).float().sum()
+                accuracy_test += (predictions == image_attribute.to(self.device)).float().sum()
                 total += torch.numel(image_attribute)
 
         loss_test = running_loss_test/self.batch
@@ -193,59 +150,30 @@ class TrainTestModels:
         all_labels = []
         all_predictions = []
 
-        with torch.no_grad(), autocast():
-            for inputs, labels, attributes in self.loader[1]:  # Assuming self.loader[1] is the testing data loader
-                # peak_images, _ = inputs
-                # peak_images = peak_images.to(self.device)
+        with torch.no_grad():
+            for inputs, labels, attributes in self.train_loader:  # Assuming self.loader[1] is the testing data loader
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
-                
+
                 score = self.model(inputs)
-                image_attribute = attributes[self.feature]
+
                 # Flatten and append labels to all_labels
-                # image_attribute = attributes[self.feature].reshape(-1).cpu().numpy()   
-                if self.feature == 'peak':
-                    image_attribute = image_attribute.reshape(-1, 1).to(self.device)
-                    image_attribute = image_attribute.float()  # Convert target to float
-                elif self.feature == 'photon_energy':
-                    photon_energy_holder = torch.zeros_like(image_attribute, dtype=torch.long).to(self.device)
-                    photon_energy_holder[image_attribute == 6e3] = 1
-                    photon_energy_holder[image_attribute == 7e3] = 2
-                    photon_energy_holder[image_attribute == 8e3] = 3
-                    image_attribute = photon_energy_holder
-                elif self.feature == 'clen':
-                    photon_energy_holder = torch.zeros_like(image_attribute, dtype=torch.long).to(self.device)
-                    photon_energy_holder[image_attribute == 0.15] = 1
-                    photon_energy_holder[image_attribute == 0.25] = 2
-                    photon_energy_holder[image_attribute == 0.35] = 3
-                    image_attribute = photon_energy_holder
-                                 
-                all_labels.extend(image_attribute.cpu())
-                
-                
-                if self.feature == 'peak':
-                    predicted = (torch.sigmoid(score) > self.threshold).long().cpu()  # Assuming 'score' is the output of your model
-                elif self.feature == 'photon_energy':
-                    _, predicted = torch.max(score, 1)
-                    predicted = predicted.cpu()
-                    # predicted = torch.where(predicted == 1, torch.tensor(6000), predicted)
-                    # predicted = torch.where(predicted == 2, torch.tensor(7000), predicted)
-                    # predicted = torch.where(predicted == 3, torch.tensor(8000), predicted)
-                elif self.feature == 'clen':
-                    _, predicted = torch.max(score, 1)
-                    predicted = predicted.cpu()
-                    # predicted = torch.where(predicted == 1, torch.tensor(0.15), predicted)
-                    # predicted = torch.where(predicted == 2, torch.tensor(0.25), predicted)
-                    # predicted = torch.where(predicted == 3, torch.tensor(0.35), predicted)
+                image_attribute = attributes[self.feature].reshape(-1)
+                self.feature_class.format_image_attributes(image_attribute)
+                image_attribute = self.feature_class.get_formatted_image_attribute().cpu().numpy()
+                all_labels.extend(image_attribute)
+                                
+                self.feature_class.format_prediction(score)
+                predictions = self.feature_class.get_formatted_prediction()
                                         
-                all_predictions.extend(predicted)
+                all_predictions.extend(predictions.cpu())
 
         # No need to reshape - arrays should already be flat
         all_labels = np.array(all_labels)
         all_predictions = np.array(all_predictions)
 
         # Compute confusion matrix
-        print(f'Labels: {all_labels}')
-        print(f'Predictions: {all_predictions}')
+        print(f'-- Labels      : {all_labels}')
+        print(f'-- Predictions : {all_predictions}')
         self.cm = confusion_matrix(all_labels, all_predictions, labels=self.labels, normalize='true')
 
         # Plotting the confusion matrix
@@ -266,7 +194,7 @@ class TrainTestModels:
         """
         This function loops through the number of epochs and trains and tests the model.
         """
-
+        
         self.logger.info(f'Model training and testing: {self.model.__class__.__name__}')
         print(f'Model testing and validating: {self.model.__class__.__name__}')     
         print(f'Looking for the feature: {self.feature}')  

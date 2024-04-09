@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import models as m
+import pkg.models as m
 
 
 class Get_Configuration_Details:
@@ -98,9 +98,9 @@ class Photon_Energy_Configuration(Get_Configuration_Details):
         self._classes = 3
         self._labels = [1,2,3]
         self._attribute_mapping = {
-            1: 6e3,
-            2: 7e3,
-            3: 8e3
+            6e3: 1,
+            7e3: 2,
+            8e3: 3
         }
         
 
@@ -121,9 +121,9 @@ class Camera_Length_Configureation(Get_Configuration_Details):
         self._classes = 3
         self._labels = [1,2,3]
         self.attribute_mapping = {
-            1: 0.15,
-            2: 0.25,
-            3: 0.35
+            0.15: 1,
+            0.25: 2,
+            0.35: 3
         }
             
 

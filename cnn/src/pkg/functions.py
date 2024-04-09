@@ -258,7 +258,7 @@ def get_counts_weights(paths: object, datasets: list, classes: int) -> torch.Ten
     
     weights = 1. / weights
     weights = weights / weights.min()
-    weights = torch.where(weights == 'inf', torch.tensor(0), weights)
+    weights = torch.where(torch.isinf(weights), torch.tensor(1.0), weights)
     return  weights
 
 def prepare(data_manager: object, batch_size:int=32) -> tuple:
