@@ -52,7 +52,7 @@ class TrainTestModels:
         running_loss_train, accuracy_train, predictions, total_predictions = 0.0, 0.0, 0.0, 0.0
 
         self.model.train()
-        for inputs, labels, attributes in self.test_loader:
+        for inputs, labels, attributes in self.train_loader:
             inputs, labels = inputs.to(self.device), labels.to(self.device)
 
             self.optimizer.zero_grad()
@@ -63,6 +63,9 @@ class TrainTestModels:
             self.feature_class.format_image_attributes(image_attribute)
             image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
 
+            # print(f'-- score: {score}')
+            # print(f'-- image_attribute: {image_attribute}')
+            
             loss = self.criterion(score, image_attribute)
             
             loss.backward()
@@ -96,7 +99,7 @@ class TrainTestModels:
         
         self.model.eval()
         with torch.no_grad():
-            for inputs, labels, attributes in self.train_loader:
+            for inputs, labels, attributes in self.test_loader:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
                 self.optimizer.zero_grad()
@@ -151,7 +154,7 @@ class TrainTestModels:
         all_predictions = []
 
         with torch.no_grad():
-            for inputs, labels, attributes in self.train_loader:  # Assuming self.loader[1] is the testing data loader
+            for inputs, labels, attributes in self.test_loader:  # Assuming self.loader[1] is the testing data loader
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
                 score = self.model(inputs)
