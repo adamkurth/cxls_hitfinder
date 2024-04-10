@@ -34,7 +34,6 @@ class TrainTestModels:
         self.epochs = cfg['num_epochs']
         self.device = cfg['device']
         self.batch = cfg['batch_size']
-        self.learning_rate = cfg['learning_rate']
         
         self.feature_class = feature_class
         self.model = feature_class.get_model().to(self.device)
@@ -42,6 +41,7 @@ class TrainTestModels:
         self.classes = feature_class.get_classes()
         self.feature = feature_class.get_feature()
         self.labels = feature_class.get_labels()
+        self.learning_rate = feature_class.get_learning_rate()
         
         self.optimizer = self.optimizer(self.model.parameters(), lr=self.learning_rate)
         
@@ -77,7 +77,7 @@ class TrainTestModels:
                 image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
                 
                 loss = self.criterion(score, image_attribute)
-                
+
             self.scaler.scale(loss).backward()
             self.scaler.step(self.optimizer)
             self.scaler.update()
@@ -86,6 +86,9 @@ class TrainTestModels:
 
             self.feature_class.format_prediction(score)
             predictions = self.feature_class.get_formatted_prediction()
+            
+            print(f'-- Predictions: {predictions}')
+            print(f'-- Image Attribute: {image_attribute}')
                     
             accuracy_train += (predictions == image_attribute.to(self.device)).float().sum()
             total_predictions += torch.numel(image_attribute)
