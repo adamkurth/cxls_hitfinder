@@ -34,6 +34,7 @@ class TrainTestModels:
         self.epochs = cfg['num_epochs']
         self.device = cfg['device']
         self.batch = cfg['batch_size']
+        self.scheduler = cfg['scheduler']
         
         self.feature_class = feature_class
         self.model = feature_class.get_model().to(self.device)
@@ -44,6 +45,7 @@ class TrainTestModels:
         self.learning_rate = feature_class.get_learning_rate()
         
         self.optimizer = self.optimizer(self.model.parameters(), lr=self.learning_rate)
+        self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.1, patience=3)
         
         self.plot_train_accuracy = np.zeros(self.epochs)
         self.plot_train_loss = np.zeros(self.epochs)
@@ -86,9 +88,6 @@ class TrainTestModels:
 
             self.feature_class.format_prediction(score)
             predictions = self.feature_class.get_formatted_prediction()
-            
-            print(f'-- Predictions: {predictions}')
-            print(f'-- Image Attribute: {image_attribute}')
                     
             accuracy_train += (predictions == image_attribute.to(self.device)).float().sum()
             total_predictions += torch.numel(image_attribute)
@@ -110,7 +109,7 @@ class TrainTestModels:
         This function test the model and prints the loss and accuracy of the testing sets per epoch.
         """
         
-        running_loss_test, accuracy_test, predicted, total = 0.0, 0.0, 0.0, 0.0
+        running_loss_test, accuracy_test, predictions, total = 0.0, 0.0, 0.0, 0.0
         
         self.model.eval()
         with torch.no_grad():
@@ -136,6 +135,7 @@ class TrainTestModels:
                 total += torch.numel(image_attribute)
 
         loss_test = running_loss_test/self.batch
+        self.scheduler.step(loss_test)
         self.plot_test_loss[epoch] = loss_test
 
         accuracy_test /= total
