@@ -31,7 +31,7 @@ def rename_files_in_dir(path, keV, clen):
                 print(f"Renamed {filename} to {new_filename}")
 
 def main():
-    base_path = "../../MASTER_COPY/"
+    base_path = "../../MASTER/"
     for dir_name in os.listdir(base_path):
         full_path = os.path.join(base_path, dir_name)
         if os.path.isdir(full_path):  # Ensure it's a directory
