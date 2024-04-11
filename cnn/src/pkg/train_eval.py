@@ -43,9 +43,10 @@ class TrainTestModels:
         self.feature = feature_class.get_feature()
         self.labels = feature_class.get_labels()
         self.learning_rate = feature_class.get_learning_rate()
+        self.save_path = feature_class.get_save_path()
         
         self.optimizer = self.optimizer(self.model.parameters(), lr=self.learning_rate)
-        self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.1, patience=3)
+        self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.1, patience=1, threshold=0.1)
         
         self.plot_train_accuracy = np.zeros(self.epochs)
         self.plot_train_loss = np.zeros(self.epochs)
@@ -226,6 +227,8 @@ class TrainTestModels:
             self.train(epoch)
             self.test(epoch)
             
+            print(f"-- learning rate : {self.scheduler.get_last_lr()}")
+            
     def get_loss_accuracy(self) -> dict:
         """ 
         This function returns the loss and accuracy of the training and testing sets.
@@ -247,7 +250,7 @@ class TrainTestModels:
         for var_name in self.optimizer.state_dict():
             print(var_name, "\t", self.optimizer.state_dict()[var_name])
     
-    def save_model(self, path:str) -> None:
+    def save_model(self, path:str=None) -> None:
         """
         This function saves the model's state_dict to a specified path. This can be used to load the trained model later.
         Save as .pt file.
@@ -255,5 +258,7 @@ class TrainTestModels:
         Args:
             path (str): Path to save the model's state_dict.
         """
-        torch.save(self.model.state_dict(), path)
-    
+        if path != None:
+            torch.save(self.model.state_dict(), path)
+        else:
+            torch.save(self.model.state_dict(), self.save_path)
