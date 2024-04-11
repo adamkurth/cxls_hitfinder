@@ -1,4 +1,0 @@
-[submodule "cnn/src/pkg/waterbackground_subtraction"]
-    path = cnn/src/pkg/waterbackground_subtraction
-    url = https://github.com/adamkurth/waterbackground_subtraction.git
-    branch = simplified_for_hitfinder
