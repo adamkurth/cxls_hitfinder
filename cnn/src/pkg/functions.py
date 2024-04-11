@@ -5,8 +5,8 @@ from typing import Any
 from glob import glob
 from torch.utils.data import DataLoader
 import torch
-from typing import Union, List
-from pkg.path import PathManager
+from typing import Union, List, Dict
+
 
 def convert2int(datasets: List[Union[str, int]]) -> List[int]:
     """
@@ -106,7 +106,7 @@ def parse_attributes(paths: object, params:list) -> dict:
     """
     paths.refresh_all()
     dataset = paths.dataset
-    
+
     # Initialize the lists of file paths for each directory type
     peak_path_list, overlay_path_list, label_path_list, background_path_list = paths.init_lists(dataset)
     
@@ -122,14 +122,11 @@ def parse_attributes(paths: object, params:list) -> dict:
             assign_attributes(file_path=f, clen=params[0], photon_energy=params[1], peak=is_relavant)
             print(f"Attributes assigned to {f}")
     print("Attributes assigned to all files.")
-    
-# This singledispatch is funtioning like overriding an function, which is not normally supported due to dynamic data types. 
-# If the input is a string, the file path in this case, it will use the string case. 
-# If given the file directly, it will use the default case, since a special case does not exist for it.
 
-def get_params(dataset):
-    clen_values, photon_energy_values = [1.5, 2.5, 3.5], [6000, 7000, 8000]
-    param_matrix = parameter_matrix(clen_values, photon_energy_values)
+    
+def get_params(datasets:List[int]) -> dict:
+    datasets = convert2str(datasets=datasets)
+    clen_values, photon_energy_values = [0.15, 0.25, 0.35], [6000, 7000, 8000]
     dataset_dict = {
         '01': [clen_values[0], photon_energy_values[0]],
         '02': [clen_values[0], photon_energy_values[1]],
@@ -141,7 +138,13 @@ def get_params(dataset):
         '08': [clen_values[2], photon_energy_values[1]],
         '09': [clen_values[2], photon_energy_values[2]],
     }
-    return dataset_dict.get(dataset, None)
+    params_dict = {}
+    for dataset in datasets:
+        params_dict[dataset] = {
+            'clen': dataset_dict[dataset][0],
+            'photon_energy': dataset_dict[dataset][1]
+        }
+    return params_dict
 
 def retrieve_attributes(file_path: str):
     """
@@ -166,22 +169,35 @@ def retrieve_attributes(file_path: str):
                 
     return attributes
 
-def check_attributes(paths: object, dataset: str, type: str, **expected_attrs) -> bool:
-    """
-    Checks that specified attributes for all files in a specified type within a dataset
-    match expected values. Expected attributes are passed as keyword arguments.
-    """
-    path_list = paths.fetch_paths_by_type(dataset=dataset, dir_type=type)
-    for f in path_list: 
-        attributes = retrieve_attributes(file_path=f)
-        for attr, expected_value in expected_attrs.items():
-            if attributes.get(attr) != expected_value:
-                print(f"File {f} has mismatching {attr}: expected={expected_value}, found={attributes.get(attr)}")
-                return False
-    
-    print(f"All files in dataset {dataset} of type '{type}' have matching attributes.")
-    return True
+def check_attributes(paths: object, datasets: List[str], dir_type: str) -> bool:
+    conform = True
+    params = get_params(datasets=datasets)
+    for dataset in datasets:
+        files = paths.fetch_paths_by_type(dataset=dataset, dir_type=dir_type)
+        exp_clen, exp_photon_energy = params.get(dataset)['clen'], params.get(dataset)['photon_energy']
+        
+        for path in files:
+            # Reset exp_peak for each file based on dir_type and filename.
+            # For 'water', exp_peak remains False for all files.
+            if dir_type == 'water':
+                exp_peak = False
+            else:
+                exp_peak = not 'empty' in path.split('/')[-1]
+                
+            attributes = retrieve_attributes(path)
+            act_clen, act_photon_energy, act_peak = attributes['clen'], attributes['photon_energy'], attributes['peak'] if dir_type != 'water' else False
+            if act_clen != exp_clen or act_photon_energy != exp_photon_energy:
+                conform = False
+                print(f'Error: {path} does not match expected attributes')
+                print(f'Expected: clen={exp_clen}, photon_energy={exp_photon_energy}')
+                print(f'Actual: clen={act_clen}, photon_energy={act_photon_energy}')
+            else:
+                print(f'{path} conforms to expected attributes.')
 
+            print(f'{path}:\nExpected Peak: {exp_peak}, Actual Peak: {act_peak}')
+            
+    return conform
+    
 def get_counts(paths: object, datasets:List[int]) -> None:
     """
     Counts and reports the number of 'normal' and 'empty' images in the specified directories
@@ -195,6 +211,7 @@ def get_counts(paths: object, datasets:List[int]) -> None:
     
     for dataset in datasets:
         # Loop through each directory type and count files
+        dataset = convert2str_single(dataset)
         for directory_type in directory_types:
             directory_path = os.path.join(paths.images_dir, directory_type, dataset)
             all_files = glob(os.path.join(directory_path, '*.h5'))  # Corrected usage here
@@ -206,6 +223,43 @@ def get_counts(paths: object, datasets:List[int]) -> None:
             print(f"\tTotal files: {len(all_files)}")
             print(f"\tNormal images: {len(normal_files)}")
             print(f"\tEmpty images: {len(empty_files)}")
+            
+def get_counts_weights(paths: object, datasets: list, classes: int) -> torch.Tensor:
+    """
+    This function calcuates the weights for each dataset based on the number of images in the peaks_water_overlay directory.
+    
+    Args:
+        paths (object): An instance of PathManager.
+        datasets (list): A list of datasets to calculate weights for.
+
+    Returns:
+        torch.Tensor: weight tensor to use as an argument for the loss function.
+    """
+    
+    weights = torch.zeros(classes)
+    
+    paths.refresh_all()
+
+    # Directories to check
+    directory_types = ['peaks', 'labels', 'peaks_water_overlay']
+    
+    for index, dataset in enumerate(datasets):
+        # Loop through each directory type and count files
+        dataset = convert2str_single(dataset)
+        for directory_type in directory_types:
+            directory_path = os.path.join(paths.images_dir, directory_type, dataset)
+            all_files = glob(os.path.join(directory_path, '*.h5'))  # Corrected usage here
+            normal_files = [file for file in all_files if 'empty' not in os.path.basename(file)]
+            empty_files = [file for file in all_files if 'empty' in os.path.basename(file)]
+            
+            if directory_type == 'peaks_water_overlay':
+                print(index)
+                weights[index] = len(all_files)
+    
+    weights = 1. / weights
+    weights = weights / weights.min()
+    weights = torch.where(torch.isinf(weights), torch.tensor(1.0), weights)
+    return  weights
 
 def prepare(data_manager: object, batch_size:int=32) -> tuple:
     """
@@ -222,8 +276,8 @@ def prepare(data_manager: object, batch_size:int=32) -> tuple:
     num_test = num_items - num_train
     train_dataset, test_dataset = torch.utils.data.random_split(data_manager, [num_train, num_test])
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)    
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, pin_memory=True)    
         
     print("\nData prepared.")
     print(f"Train size: {len(train_dataset)}")

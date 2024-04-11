@@ -4,6 +4,8 @@ from functools import lru_cache
 from glob import glob
 from typing import Union, List
 from collections import namedtuple
+from pkg import functions as f
+from pkg import process as p
 
 class PathManager:
     def __init__(self, datasets:List[int], root_dir=None) -> None:
@@ -13,10 +15,6 @@ class PathManager:
         else:
             self.root = root_dir  # Directly using the provided root directory
         self.datasets = [str(num).zfill(2) for num in datasets]
-        self.setup_directories()
-        
-    def setup_directories(self) -> None:
-        # self.datasets = [str(num).zfill(2) for num in self.datasets]
         self.images_dir = os.path.join(self.root, 'images')
         self.peaks_dir = os.path.join(self.images_dir, 'peaks')
         self.labels_dir = os.path.join(self.images_dir, 'labels')
@@ -35,7 +33,8 @@ class PathManager:
             overlays += glob(os.path.join(self.peaks_water_overlay_dir, dataset, '*.h5'))
             labels += glob(os.path.join(self.labels_dir, dataset, '*.h5'))
             water_background += glob(os.path.join(self.water_background_dir, dataset, '*.h5'))
-            
+        # print(f'peaks : {peaks}')
+    
         return Paths(peaks=peaks, overlays=overlays, labels=labels, water_background=water_background)
 
     def init_lists(self, dataset:str) -> list: 
@@ -44,19 +43,19 @@ class PathManager:
         self.label_list = self.get_label_images_paths(self.dataset)
         self.water_background_list = [self.get_water_background(self.dataset)] # expecting 1 image
         return self.peak_list, self.water_peak_list, self.label_list, self.water_background_list
-    
+
     def fetch_paths_by_type(self, dataset:str, dir_type:str) -> list:
         """
         Fetches and returns a list of file paths based on the specified directory type.
         """
         if dir_type == 'peak':
-            return self.get_peak_image_paths(dataset)
+            return self.get_peak_image_paths(dataset=dataset)
         elif dir_type == 'overlay':
-            return self.get_peaks_water_overlay_image_paths(dataset)
+            return self.get_peaks_water_overlay_image_paths(dataset=dataset)
         elif dir_type == 'label':
-            return self.get_label_images_paths(dataset)
+            return self.get_label_images_paths(dataset=dataset)
         elif dir_type == 'background':
-            return [self.get_water_background(dataset)]
+            return [self.get_water_background(dataset=dataset)]
         else:
             raise ValueError("Invalid directory type specified.")
     

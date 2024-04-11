@@ -30,6 +30,7 @@ def rename_files_in_dir(path, keV, clen):
                 os.rename(os.path.join(path, filename), os.path.join(path, new_filename))
                 print(f"Renamed {filename} to {new_filename}")
 
+
 def main():
     base_path = "../../MASTER/"
     for dir_name in os.listdir(base_path):

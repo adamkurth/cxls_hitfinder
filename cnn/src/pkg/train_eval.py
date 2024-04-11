@@ -5,6 +5,15 @@ import numpy as np
 import logging
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
+from pkg import *
+from torch.cuda.amp import GradScaler, autocast
+
+
+
+"""
+This file is for creating the new train_eval file using the new inputs and class structure for each specific feature. 
+"""
+
 
 class TrainTestModels:
     """ 
@@ -12,130 +21,119 @@ class TrainTestModels:
     There are two methods for training: test_model_no_freeze and test_model_freeze.
     """
     
-    def __init__(self, model: object, loader: list, criterion, optimizer, device, cfg: dict) -> None:
+    def __init__(self, cfg: dict, feature_class: object) -> None:
         """ 
         Takes the arguments for training and testing and makes them available to the class.
 
         Args:
-            model: PyTorch model
-            loader: list of torch.utils.data.DataLoader where loader[0] is the training set and loader[1] is the testing set
-            criterion: PyTorch loss function
-            optimizer: PyTorch optimizer
-            device: torch.device which is either 'cuda' or 'cpu'
-            cfg: dict which holds the configuration parameters num_epochs, batch_size, and num_classes
+            cfg: dict which holds shared configuration details.
+            feature_class: class which holds the feature specific configuration details.
         """
-        self.model = model
-        self.loader = loader
-        self.train_loader, self.test_loader = loader[0], loader[1]
-        self.criterion = criterion
-        self.optimizer = optimizer
+        self.train_loader, self.test_loader = cfg['loader']
+        self.optimizer = cfg['optimizer']
         self.epochs = cfg['num_epochs']
-        self.device = device
+        self.device = cfg['device']
         self.batch = cfg['batch_size']
-        self.classes = cfg['num_classes']
+        
+        self.feature_class = feature_class
+        self.model = feature_class.get_model().to(self.device)
+        self.criterion = feature_class.get_criterion()
+        self.classes = feature_class.get_classes()
+        self.feature = feature_class.get_feature()
+        self.labels = feature_class.get_labels()
+        self.learning_rate = feature_class.get_learning_rate()
+        
+        self.optimizer = self.optimizer(self.model.parameters(), lr=self.learning_rate)
+        
         self.plot_train_accuracy = np.zeros(self.epochs)
         self.plot_train_loss = np.zeros(self.epochs)
         self.plot_test_accuracy = np.zeros(self.epochs)
         self.plot_test_loss = np.zeros(self.epochs)
-
         self.cm = np.zeros((self.classes,self.classes), dtype=int)
-        self.threshold = 0.5
+        
         self.logger = logging.getLogger(__name__)
+        self.scaler = GradScaler()
 
-
+           
     def train(self, epoch:int) -> None:
+        
         """
-        This function trains the model without freezing the parameters in the case of transfer learning.
-        This will print the loss and accuracy of the training sets per epoch.
+        This function trains the model and prints the loss and accuracy of the training sets per epoch.
         """
-
-        # print(f'Model training: {self.model.__class__.__name__}')
-
-        running_loss_train = accuracy_train = predictions = total_predictions = 0.0
+        
+        running_loss_train, accuracy_train, predictions, total_predictions = 0.0, 0.0, 0.0, 0.0
 
         self.model.train()
-        for inputs, labels in self.loader[0]:  # Assuming self.loader[0] is the training data loader
-            peak_images, overlay_images = inputs
-            peak_images, overlay_images, labels = peak_images.to(self.device), overlay_images.to(self.device), labels.to(self.device)
-
-            temp = np.count_nonzero(np.array(labels.cpu()))
-            print(temp)
+        for inputs, labels, attributes in self.train_loader:
+            inputs, labels = inputs.to(self.device), labels.to(self.device)
 
             self.optimizer.zero_grad()
-            score = self.model(peak_images)
-            predictions = (torch.sigmoid(score) > self.threshold).long()  
-            truth = (torch.sigmoid(labels) > self.threshold).long()
-            predictions = predictions.any().item()
-            truth = truth.any().item()
-            predictions = torch.tensor([float(predictions)], requires_grad=True)
-            truth = torch.tensor([float(truth)])
-            # loss = self.criterion(score, labels)
-            loss = self.criterion(predictions, truth)
-            loss.backward()
-            self.optimizer.step()
-            running_loss_train += loss.item()  
-            # predictions = (torch.sigmoid(score) > self.threshold).long()  
-            # truth = (torch.sigmoid(labels) > self.threshold).long()
-            # accuracy_train += (predictions == labels).float().sum()
             
-            accuracy_train += (predictions == truth).float().sum()
-            # total_predictions += np.prod(labels.shape)
-            # total_predictions += torch.numel(labels)
-            total_predictions += 1
+            with autocast():
+                score = self.model(inputs)
+                image_attribute = attributes[self.feature]
+                
+                self.feature_class.format_image_attributes(image_attribute)
+                image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
+                
+                loss = self.criterion(score, image_attribute)
+
+            self.scaler.scale(loss).backward()
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
+
+            running_loss_train += loss.item()
+
+            self.feature_class.format_prediction(score)
+            predictions = self.feature_class.get_formatted_prediction()
             
-        loss_train = running_loss_train / self.batch
+            print(f'-- Predictions: {predictions}')
+            print(f'-- Image Attribute: {image_attribute}')
+                    
+            accuracy_train += (predictions == image_attribute.to(self.device)).float().sum()
+            total_predictions += torch.numel(image_attribute)
+            
+        loss_train = running_loss_train / len(self.train_loader)  # Assuming you want to average over all batches
         self.plot_train_loss[epoch] = loss_train
         self.logger.info(f'Train loss: {loss_train}')
         print(f'Train loss: {loss_train}')
 
-        # If you want to uncomment these lines, make sure the calculation of accuracy_train is corrected as follows:
         accuracy_train /= total_predictions
         self.plot_train_accuracy[epoch] = accuracy_train
         self.logger.info(f'Train accuracy: {accuracy_train}')
         print(f'Train accuracy: {accuracy_train}')
-            
-    # def test_freeze(self) -> None:
-    #     """ 
-    #     This function trains the model with freezing the parameters of in the case of transfer learning.
-    #     This will print the loss and accuracy of the testing sets per epoch.
-    #     WIP
-    #     """   
-    #     pass
+        
         
     def test(self, epoch:int) -> None:
+        
         """ 
         This function test the model and prints the loss and accuracy of the testing sets per epoch.
         """
-        # print(f'Model testing: {self.model.__class__.__name__}')
-            
-        running_loss_test = accuracy_test = predicted = total = 0.0
+        
+        running_loss_test, accuracy_test, predicted, total = 0.0, 0.0, 0.0, 0.0
+        
         self.model.eval()
         with torch.no_grad():
-            for inputs, labels in self.loader[1]:
-                peak_images, _ = inputs
-                peak_images = peak_images.to(self.device)
-                labels = labels.to(self.device)
-                score = self.model(peak_images)
-                predicted = (torch.sigmoid(score) > self.threshold).long()  # Assuming 'score' is the output of your model
-                truth = (torch.sigmoid(labels) > self.threshold).long()
-                predicted = predicted.any().item()
-                truth = truth.any().item()
-                predicted = torch.tensor([float(predicted)])
-                truth = torch.tensor([float(truth)])
-                
-                loss = self.criterion(predicted, truth)
-                # loss = self.criterion(score, labels)
-                
-                
+            for inputs, labels, attributes in self.test_loader:
+                inputs, labels = inputs.to(self.device), labels.to(self.device)
+
+                with autocast():
+                    score = self.model(inputs)
+                                                        
+                    image_attribute = attributes[self.feature]
+                    
+                    self.feature_class.format_image_attributes(image_attribute)
+                    image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
+                        
+                    loss = self.criterion(score, image_attribute)
+            
                 running_loss_test += loss.item()  # Convert to Python number with .item()
-                # predicted = (torch.sigmoid(score) > self.threshold).long()  # Assuming 'score' is the output of your model
-                # truth = (torch.sigmoid(labels) > self.threshold).long()
                 
-                # accuracy_test += (predicted == labels).float().sum()
-                accuracy_test += (predicted == truth).float().sum()
-                # total += np.prod(labels.shape)
-                # total += torch.numel(labels)
-                total += 1
+                self.feature_class.format_prediction(score)
+                predictions = self.feature_class.get_formatted_prediction()
+                    
+                accuracy_test += (predictions == image_attribute.to(self.device)).float().sum()
+                total += torch.numel(image_attribute)
 
         loss_test = running_loss_test/self.batch
         self.plot_test_loss[epoch] = loss_test
@@ -146,9 +144,8 @@ class TrainTestModels:
         self.logger.info(f'Test loss: {loss_test}')
         self.logger.info(f'Test accuracy: {accuracy_test}')
         print(f'Test loss: {loss_test}')
-        print(f'Test accuracy: {accuracy_test}')
-
-        
+        print(f'Test accuracy: {accuracy_test}')          
+                    
     def plot_loss_accuracy(self) -> None:
         """ 
         This function plots the loss and accuracy of the training and testing sets per epoch.
@@ -163,6 +160,7 @@ class TrainTestModels:
         plt.legend(['accuracy train','accuracy test','loss train','loss test'])
         plt.show()
     
+
     def plot_confusion_matrix(self) -> None:
         """ 
         This function plots the confusion matrix of the testing set.
@@ -171,34 +169,40 @@ class TrainTestModels:
         all_predictions = []
 
         with torch.no_grad():
-            for inputs, label in self.loader[1]:
-                peak_images, _ = inputs
-                peak_images = peak_images.to(self.device)
-                label = label.to(self.device)
+            for inputs, labels, attributes in self.test_loader:  # Assuming self.loader[1] is the testing data loader
+                inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-                score = self.model(peak_images).squeeze()
-                predictions = (torch.sigmoid(score) > self.threshold).long()
-                truth = (torch.sigmoid(label) > self.threshold).long()
-                predictions = predictions.any().item()
-                truth = truth.any().item()
+                with autocast():
+                    score = self.model(inputs)
 
-                # all_labels.extend(label.cpu().numpy().flatten())
-                # all_labels.extend(truth.cpu().numpy().flatten()) 
-                # all_predictions.extend(predictions.cpu().numpy().flatten())
-                all_labels.append(truth)
-                all_predictions.append(predictions)
+                # Flatten and append labels to all_labels
+                image_attribute = attributes[self.feature].reshape(-1)
+                self.feature_class.format_image_attributes(image_attribute)
+                image_attribute = self.feature_class.get_formatted_image_attribute().cpu().numpy()
+                all_labels.extend(image_attribute)
+                                
+                self.feature_class.format_prediction(score)
+                predictions = self.feature_class.get_formatted_prediction().cpu()
+                                        
+                all_predictions.extend(predictions)
 
+        # No need to reshape - arrays should already be flat
         all_labels = np.array(all_labels)
         all_predictions = np.array(all_predictions)
 
-        self.cm = confusion_matrix(all_labels, all_predictions, normalize='true')
+        # Compute confusion matrix
+        print(f'-- Labels      : {all_labels}')
+        print(f'-- Predictions : {all_predictions}')
+        self.cm = confusion_matrix(all_labels, all_predictions, labels=self.labels, normalize='true')
 
-        plt.matshow(self.cm ,cmap="Blues")
-        plt.title('Confusion matrix')
+        # Plotting the confusion matrix
+        plt.matshow(self.cm, cmap="Blues")
+        plt.title('Confusion Matrix')
         plt.colorbar()
-        plt.ylabel('True label')
-        plt.xlabel('Predicted label')
+        plt.ylabel('True Label')
+        plt.xlabel('Predicted Label')
         plt.show()
+
 
     def get_confusion_matrix(self) -> np.ndarray:
         """ 
@@ -212,7 +216,8 @@ class TrainTestModels:
         """
         
         self.logger.info(f'Model training and testing: {self.model.__class__.__name__}')
-        print(f'Model testing and validating: {self.model.__class__.__name__}')       
+        print(f'Model testing and validating: {self.model.__class__.__name__}')     
+        print(f'Looking for the feature: {self.feature}')  
         
         for epoch in range(self.epochs):
             self.logger.info('-- epoch '+str(epoch)) 
