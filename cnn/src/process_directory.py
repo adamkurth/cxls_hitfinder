@@ -13,7 +13,7 @@ from glob import glob
 import argparse
 from pkg import *
 
-def create_and_populate_dirs(target_path):
+def create_and_populate_dirs(target_path:str):
     """
     Creates and populates directories if they don't exist.
 
@@ -36,7 +36,7 @@ def create_and_populate_dirs(target_path):
     else: 
         print(f"Directories '01' through '09' already created in '{target_path}'.")
 
-def validate_directories(base_path):
+def validate_directories(base_path:str):
     """
     Validates the directory structure and file counts within the specified base path.
 
