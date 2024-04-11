@@ -5,7 +5,7 @@ from pkg import *
 import numpy as np
 
 class ModelPipeline:
-    def __init__(self, peak_model_path: str, energy_model_path: str, clen_model_path: str, peak_model: nn.Module, energy_model: nn.Module, clen_model: nn.Module) -> None:
+    def __init__(self, peak_model_path: str, energy_model_path: str, clen_model_path: str, peak_model: nn.Module, energy_model: nn.Module, clen_model: nn.Module, device) -> None:
         """
         This class represents a pipeline for analyzing Bragg peak images.
         It combines three models for peak detection, energy estimation, and clen calculation.
@@ -16,15 +16,24 @@ class ModelPipeline:
             clen_model (nn.Module): Convolutional neural network for clen calculation. This model is used when a peak is detected after energy_model.
         """
         
-        self.peak_model = peak_model.load_state_dict(torch.load(peak_model_path))
-        self.energy_model = energy_model.load_state_dict(torch.load(energy_model_path))
-        self.clen_model = clen_model.load_state_dict(torch.load(clen_model_path))
+        peak_state_dict = torch.load(peak_model_path)
+        energy_state_dict = torch.load(energy_model_path)
+        clen_state_dict = torch.load(clen_model_path)
+
+        peak_model.load_state_dict(peak_state_dict)
+        energy_model.load_state_dict(energy_state_dict)
+        clen_model.load_state_dict(clen_state_dict)
+
+        self.peak_model = peak_model.eval() 
+        self.energy_model = energy_model.eval()
+        self.clen_model = clen_model.eval()
         
-        self.peak_model.eval()
-        self.energy_model.eval()
-        self.clen_model.eval()
-        
-        self.pipeline_results = (0,0)
+        self.peak_model.to(device)
+        self.energy_model.to(device)
+        self.clen_model.to(device)
+
+        self.pipeline_results = (0, 0)
+        self.attributes = (0, 0)  
         self.atributes = (0,0)
 
     def run(self, image: torch.tensor) -> tuple:
@@ -39,11 +48,11 @@ class ModelPipeline:
         """
         
         with torch.no_grad():  
-            peak_detected = self.peak_model(image).argmax(dim=1).item() == 1
+            peak_detected = (torch.sigmoid(self.peak_model(image)) > 0.3).long()
               
-            if peak_detected:
-                x_ray_energy = self.energy_model(image).item()
-                clen = self.clen_model(image).item()
+            if peak_detected == 1:
+                _, x_ray_energy = torch.max(self.energy_model(image),1)        
+                _, clen = torch.max(self.clen_model(image),1)
                 
                 self.pipeline_results = (x_ray_energy, clen)
                 return self.pipeline_results

@@ -111,7 +111,7 @@ class Photon_Energy_Configuration(Get_Configuration_Details):
             8e3: 3
         }
         self._threshold = None
-        self._learning_rate = 0.00001
+        self._learning_rate = 0.000001
         self._weights = get_counts_weights(paths, datasets, self._classes)
         self._criterion = nn.CrossEntropyLoss(weight=self._weights.to(device))
         
