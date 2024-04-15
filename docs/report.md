@@ -25,13 +25,13 @@ The CXLS is equipped with a Dectris Eiger 4M detector, which is integral to the 
 
 ### Methods:
 
-This study primarily employs the Dectris Eiger 4M detector, with an initial focus on X-ray crystallography. Typically, this method requires manual estimation of photon energy and the distance between the protein crystal sample and the detector, often necessitating subsequent adjustments. Such estimations are further complicated by dynamic scattering patterns, which arise from intrinsic noise due to water within the protein samples.
+This study primarily employs the Dectris Eiger 4M detector, with a focus on X-ray crystallography. Typically, this method requires manual estimation of photon energy and the distance between the protein crystal sample and the detector, often necessitating subsequent adjustments and revision. Such estimations are further complicated by dynamic scattering patterns, which arise from intrinsic noise due to water within the protein samples.
 
 In this research, we specifically analyze the variables of interaction distance (camera length, denoted as "clen") and photon energy. Camera length is examined at increments of 0.15, 0.25, and 0.35 meters, while photon energy is tested at 6, 7, and 8 keV. These variables are organized into three discrete levels each, resulting in a matrix of nine unique combinations of these variables. This structured approach allows for a systematic examination of how each variable combination impacts the scattering patterns and the resultant data quality.
 
 Parameter matrix for `camlen` and `keV`:
 
-| Dataset (01-09) | camlen (m) | photon energy (keV) |
+| Dataset (`01`-`09`) | camlen (m) | photon energy (keV) |
 |---------------|------------|---------------------|
 | `01`          | 0.15        | 6                   |
 | `02`          | 0.15        | 7                   |
@@ -43,9 +43,12 @@ Parameter matrix for `camlen` and `keV`:
 | `08`          | 0.35        | 7                   |
 | `09`          | 0.35        | 8                   |
 
-This matrix serves as the foundation for the subsequent data generation and analysis, where the backend programming focus enables the simulated images to dynamically adjust for different datasets to be loaded. The data generation process involves the simulation of diffraction images using the CrystFEL software suite, renowned for its capabilities in snapshot serial crystallography. The diffraction images are generated based on a specific protein (1IC6.pdb) and tailored to the nine unique variable combinations outlined in the matrix.
+This matrix serves as the foundation for the subsequent data generation and analysis, where the backend programming focus enables the simulated images to dynamically adjust for different datasets to be loaded. The data generation process involves the simulation of diffraction images using the CrystFEL software suite, renowned for its capabilities in snapshot serial crystallography. The diffraction images are generated based on a specific protein (1IC6.pdb) and tailored to the nine unique variable combinations outlined in the matrix. The subsequent analysis involves the extraction of Bragg peaks from these diffraction images, a critical step in the classification and prediction tasks.
 
 #### Structure of the Repository:
+
+The repository structure is organized to facilitate the efficient management of the project's codebase, documentation, and data. 
+The following is an overview of the repository structure:
 
 ```bash
 cxls_hitfinder/
@@ -84,52 +87,51 @@ cxls_hitfinder/
     │   ├── rename_directories_parameters.py
     │   ├── test/
     ├── requirements.txt
-    ├── hitfinder_env.yml
+    ├── hitfinder_env.**yml**
     └── README.md
 ```
 
-- `.gitignore` and `.gitkeep` are files that specify which files and directories to ignore in Git.
-- `.gitmodules` is a file that defines the Git submodules.
-- `cnn/` is a directory containing files related to a convolutional neural network (CNN) model.
+- `.gitignore` and `.gitkeep` are files that specify which files and directories to ignore in Git, namely ignoring the large HDF5 files.
+- `.gitmodules` is a file that defines the Git submodules for `waterbackground_subtraction`.
+- `cnn/` is a directory containing files related to the Convolutional Neural Network (CNN) implementation.
     - `models/` is a subdirectory that stores trained CNN models.
     - `src/` is a subdirectory that contains source code for the CNN implementation.
-        - `pkg/` is a subdirectory that holds Python packages.
-            - `water_background/` is a subdirectory that contains code related to water background detection.
-                - `finder/` is a subdirectory that includes files for finding water backgrounds.
-- `docs/` is a directory for documentation files.
-    - `diagrams/` is a subdirectory for storing diagrams.
-    - `directions/` is a subdirectory for storing directions or instructions.
+        - `pkg/` is a subdirectory that holds the main Python package for implementation.
+            - `waterbackground_subtraction/` is a subdirectory and submodule cloned in the Python module `pkg` that contains code related to water background detection and analysis.
+                - `finder/` is a Python package that includes code to analyze and estimate peaks using three-ring integration technique.
+- `docs/` is a directory for storing documentation for this project.
+    - `diagrams/` is a subdirectory for storing diagrams used.
+    - `directions/` is a subdirectory for storing directions.
     - `report.md` is a Markdown file that serves as a report.
-- `images/` is a directory for storing images.
-    - `labels/` is a subdirectory for storing labeled images.
-    - `peaks/` is a subdirectory for storing peak images.
-    - `peaks_water_overlay/` is a subdirectory for storing peak images with water overlays.
-    - `temp/` is a subdirectory for temporary images.
-    - `water/` is a subdirectory for water-related images.
-- `scripts/` is a directory for storing scripts.
-    - `01_09_dir_struc.sh` is a shell script for directory structure management.
-    - `assign_params.py` is a Python script for assigning parameters of a directory in `images/`.
+- `images/` is a directory for storing images used in the project, every dataset (`01`-`09`) is a unique combination of the parameter matrix.
+    - `labels/` is a subdirectory for storing labeled images with 01-09 directories.
+    - `peaks/` is a subdirectory for storing peak images with 01-09 directories.
+    - `peaks_water_overlay/` is a subdirectory for storing peak images with water overlays with 01-09 directories.
+    - `water/` is a subdirectory for storing the background water images, with 01-09 directories.
+- `scripts/` is a directory for storing scripts useful to use on Agave.
+    - `01_09_dir_struc.sh` is a shell script for directory structure management of datasets 01-09.
+    - `assign_params.py` is a Python script for assigning parameters of a directory in `images/<directory>`.
     - `checks.sh` is a shell script for performing checks of the number of images in `images/peaks`, `labels`, and `peak_water_overlay`, and all assigned the correct attributes.
     - `peak_water_overlay_label_dir_struc.sh` is a shell script for creating a directory structure for peak, water, and label images.
-    - `reformat-h5.py` is a Python script for reformatting the name of H5 files.
-    - `rename_directories_parameters.py` is a Python script for renaming directories based on parameters combinations.
-- `requirements.txt` is a file that lists the project's dependencies.
+    - `reformat-h5.py` is a Python script for reformatting the name of H5 files (useful for uniform naming structure).
+    - `rename_directories_parameters.py` is a Python script for renaming directories based on parameters combinations (e.g. `01_6keV_clen01`).
+- `requirements.txt` is a file that lists the project's dependencies for easy enviornment setup.
 - `hitfinder_env.yml` is a YAML file that contains the environment configuration for the project.
 - `README.md` is a Markdown file that provides an overview of the project.
 
-Contents of `images/`:
-- `images/peaks` contains the Bragg peaks images from the simulated diffraction images. 
+Note the contents of `images/`:
+- `images/peaks` contains the Bragg peaks images from the simulated diffraction images, the peaks are simulated using CrystalFEL[1] software and do not contain any noise in the images. 
 - `images/labels` contains the labels for the Bragg peaks (0 for no peak, 1 for peak present).
 - `images/peaks_water_overlay` contains the Bragg peaks overlayed with the respective keV dataset water image `images/water`.
-- `images/water` contains the different keV and camera length water images.
+- `images/water` contains the different keV and camera length water images to overlay with `images/peaks` images.
 
 #### Data Generation:
 
-During the data generation phase of the project, we utilize the `pattern_sim` module in CrystFEL[1] software, renowned for generating simulation diffraction images under conditions similar to those of the CXLS. The specific protein used in this study is designated as 1IC6.pdb, obtained from the RCSB Protein Data Bank[2]. Initially, our testing focuses on a medium-sized unit cell, to limit the complexities of the analysis but presents a promising avenue for future research enhancements.
+During the data generation phase of the project, we utilize the `pattern_sim`[5] module in CrystFEL software, renowned for generating simulation diffraction images under conditions similar to those of the CXLS. The specific protein used in this study is designated as 1IC6.pdb, obtained from the RCSB Protein Data Bank[2]. Initially, our testing focuses on a medium-sized unit cell, to limit the complexities of the analysis but presents a promising avenue for future research enhancements.
 
-Before commencing the `pattern_sim` simulations, it was essential to create a crystal file and a corresponding water-background image tailored to the specific photon energy and camera length parameter combination as stated in the parameter matrix above. Using the [reborn](https://gitlab.com/kirianlab/reborn)[3] software, we generate the required water-background images for all of the datasets. Inside of `water_background.py` the program generates the water-background images for the specified photon energy and camera length that is currently in the `.geom` file. Thus, for the three camera lengths and three photon energies, we generate nine total water background images, each for one dataset. This will be further explained in the `Water-Background Noise` section.
+Before commencing the `pattern_sim` simulations, it was essential to create a crystal file and a corresponding water-background image tailored to the specific photon energy and camera length parameter combination as stated in the parameter matrix above. Using the [reborn](https://gitlab.com/kirianlab/reborn)[3] software, we generate the required water-background images for all of the datasets. In reborn, the `water_background.py` the program generates the dynamic water-background images for the specified photon energy and camera length parameters, where these parameters are accessed from the `Eiger.geom` fiile. Thus, for the three camera lengths and three photon energies, we generate nine total water background images, each for one dataset. This will be further explained in the `Water-Background Noise` section.
 
-For the crystal file, we utilize `sfall`, which produces the `.hkl` file containing the Miller indices pertinent to the specific `.pdb` file. The crystal file is a text document that records vital information such as the unit-cell dimensions and the crystal's spacegroup. These details are crucial for ensuring the simulations accurately reflect the diffraction patterns expected from the protein crystal, thereby enabling precise analysis of structural properties. 
+For generating the crystal file, we employ the SFALL[4] (`sfall`) module from the CCP4 software suite to compute the structure factors of the protein under study. This module outputs an `.hkl` file, which contains the Miller indices associated with the specific `.pdb` file. Additionally, the resulting crystal file is a text document that captures essential details such as the unit-cell dimensions and the crystal’s space group. These data elements are critical as they ensure that our simulations faithfully reproduce the expected diffraction patterns from the protein crystal, facilitating accurate analysis of its structural properties.
 
 ##### Water-Background Noise:
 
@@ -151,14 +153,14 @@ photon_energy = 8000
 ;...
 ```
 
-In the diagrams below, the water-background noise images are displayed for two distinct photon energies (6000 eV and 8000 eV) and camera lengths (0.15 m and 0.25 m). In these images, it is clear that the closer the protein sample is to the detector, the more pronounced the water-ring becomes. This phenomenon is due to the increased scattering of x-rays by the water content within the protein sample, resulting in a more prominent water background noise in the diffraction images. By incorporating this water background noise into the simulations, we aim to enhance the authenticity of the diffraction data generated by the CrystFEL software, thereby facilitating more accurate and reliable analysis of the protein crystal structures.
+In the diagrams below, the water-background noise images are displayed for two distinct photon energies (6000 eV and 8000 eV) and camera lengths (0.15 m and 0.25 m). It is clear with these images juxtaposed, the closer the protein sample is to the detector, the more pronounced the water-ring becomes. This phenomenon is due to the increased scattering of x-rays by the water content within the protein sample, resulting in a more prominent water background noise in the diffraction images. By incorporating this water background noise into the simulations, we aim to enhance the authenticity of the diffraction data, thereby facilitating more accurate and reliable analysis of the protein crystal structures.
 
 <p float="left">
     <img src="./diagrams/water01.png" alt="water01.h5" width="500" />
     <img src="./diagrams/water07.png" alt="water07.h5" width="500" /> 
 </p>
 
-*Figure 1: Water background noise comparison. Left: (water01.png) photon energy is 6000 eV, with camera length is 0.15m. Right: (water07.png) photon energy is 8000 eV, with camera length is 0.15m. Both images can be found in `docs/diagrams/`*
+*Figure 1: Water background noise comparison. Left: (`water01.png`) photon energy is 6000 eV, with camera length is 0.15m. Right: (`water07.png`) photon energy is 8000 eV, with camera length is 0.15m. Both images can be found in `docs/diagrams/`*
 
 ##### Crystal Used in Simulations:
 
@@ -185,21 +187,22 @@ CRYSTAL="1IC6.cell" # Crystal file
 INPUT="1IC6.pdb.hkl" # Constant HKL input file 
 POINT_GROUP="4/mmm"                                            
 CRYSTAL_SIZE_MIN=1000  
-CRYSTAL_SIZE_MAX=1000                                                         SPECTRUM="tophat"
+CRYSTAL_SIZE_MAX=1000
+SPECTRUM="tophat"
 SAMPLING=7
 BANDWIDTH=0.01
-N_PHOTONS=3e8 # Number photons (not fixed value)
+N_PHOTONS=3e8
 BEAM_RADIUS=5e-6                                                              
 # ...
 ```
 
-The `pattern_sim` command is executed within the `submit.sh` script, with the following parameters:
+The `pattern_sim` command is executed within the bottom half of `submit.sh`, with the following parameters:
 
 ```bash
 pattern_sim -g $GEOM -p $CRYSTAL --number=$cores -o $job_name -i $INPUT -r -y $POINT_GROUP --min-size=$CRYSTAL_SIZE_MIN --max-size=$CRYSTAL_SIZE_MAX --spectrum=$SPECTRUM -s $SAMPLING --background=0 --beam-bandwidth=$BANDWIDTH --photon-energy=$PHOTON_ENERGY --nphotons=$N_PHOTONS --beam-radius=$BEAM_RADIUS
 ```
 
-The `pattern_sim` command generates the diffraction images based on the specified parameters, including the photon energy, crystal file, and geometry file. The resulting diffraction images are then processed to extract the Bragg peaks, which are essential for the subsequent analysis and classification tasks.
+The `pattern_sim` command generates the diffraction images based on the specified parameters, including the photon energy, crystal file, and geometry file. The resulting diffraction images are then stored and renamed appropriately for out uses. Note that at this stage, the outputted images are signal only, and will be stored in `images/peaks` after renaming the files.
 
 #### Data Preprocessing:
 
@@ -233,3 +236,9 @@ The `pattern_sim` command generates the diffraction images based on the specifie
 [2] RCSB Protein Data Bank. (n.d.). 1IC6: Structure of a serine protease proteinase K from Tritirachium album limber at 0.98 a resolution. RCSB PDB. https://www.rcsb.org/structure/1ic6 
 
 [3] kirianlab. (n.d.). Kirianlab / reborn · GITLAB. GitLab. https://gitlab.com/kirianlab/reborn 
+
+[4] SFALL (CCP4: Supported program). SFALL (CCP4: Supported Program) - CCP4 documentation. (n.d.). https://www.ccp4.ac.uk/html/sfall.html 
+
+[5] White, T. A., Kirian, R. A., Martin, A. V., Aquila, A., Nass, K., Barty, A., & Chapman, H. N. (2012). CrystFEL: a software suite for snapshot serial crystallography. Journal of Applied Crystallography, 45(2), 335-341. Retrieved from https://www.desy.de/~twhite/crystfel/manual-pattern_sim.html
+
+
