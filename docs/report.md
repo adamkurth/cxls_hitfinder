@@ -1,9 +1,8 @@
-## Enhancing X-ray Crystallography Analysis Through Deep Learning at the Compact X-ray Light Source (CXLS), Arizona State University
+## Enhancing X-ray Peakfinding Through Deep Learning at the Compact X-ray Light Source (CXLS), Arizona State University
 
 Kurth, A. M.1, Everett, E.1, Botha, S.1,2
 
 *The Biodesign Beus CXFEL Laboratory, Arizona State University, Tempe, AZ 85287, USA. 1. Department of Physics, Arizona State University, Tempe, AZ 85287, USA*
-
 
 Repository can be found here: [cxls_hitfinder](https://github.com/adamkurth/cxls_hitfinder.git)
 
@@ -11,9 +10,11 @@ Repository can be found here: [cxls_hitfinder](https://github.com/adamkurth/cxls
 
 The Compact X-ray Light Source (CXLS) at Arizona State University represents a pioneering integration of deep learning methodologies for the analysis of diverse data sets originating from various experimental modalities within the facility. This research primarily utilizes the Dectris Eiger 4M detector, focusing initially on X-ray crystallography. Traditional approaches often necessitate manual predictions concerning the photon energy and the distance between the protein crystal sample and the detector. These predictions are complicated by the dynamic scattering patterns resulting from the intrinsic noise associated with the water within the protein samples. This study delineates the variables of interaction distance (camera length, denoted as "clen" with values of 0.15, 0.25, 0.35 meters) and photon energy (denoted as "photon_energy" with values of 6, 7, 8 keV), discretizing them into three distinct instances to formulate a matrix comprising nine unique variable combinations.
 
-Utilizing CrystFEL[1] software to simulate diffraction images of a specific protein (1IC6.pdb), this research embarked on generating realistic diffraction data across the nine variable combinations by processing initial data, labeling, and applying corresponding water background noise. The objective is threefold: initially, to enable the detection of peaks within these images through binary classification via convolutional neural networks (CNNs), and subsequently, to facilitate the prediction of photon energy and camera length. The model pipeline sequentially addresses binary classification (peak detection), photon energy prediction, and camera length estimation. Preliminary assessments are being conducted on various CNN architectures, including ResNet50, DenseNet, and Basic CNN, to identify the most efficacious model for feature extraction relevant to our analytical objectives.
+Utilizing CrystFEL[1] software to simulate diffraction images of a specific protein (1IC6.pdb), this project needed to generate realistic diffraction data across the parameter combinations by processing the initial data, labeling, and applying corresponding water background noise. The objective is threefold: initially, to enable the detection of peaks within these images through binary classification via convolutional neural networks (CNNs), and subsequently, to facilitate the prediction of photon energy and camera length parameters. This is done through the model pipeline, which subsequently addresses binary classification (peak detection), photon energy, and camera length prediction. Preliminary assessments are being conducted on various CNN architectures, including ResNet50, DenseNet, and Basic CNN, to identify the most efficacious model for feature extraction relevant to our analytical objectives.
 
-Further development endeavors to broaden the model's applicability by training on an expanded dataset of various protein PDB samples from simulated data. The aim is to refine the model's capacity for classifying proteins based on the location of Bragg peaks and accurately predicting proteins previously introduced to the model. This expanded scope not only solidifies the model's foundational capabilities in X-ray crystallography analysis but also anticipates its application in material science spectroscopy. Ultimately, this exploration into the application of deep learning for X-ray crystallography at CXLS not only innovates in the realm of experimental data analysis but also sets the stage for future applications in material science spectroscopy, enhancing the precision and efficiency of experimental outcomes.
+Overall, this project aims to enhance the analytical capabilities of deep learning methods at CXLS through two primary targets. Initially, the goal is to develop a model trained on multiple datasets of simulated protein diffraction images, and predict the combination of parameters through testing on real experimental data. The optimal parameter combination will be based on how the noise is presented in the image, as well as any observed Bragg peaks. The broadened training dataset will enhance the model's foundational capabilities in X-ray crystallography analysis.
+
+The second target expands the model's scope to include additional experimental data from the CXLS facility, specifically in material science spectroscopy. By integrating X-ray crystallography with material science spectroscopy, the project not only solidifies the model’s utility in diverse research contexts but also anticipates broader applications. This expanded approach will enhance the precision and efficiency of experimental outcomes, setting the stage for future innovations in analyzing diverse types of data through deep learning at the CXLS facility. Ultimately, this exploration into the application of deep learning for X-ray crystallography at CXLS innovates in the realm of experimental data analysis and paves the way for expansive applications in material science spectroscopy.
 
 ### Introduction:
 
@@ -43,9 +44,9 @@ Parameter matrix for `camlen` and `keV`:
 | `08`          | 0.35        | 7                   |
 | `09`          | 0.35        | 8                   |
 
-This matrix serves as the foundation for the subsequent data generation and analysis, where the backend programming focus enables the simulated images to dynamically adjust for different datasets to be loaded. The data generation process involves the simulation of diffraction images using the CrystFEL software suite, renowned for its capabilities in snapshot serial crystallography. The diffraction images are generated based on a specific protein (1IC6.pdb) and tailored to the nine unique variable combinations outlined in the matrix. The subsequent analysis involves the extraction of Bragg peaks from these diffraction images, a critical step in the classification and prediction tasks.
+This matrix serves as the foundation for the subsequent data generation and analysis, where the backend programming focus enables the simulated images to dynamically adjust for different datasets to be loaded. The data generation process involves the simulation of diffraction images using the CrystFEL software suite, renowned for its capabilities in snapshot serial crystallography. The diffraction images are generated based on a specific protein (1IC6.pdb) and tailored to the nine unique parameter combinations outlined in the matrix.
 
-#### Structure of the Repository:
+#### Overall Structure of the Repository:
 
 The repository structure is organized to facilitate the efficient management of the project's codebase, documentation, and data. 
 The following is an overview of the repository structure:
@@ -115,27 +116,99 @@ cxls_hitfinder/
     - `peak_water_overlay_label_dir_struc.sh` is a shell script for creating a directory structure for peak, water, and label images.
     - `reformat-h5.py` is a Python script for reformatting the name of H5 files (useful for uniform naming structure).
     - `rename_directories_parameters.py` is a Python script for renaming directories based on parameters combinations (e.g. `01_6keV_clen01`).
-- `requirements.txt` is a file that lists the project's dependencies for easy enviornment setup.
+- `requirements.txt` is a file that lists the project's dependencies for easy environment setup.
 - `hitfinder_env.yml` is a YAML file that contains the environment configuration for the project.
 - `README.md` is a Markdown file that provides an overview of the project.
 
+#### `pkg` Module:
+
+The `pkg` directory contains the main Python module for the project, which is responsible for the implementation of the Convolution Neural Network (CNN) model. The package is structured as follows:
+
+``` bash
+pkg/
+    ├── __init__.py
+    ├── process.py
+    ├── path.py
+    ├── data.py
+    ├── models.py
+    ├── eval.py
+    ├── train_eval.py
+    ├── pipe.py
+    ├── arch.py
+    ├── functions.py
+    ├── transform.py
+    ├── waterbackground_subtraction/
+    │   ├── finder/
+    │   │   ├── __init__.py
+    │   │   ├── background.py        
+    │   │   ├── datahandler.py
+    │   │   ├── functions.py
+    │   │   ├── imageprocessor.py
+    │   │   ├── region.py
+    │   │   ├── threshold.py
+```
+
+The following is a brief overview of the files in the `pkg` module:
+- `__init__.py` is the initialization file for the Python module.
+- `process.py` contains the class responsible for most of the preprocessing of the data, including the generation of the labeled images and overlaying the peaks with the water background images.
+- `path.py` contains the dynamic path configurations for the datasets selected for preprocessing, training, and testing. 
+- `data.py` is responsible for loading the data and creating the dataset for the models using PyTorch's `Dataset` class.
+- `model.py` contains the classes for the various models used in the project.
+- `eval.py` is responsible for evaluating the model's performance.
+- `train_eval.py` contains the training and evaluation class for the models.
+- `pipe.py` contains the pipeline for the model, which predicts the parameters based on the images from the DataLoader.
+- `arch.py` contains the architecture of the models used in the project.
+- `functions.py` contains the miscellaneous functions used in the `pkg` module.
+
+The `waterbackground_subtraction` directory is a submodule from [waterbackground_subtraction](https://github.com/adamkurth/waterbackground_subtraction.git) under a refined branch called `simplified_for_hitfinder`, that contains code related to water background detection and analysis. The `finder` subdirectory includes code to analyze and estimate peaks using a three-ring integration technique. The following is a brief overview of the files in the `waterbackground_subtraction` directory:
+- `background.py` contains the refined class for single and multiple image three-ring integration technique.
+- `datahandler.py` contains the class for handling the data for the overwritting of the stream files, not necessary for the project.
+- `imageprocessor.py` contains the class for processing and visualizing the images.
+- `region.py` contains the class for the region of interest (ROI) for the images. This is utilized in the `background.py` three-ring integration technique.
+- `threshold.py` contains the class for the threshold of the images also used in the `background.py` three-ring integration technique.
+
+#### Data:
+Located in the root directory of the repository, the `images/` directory contains the data used in the project. The data is structured as follows:
+
+``` bash
+images/
+    ├── peaks/
+    |   ├── 01/
+    |   |   ├── 01_6keV_clen01_000000.h5
+    |   |   ├── ...
+    |   ├── 02/
+    |   |   ├── 02_7keV_clen01_000000.h5
+    |   |   ├── ...
+    |   ├── ... 
+    |   ├── 09/
+    |   |   ├── 09_8keV_clen03_000000.h5
+    |   |   ├── ...
+    ├── labels/
+    ├── peaks_water_overlay/
+    ├── water/
+```
+
+Here, all directories have the same `01` through `09` structure, with each directory containing the images for the respective dataset.
+
 Note the contents of `images/`:
-- `images/peaks` contains the Bragg peaks images from the simulated diffraction images, the peaks are simulated using CrystalFEL[1] software and do not contain any noise in the images. 
-- `images/labels` contains the labels for the Bragg peaks (0 for no peak, 1 for peak present).
-- `images/peaks_water_overlay` contains the Bragg peaks overlayed with the respective keV dataset water image `images/water`.
-- `images/water` contains the different keV and camera length water images to overlay with `images/peaks` images.
+- `peaks` contains the Bragg peaks images from the simulated diffraction images, the peaks are simulated using CrystalFEL software and do not contain any noise in the images. 
+- `labels` contains the labels for the Bragg peaks (0 for no peak, 1 for peak present).
+- `peaks_water_overlay` contains the Bragg peaks overlayed with the respective keV dataset water image `images/water`.
+- `water` contains the different keV and camera length water images to overlay with `images/peaks` images.
+
+### Simulations:
 
 #### Data Generation:
 
 During the data generation phase of the project, we utilize the `pattern_sim`[5] module in CrystFEL software, renowned for generating simulation diffraction images under conditions similar to those of the CXLS. The specific protein used in this study is designated as 1IC6.pdb, obtained from the RCSB Protein Data Bank[2]. Initially, our testing focuses on a medium-sized unit cell, to limit the complexities of the analysis but presents a promising avenue for future research enhancements.
 
-Before commencing the `pattern_sim` simulations, it was essential to create a crystal file and a corresponding water-background image tailored to the specific photon energy and camera length parameter combination as stated in the parameter matrix above. Using the [reborn](https://gitlab.com/kirianlab/reborn)[3] software, we generate the required water-background images for all of the datasets. In reborn, the `water_background.py` the program generates the dynamic water-background images for the specified photon energy and camera length parameters, where these parameters are accessed from the `Eiger.geom` fiile. Thus, for the three camera lengths and three photon energies, we generate nine total water background images, each for one dataset. This will be further explained in the `Water-Background Noise` section.
+Before commencing the `pattern_sim` simulations, it was essential to create a crystal file and a corresponding water-background image tailored to the specific photon energy and camera length parameter combination as stated in the parameter matrix above. Using the [reborn](https://gitlab.com/kirianlab/reborn)[3] software, we generate the required water-background images for all of the datasets. In reborn, the `water_background.py` the program generates the dynamic water-background images for the specified photon energy and camera length parameters, where these parameters are accessed from the `Eiger.geom` file. The water-background images are then stored in the `images/water` directory for subsequent use in the simulations.
 
 For generating the crystal file, we employ the SFALL[4] (`sfall`) module from the CCP4 software suite to compute the structure factors of the protein under study. This module outputs an `.hkl` file, which contains the Miller indices associated with the specific `.pdb` file. Additionally, the resulting crystal file is a text document that captures essential details such as the unit-cell dimensions and the crystal’s space group. These data elements are critical as they ensure that our simulations faithfully reproduce the expected diffraction patterns from the protein crystal, facilitating accurate analysis of its structural properties.
 
 ##### Water-Background Noise:
 
-The water background noise is a crucial component of the simulated diffraction images, generated by varying the photon energy and camera length. Photon energy is specified in the `Eiger4M.geom` file, while the camera length is defined as the distance between the protein crystal sample and the detector.
+The water background noise is a crucial component of the simulated diffraction images, generated by varying the photon energy and camera length. Both, photon energy and camera length are specified in the `Eiger4M.geom` file, which the reborn's `water_background.py` script accesses. The water background noise is essential as it mimics the scattering patterns resulting from the water content within the protein samples, thereby enhancing the authenticity of the diffraction data.
 
 The start of the `Eiger4M.geom` file is structured as follows:
 ```
@@ -202,10 +275,37 @@ The `pattern_sim` command is executed within the bottom half of `submit.sh`, wit
 pattern_sim -g $GEOM -p $CRYSTAL --number=$cores -o $job_name -i $INPUT -r -y $POINT_GROUP --min-size=$CRYSTAL_SIZE_MIN --max-size=$CRYSTAL_SIZE_MAX --spectrum=$SPECTRUM -s $SAMPLING --background=0 --beam-bandwidth=$BANDWIDTH --photon-energy=$PHOTON_ENERGY --nphotons=$N_PHOTONS --beam-radius=$BEAM_RADIUS
 ```
 
-The `pattern_sim` command generates the diffraction images based on the specified parameters, including the photon energy, crystal file, and geometry file. The resulting diffraction images are then stored and renamed appropriately for out uses. Note that at this stage, the outputted images are signal only, and will be stored in `images/peaks` after renaming the files.
+The `pattern_sim` command generates the diffraction images based on the specified parameters, including the photon energy, crystal file, and geometry file. The resulting diffraction images are then stored and renamed appropriately for out uses. Note that at this stage, the outputted images are signal only, and will be stored in `images/peaks` after renaming the files. 
 
 #### Data Preprocessing:
 
+In `pkg` directory, every file is responsible for a class or functions in the Python module. Most of these are dealing with preprocessing the data for eventual use in the CNN model. 
+
+``` bash
+pkg/
+    ├── __init__.py
+    ├── path.py
+    ├── data.py
+    ├── arch.py
+    ├── functions.py
+    ├── eval.py
+    ├── pipe.py
+    ├── process.py
+    ├── models.py
+    ├── train_eval.py
+    ├── transform.py
+    ├── waterbackground_subtraction/
+    │   ├── finder/
+    │   │   ├── __init__.py
+    │   │   ├── background.py        
+    │   │   ├── datahandler.py
+    │   │   ├── functions.py
+    │   │   ├── imageprocessor.py
+    │   │   ├── region.py
+    │   │   ├── threshold.py
+```
+
+The script `process_directory.py`, handles most of the preprocessing of the data for `images`, found in `cnn/src`. This script is responsible for taking the simulated images from `images/peaks` and casting every pixel value to a binary value (0 or 1) based on a threshold. It is known that the simulated images contain no noise, thus the threshold can be set very low to identify all of the peaks. The script will then save the labeled images in `images/labels` for further use after the model training. This is important to keep for the identification of proteins based on the location of Bragg peaks, if this would be a helpful addition to the project and this will not be implemented in the model for training. The script also takes the corresponding water-background image from `images/water` (of the specific dataset) and overlays the peaks with the water background image, saving the images in `images/peaks_water_overlay`. These are the images are the only images that will be used in the model training.
 
 #### Model Architecture:
 
@@ -239,6 +339,6 @@ The `pattern_sim` command generates the diffraction images based on the specifie
 
 [4] SFALL (CCP4: Supported program). SFALL (CCP4: Supported Program) - CCP4 documentation. (n.d.). https://www.ccp4.ac.uk/html/sfall.html 
 
-[5] White, T. A., Kirian, R. A., Martin, A. V., Aquila, A., Nass, K., Barty, A., & Chapman, H. N. (2012). CrystFEL: a software suite for snapshot serial crystallography. Journal of Applied Crystallography, 45(2), 335-341. Retrieved from https://www.desy.de/~twhite/crystfel/manual-pattern_sim.html
+[5] White, T. A., Kirian, R. A., Martin, A. V., Aquila, A., Nass, K., Barty, A., & Chapman, H. N. (2012). CrystFEL: a software suite for snapshot serial crystallography. Journal of Applied Crystallography, *45*(2), 335-341. Retrieved from https://www.desy.de/~twhite/crystfel/manual-pattern_sim.html
 
 
