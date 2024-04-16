@@ -11,13 +11,19 @@ For use at CXLS beamline, this software aims to identify the Bragg peaks, camera
 
 ```bash
 # local
-git clone https://github.com/adamkurth/cxls_hitfinder.git
+git clone --recurse-submodules https://github.com/adamkurth/cxls_hitfinder.git
 ```
 or using GitLab:
     
 ```bash
 # local
-git clone https://gitlab.com/adamkurth/cxls_hitfinder.git
+git clone --recurse-submodules https://gitlab.com/adamkurth/cxls_hitfinder.git
+```
+
+Or if you forget to add `--recurse-submodules`, then run the following command:
+
+```bash
+git submodule update --init --recursive
 ```
 
 2. Change into the directory:
