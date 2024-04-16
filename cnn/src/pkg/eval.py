@@ -84,13 +84,13 @@ class Peak_Detection_Configuration(Get_Configuration_Details):
     """
     def __init__(self, paths, datasets, device, save_path=None): 
         super().__init__()
-        self._model = m.Multi_Class_CNN1(output_channels=1)
+        self._model = m.Multi_Class_CNN2(output_channels=1)
         self._feature = "peak"
         self._classes = 2
         self._labels = [0,1]
         self._attribute_mapping = {}
-        self._threshold = 0.3
-        self._learning_rate = 0.00001
+        self._threshold = 0.5
+        self._learning_rate = 0.0001
         self._weights = get_counts_weights(paths, datasets, self._classes)
         self._criterion = nn.BCEWithLogitsLoss(pos_weight=self._weights.to(device))
         self._save_path = save_path
