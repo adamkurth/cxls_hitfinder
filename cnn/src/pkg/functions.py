@@ -236,13 +236,14 @@ def get_counts_weights(paths: object, datasets: list, classes: int) -> torch.Ten
         torch.Tensor: weight tensor to use as an argument for the loss function.
     """
     
-    weights = torch.zeros(classes)
+    
+    size = torch.zeros(classes)
     
     paths.refresh_all()
 
     # Directories to check
     directory_types = ['peaks', 'labels', 'peaks_water_overlay']
-    
+
     for index, dataset in enumerate(datasets):
         # Loop through each directory type and count files
         dataset = convert2str_single(dataset)
@@ -252,13 +253,20 @@ def get_counts_weights(paths: object, datasets: list, classes: int) -> torch.Ten
             normal_files = [file for file in all_files if 'empty' not in os.path.basename(file)]
             empty_files = [file for file in all_files if 'empty' in os.path.basename(file)]
             
-            if directory_type == 'peaks_water_overlay':
-                print(index)
-                weights[index] = len(all_files)
-    
-    weights = 1. / weights
-    weights = weights / weights.min()
-    weights = torch.where(torch.isinf(weights), torch.tensor(1.0), weights)
+            if classes == 2:
+                if directory_type == 'peaks_water_overlay':
+                    size[0] += len(normal_files)
+                    size[1] += len(empty_files)
+            else:
+                if directory_type == 'peaks_water_overlay':
+                    size[index] = len(all_files)
+    if classes == 2:
+        weights = torch.Tensor([size[1]/size[0]])
+    else:           
+        weights = 1. / size
+        weights = weights / weights.min()
+        weights = torch.where(torch.isinf(weights), torch.tensor(1.0), weights)
+        
     return  weights
 
 def prepare(data_manager: object, batch_size:int=32) -> tuple:
