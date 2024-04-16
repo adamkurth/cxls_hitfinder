@@ -33,13 +33,7 @@ class PathManager:
             overlays += glob(os.path.join(self.peaks_water_overlay_dir, dataset, '*.h5'))
             labels += glob(os.path.join(self.labels_dir, dataset, '*.h5'))
             water_background += glob(os.path.join(self.water_background_dir, dataset, '*.h5'))
-<<<<<<< HEAD
-        # print(f'peaks : {peaks}')
-    
-=======
             
-            
->>>>>>> progress-Everett
         return Paths(peaks=peaks, overlays=overlays, labels=labels, water_background=water_background)
 
     def init_lists(self, dataset:str) -> list: 
