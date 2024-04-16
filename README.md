@@ -119,7 +119,13 @@ sudo apt-get update
 sudo apt-get install singularity-container
 ```
 
+5. Run Apptainer:
 
+```bash
+singularity shell default
+```
+
+---
 
 ### 1. Directory Structure
 
