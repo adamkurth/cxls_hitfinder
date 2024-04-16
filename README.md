@@ -5,29 +5,119 @@ Will be ongoing project to implement machine learning techniques for peakfinding
 
 For use at CXLS beamline, this software aims to identify the Bragg peaks, camera length (m), and photon energy (keV), of an image based on the training data. This software will be continuing development, so please check the most recent update to `main` branch for the most recent updates.
 
-### 0. Installation
+### 1. Installation
 
 1. Clone the repository:
 
 ```bash
+# local
 git clone https://github.com/adamkurth/cxls_hitfinder.git
 ```
 or using GitLab:
     
 ```bash
+# local
+git clone https://gitlab.com/adamkurth/cxls_hitfinder.git
 ```
 
-2. Please install the following dependencies:
+2. Change into the directory:
 
 ```bash
-pip install -r requirements.txt
+# local
+cd cxls_hitfinder
 ```
+
+#### 1.1 Local Linux Installation
+ To install Apptainer, run the following command:
+
+```bash
+
+``` 
+
+#### 1.2 Docker Installation
+
+1. Run the Docker file to generate the Docker image:
+
+```bash
+# local
+docker buildx build -t cxls_hitfinder .
+```
+
+2. Save the Docker image:
+
+```bash
+# local
+docker save cxls_hitfinder > cxls_hitfinder.tar
+```
+
+To transfer the Docker image to a remote machine, use `scp`:
+Note: Please ensure that the remote machine has Docker installed, and has cloned the repository on the remote machine.
+
+On remote machine:
+```bash
+# On SOL
+git clone https://github.com/adamkurth/cxls_hitfinder.git
+cd cxls_hitfinder
+```
+Then, on the local machine, transfer the Docker image to the remote machine using `scp`:
+```bash
+# local
+scp cxls_hitfinder.tar <ASURITE>@sol.asu.edu:/home/<ASURITE>/cxls_hitfinder/
+```
+
+3. Load the Docker image on the respective machine:
+```bash
+# on SOL
+docker load < cxls_hitfinder.tar
+```
+
+4. Run the Docker image:
+```bash
+# On SOL
+docker run -d --name my_cxls_hitfinder_instance cxls_hitfinder
+```
+
+5. Access the Docker container:
+```bash
+docker exec -it my_cxls_hitfinder_instance bash
+```
+
+#### 1.3 Apptainer (formerly Singularity) Installation
+
+##### 1.3.1 Apptainer Installation For MacOS
+
+For Mac with (Apple Silicon or Intel), you can't install Apptainer (formerly Singularity) directly because it's designed to run on Linux. However, you can use a Linux virtual machine on your Mac and then install Apptainer within that VM. Lima is a tool that sets up a Linux VM for you on a Mac, and once it's running, you can install Linux-compatible tools like Apptainer inside it.
+
+1. Install Lima:
+
+```bash
+brew install lima
+```
+
+2. Start the VM:
+
+```bash
+limactl start default
+```
+
+1. Access the Lima VM:
+
+```bash
+lima start default
+```
+
+4. Install Apptainer:
+
+```bash
+sudo apt-get update
+sudo apt-get install singularity-container
+```
+
+
 
 ### 1. Directory Structure
 
 The `checks.sh` script will ensure the proper directories are made in the `images/` directory. The `images/` directory is where the images will be stored. The `images/` directory will have the following structure:
-
-
 
 ```bash
 cnn_hitfinder/
