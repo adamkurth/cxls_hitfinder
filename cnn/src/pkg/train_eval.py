@@ -11,7 +11,7 @@ from torch.cuda.amp import GradScaler, autocast
 
 
 """
-This file is for creating the new train_eval file using the new inputs and class structure for each specific feature. 
+This file is for creating the new train_eval file using the new inputs and class structure for each specific feature. git 
 """
 
 
@@ -46,7 +46,7 @@ class TrainTestModels:
         self.save_path = feature_class.get_save_path()
         
         self.optimizer = self.optimizer(self.model.parameters(), lr=self.learning_rate)
-        self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.1, patience=1, threshold=0.1)
+        self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.1, patience=2, threshold=0.1)
         
         self.plot_train_accuracy = np.zeros(self.epochs)
         self.plot_train_loss = np.zeros(self.epochs)
