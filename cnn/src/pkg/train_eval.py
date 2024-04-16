@@ -34,6 +34,7 @@ class TrainTestModels:
         self.epochs = cfg['num_epochs']
         self.device = cfg['device']
         self.batch = cfg['batch_size']
+        self.scheduler = cfg['scheduler']
         
         self.feature_class = feature_class
         self.model = feature_class.get_model().to(self.device)
@@ -42,8 +43,10 @@ class TrainTestModels:
         self.feature = feature_class.get_feature()
         self.labels = feature_class.get_labels()
         self.learning_rate = feature_class.get_learning_rate()
+        self.save_path = feature_class.get_save_path()
         
         self.optimizer = self.optimizer(self.model.parameters(), lr=self.learning_rate)
+        self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.1, patience=1, threshold=0.1)
         
         self.plot_train_accuracy = np.zeros(self.epochs)
         self.plot_train_loss = np.zeros(self.epochs)
@@ -86,9 +89,6 @@ class TrainTestModels:
 
             self.feature_class.format_prediction(score)
             predictions = self.feature_class.get_formatted_prediction()
-            
-            print(f'-- Predictions: {predictions}')
-            print(f'-- Image Attribute: {image_attribute}')
                     
             accuracy_train += (predictions == image_attribute.to(self.device)).float().sum()
             total_predictions += torch.numel(image_attribute)
@@ -110,7 +110,7 @@ class TrainTestModels:
         This function test the model and prints the loss and accuracy of the testing sets per epoch.
         """
         
-        running_loss_test, accuracy_test, predicted, total = 0.0, 0.0, 0.0, 0.0
+        running_loss_test, accuracy_test, predictions, total = 0.0, 0.0, 0.0, 0.0
         
         self.model.eval()
         with torch.no_grad():
@@ -136,6 +136,7 @@ class TrainTestModels:
                 total += torch.numel(image_attribute)
 
         loss_test = running_loss_test/self.batch
+        self.scheduler.step(loss_test)
         self.plot_test_loss[epoch] = loss_test
 
         accuracy_test /= total
@@ -226,6 +227,8 @@ class TrainTestModels:
             self.train(epoch)
             self.test(epoch)
             
+            print(f"-- learning rate : {self.scheduler.get_last_lr()}")
+            
     def get_loss_accuracy(self) -> dict:
         """ 
         This function returns the loss and accuracy of the training and testing sets.
@@ -247,7 +250,7 @@ class TrainTestModels:
         for var_name in self.optimizer.state_dict():
             print(var_name, "\t", self.optimizer.state_dict()[var_name])
     
-    def save_model(self, path:str) -> None:
+    def save_model(self, path:str=None) -> None:
         """
         This function saves the model's state_dict to a specified path. This can be used to load the trained model later.
         Save as .pt file.
@@ -255,5 +258,7 @@ class TrainTestModels:
         Args:
             path (str): Path to save the model's state_dict.
         """
-        torch.save(self.model.state_dict(), path)
-    
+        if path != None:
+            torch.save(self.model.state_dict(), path)
+        else:
+            torch.save(self.model.state_dict(), self.save_path)

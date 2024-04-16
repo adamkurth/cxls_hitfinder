@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import pkg.models as m
+from pkg.functions import get_counts_weights
 
 
 class Get_Configuration_Details:
@@ -43,7 +44,7 @@ class Get_Configuration_Details:
         for original_value, new_value in self._attribute_mapping.items():
             holder[image_attribute == original_value] = new_value
         self._formatted_image_attribute = holder
-
+        
     def format_prediction(self, score: torch.Tensor) -> None:
         """
         Formats the prediction based on the score and threshold.
@@ -67,6 +68,12 @@ class Get_Configuration_Details:
     def get_learning_rate(self) -> float:
         return self._learning_rate
     
+    def get_loss_weights(self) -> torch.Tensor:
+        return self._weights
+    
+    def get_save_path(self) -> str:
+        return self._save_path
+    
     
 class Peak_Detection_Configuration(Get_Configuration_Details):
     """
@@ -75,17 +82,18 @@ class Peak_Detection_Configuration(Get_Configuration_Details):
     Args:
         Get_Configuration_Details (class): Class used for retreiving configuration details.
     """
-    def __init__(self): 
+    def __init__(self, paths, datasets, device, save_path=None): 
         super().__init__()
-        self._model = m.BasicCNN3()
-        self._criterion = nn.BCEWithLogitsLoss()
+        self._model = m.Multi_Class_CNN1(output_channels=1)
         self._feature = "peak"
         self._classes = 2
         self._labels = [0,1]
         self._attribute_mapping = {}
-        self._threshold = 0.5
-        self._learning_rate = 0.001
-
+        self._threshold = 0.3
+        self._learning_rate = 0.00001
+        self._weights = get_counts_weights(paths, datasets, self._classes)
+        self._criterion = nn.BCEWithLogitsLoss(pos_weight=self._weights.to(device))
+        self._save_path = save_path
 
 
 class Photon_Energy_Configuration(Get_Configuration_Details):
@@ -95,10 +103,9 @@ class Photon_Energy_Configuration(Get_Configuration_Details):
     Args:
         Get_Configuration_Details (class): Class used for retreiving configuration details.
     """ 
-    def __init__(self):
+    def __init__(self, paths, datasets, device, save_path=None): 
         super().__init__()
         self._model = m.Multi_Class_CNN1()
-        self._criterion = nn.CrossEntropyLoss()
         self._feature = "photon_energy"
         self._classes = 3
         self._labels = [1,2,3]
@@ -108,7 +115,10 @@ class Photon_Energy_Configuration(Get_Configuration_Details):
             8e3: 3
         }
         self._threshold = None
-        self._learning_rate = 0.00001
+        self._learning_rate = 0.000001
+        self._weights = get_counts_weights(paths, datasets, self._classes)
+        self._criterion = nn.CrossEntropyLoss(weight=self._weights.to(device))
+        self._save_path = save_path
         
 
         
@@ -120,10 +130,9 @@ class Camera_Length_Configureation(Get_Configuration_Details):
     Args:
         Get_Configuration_Details (class): Class used for retreiving configuration details.
     """
-    def __init__(self):
+    def __init__(self, paths, datasets, device, save_path=None): 
         super().__init__()
         self._model = m.Multi_Class_CNN1()
-        self._criterion = nn.CrossEntropyLoss()
         self._feature = "clen"
         self._classes = 3
         self._labels = [1,2,3]
@@ -134,5 +143,6 @@ class Camera_Length_Configureation(Get_Configuration_Details):
         }
         self._threshold = None
         self._learning_rate = 0.00001
-
-        
+        self._weights = get_counts_weights(paths, datasets, self._classes)
+        self._criterion = nn.CrossEntropyLoss(weight=self._weights.to(device))
+        self._save_path = save_path
