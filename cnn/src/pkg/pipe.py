@@ -43,6 +43,8 @@ class ModelPipeline:
         self.peak_model.to(device)
         self.energy_model.to(device)
         self.clen_model.to(device)
+        
+        self.water_background_subtraction = background.BackgroundSubtraction()
 
         self.pipeline_results = {
             'photon_energy': None,
@@ -64,7 +66,7 @@ class ModelPipeline:
         """
         
         with torch.no_grad():  
-            peak_detected = (torch.sigmoid(self.peak_model(image)) > 0.53).long()
+            peak_detected = (torch.sigmoid(self.peak_model(image)) > 0.5).long()
               
             if peak_detected == 1:
                 _, x_ray_energy = torch.max(self.energy_model(image),1)
@@ -75,6 +77,13 @@ class ModelPipeline:
                 
                 self.pipeline_results['photon_energy'] = x_ray_energy
                 self.pipeline_results['clen'] = clen
+                
+                dataframe = self.water_background_subtraction.main(image)
+                
+                print(dataframe)
+                
+                self.water_background_subtraction.visualize_peaks(image, dataframe)
+                
                 return self.pipeline_results
             else:
                 return None 
