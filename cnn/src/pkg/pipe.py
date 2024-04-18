@@ -45,7 +45,7 @@ class ModelPipeline:
         self.energy_model.to(device)
         self.clen_model.to(device)
         
-        self.water_background_subtraction = background.BackgroundSubtraction()
+        self.water_background_subtraction = background.BackgroundSubtraction(threshold=0)
 
         self.pipeline_results = {
             'photon_energy': None,
