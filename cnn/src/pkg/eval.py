@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torchviz import make_dot
 import pkg.models as m
 from pkg.functions import get_counts_weights
 
@@ -73,6 +74,11 @@ class Get_Configuration_Details:
     
     def get_save_path(self) -> str:
         return self._save_path
+    
+    def get_model_diagram(self) -> None:
+        x = torch.randn(1, 1, 2163, 2069)
+        vis_graph = make_dot(self._model(x), params=dict(self._model.named_parameters()))
+        vis_graph.view()  
     
     
 class Peak_Detection_Configuration(Get_Configuration_Details):
