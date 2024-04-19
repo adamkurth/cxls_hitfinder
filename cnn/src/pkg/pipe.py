@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from pkg import *
+# from pkg import *
+from pkg.waterbackground_subtraction.finder import background
 import numpy as np
 
 class ModelPipeline:
@@ -44,7 +45,7 @@ class ModelPipeline:
         self.energy_model.to(device)
         self.clen_model.to(device)
         
-        self.water_background_subtraction = background.BackgroundSubtraction()
+        self.water_background_subtraction = background.BackgroundSubtraction(threshold=0)
 
         self.pipeline_results = {
             'photon_energy': None,
@@ -88,21 +89,21 @@ class ModelPipeline:
             else:
                 return None 
 
-    def evaluate_results(self, image_path: str) -> None:
-        """
-        This function compares the pipeline results with the true attributes of the image.
+    # def evaluate_results(self, image_path: str) -> None:
+    #     """
+    #     This function compares the pipeline results with the true attributes of the image.
 
-        Args:
-            image_path (str): This is the path to the .h5 image that was used in run_pipeline.
+    #     Args:
+    #         image_path (str): This is the path to the .h5 image that was used in run_pipeline.
 
-        Returns:
-            str: The message telling us if the atributes are matching or not.
-        """
+    #     Returns:
+    #         str: The message telling us if the atributes are matching or not.
+    #     """
         
-        clen, photon_energy = f.retrieve_attributes(image_path)
-        self.atributes = (clen, photon_energy)
+    #     clen, photon_energy = f.retrieve_attributes(image_path)
+    #     self.atributes = (clen, photon_energy)
         
-        if self.pipeline_results == self.atributes:
-            print("The pipeline results match the true attributes.")
-        else:
-            print("The pipeline results do not match the true attributes.")
+    #     if self.pipeline_results == self.atributes:
+    #         print("The pipeline results match the true attributes.")
+    #     else:
+    #         print("The pipeline results do not match the true attributes.")

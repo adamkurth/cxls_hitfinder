@@ -302,12 +302,30 @@ pkg/
 The script `process_directory.py`, handles most of the preprocessing of the data for `images`, found in `cnn/src`. This script is responsible for taking the simulated images from `images/peaks` and casting every pixel value to a binary value (0 or 1) based on a threshold. It is known that the simulated images contain no noise, thus the threshold can be set very low to identify all of the peaks. The script will then save the labeled images in `images/labels` for further use after the model training. This is important to keep for the identification of proteins based on the location of Bragg peaks, if this would be a helpful addition to the project and this will not be implemented in the model for training. The script also takes the corresponding water-background image from `images/water` (of the specific dataset) and overlays the peaks with the water background image, saving the images in `images/peaks_water_overlay`. These are the images are the only images that will be used in the model training.
 
 #### Model Architecture:
+<!-- talk about pipeline as well -->
+For this project we utilized convolutional neural networks (CNN) using pytorch. CNNs are an excellent for for this task because of their ability to perform hierarchical feature extraction. This is crucial for x-ray scattering images where different layers can learn to identify various features, from peaks detection or specific shapes indicative of photon energy levels and camera length. The spatial hierarchy of features in CNNs mirrors the physical structure within x-ray scattering images. Early layers capture basic details, while deeper layers integrate these into more complex patterns that are vital for accurate predictions.
 
+Instead of implimenting one neural network where each output node is a different combination of the possible attributes, 3 neural networks were implimented. We have done this in a pipeline sytle format. We instantiate the file pipe.py and pass in classes correspoding to each attribute that hold the saved model data. This will be elaborated on more in the training section. Once instantiated, we can run the method run in pipe.py, which takes in an image tensor. This will first run it though our trained peak detector model. This serves as a filter, were is a peak is not detected, it will not run through the other models. If an image is detected, it will run through the photon energy and camera length models and identify the 
 
 #### Training:
+<!-- make sure to reference how much data was used, how to was put into the data loader, and the 80/20 split -->
+<!-- make a visual for the configuration details -->
 
+In the development of our neural network model, we adopted the standard PyTorch training loop as a foundation and tailored the training process to our specific needs to improve model performance. Our project's goal is to learn in three categories: peak detection, photon energy, and camera length. Given the distinct nature of these attributes, it was necessary to customize the training parameters accordingly.
 
-#### Evaluation:
+To make our implementation robust, we employed two types of configurations: a global configuration and specific configurations for each attribute. The global configuration is a Python dictionary that contains shared training parameters such as the data loaders, number of epochs, batch size, the optimizer, the scheduler, and the device for training. These parameters are considered global because they remain consistent across the training of different attributes.
+
+The specific configuration, implemented through a class for each attribute, manages variables that vary from one attribute to another. These variables include the model, the feature name, the number of output classes, labels, attribute mapping, threshold, learning rate, weights, criterion, and save path.
+
+Critical elements in the specific configuration are the models, learning rates, criterion, and weights. Each attribute required a different model and learning rate due to performance improvements observed during training. The criterion varies with the first attribute, peaks, being a binary classification problem where BCEWithLogitsLoss is more appropriate, whereas CrossEntropyLoss is used for multi-class classification tasks like photon energy and camera length. Introducing weights to the training process was particularly advantageous for peak identification. The simulated data does not have an even distribution of data points with and without peaks, thus using weights with the criterion significantly improved the speed at which the model learned.
+
+In our program, we instantiate each specific attribute class and then create a corresponding training and evaluation class, train_eval.py, with the specific attribute class and global configuration dictionary as arguments. These arguments are organized in the constructor into global variables for all the encapsulated data. The training is initiated by calling the epoch_loop function within train_eval. This function loops over the specified number of epochs, and at each epoch, it calls a training and a testing function. This setup is advantageous because it allows for immediate evaluation of the updated parameters using the testing data, providing continuous feedback on the model’s performance during training.
+
+Inside the training function, two key enhancements from the standard PyTorch training loop are implemented: mixed precision training, which reduces the computational cost by utilizing both float32 and float16 tensors, and the addition of an accuracy calculation to directly measure how well the training data matches its labels.
+
+In the testing function, we utilize the loss results from the test to dynamically control our scheduler, ReduceLROnPlateau, which has proven effective in improving outcomes by adjusting the learning rate during the training process based on performance, especially in binary classification scenarios.
+
+By adhering to this structured training approach, we have successfully tailored our neural network models to effectively learn and perform across different attributes, setting a strong foundation for their application in real-world scenarios.
 
 
 ### Results:

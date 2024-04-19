@@ -46,7 +46,7 @@ class TrainTestModels:
         self.save_path = feature_class.get_save_path()
         
         self.optimizer = self.optimizer(self.model.parameters(), lr=self.learning_rate)
-        self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.1, patience=2, threshold=0.1)
+        self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.01, patience=2, threshold=0.1)
         
         self.plot_train_accuracy = np.zeros(self.epochs)
         self.plot_train_loss = np.zeros(self.epochs)
@@ -57,7 +57,6 @@ class TrainTestModels:
         self.logger = logging.getLogger(__name__)
         self.scaler = GradScaler()
 
-           
     def train(self, epoch:int) -> None:
         
         """
@@ -262,3 +261,4 @@ class TrainTestModels:
             torch.save(self.model.state_dict(), path)
         else:
             torch.save(self.model.state_dict(), self.save_path)
+            
