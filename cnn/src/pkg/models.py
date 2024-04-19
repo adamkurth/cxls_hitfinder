@@ -261,12 +261,12 @@ class Multi_Class_CNN2(nn.Module):
     def __init__(self, input_channels=1, input_size=(2163, 2069), output_channels=3):
         super(Multi_Class_CNN2, self).__init__()
         
-        self.conv1 = nn.Conv2d(input_channels, 32, kernel_size=20, stride=5, padding=1)
+        self.conv1 = nn.Conv2d(input_channels, 32, kernel_size=10, stride=5, padding=1)
         self.bn1 = nn.BatchNorm2d(32)  
         self.conv2 = nn.Conv2d(32, 64, kernel_size=5, stride=1, padding=1)
         self.bn2 = nn.BatchNorm2d(64)  
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
-        self.dropout = nn.Dropout(0.5)  
+        self.dropout = nn.Dropout(0.7)  
         
         dummy_input = torch.autograd.Variable(torch.zeros(1, input_channels, *input_size))
         output_size = self._get_conv_output(dummy_input)
