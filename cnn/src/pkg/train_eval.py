@@ -227,7 +227,7 @@ class TrainTestModels:
             self.train(epoch)
             self.test(epoch)
             
-            print(f"-- learning rate : {self.scheduler.get_last_lr()}")
+            print(f"-- learning rate : {self.scheduler.get_last_lr()}") 
             
     def get_loss_accuracy(self) -> dict:
         """ 
