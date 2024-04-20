@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torchviz import make_dot
 import pkg.models as m
 from pkg.functions import get_counts_weights
 
@@ -74,6 +75,19 @@ class Get_Configuration_Details:
     def get_save_path(self) -> str:
         return self._save_path
     
+    def get_model_diagram(self) -> None:
+        x = torch.randn(1, 1, 2163, 2069)
+        vis_graph = make_dot(self._model(x), params=dict(self._model.named_parameters()))
+        vis_graph.view()  
+    
+    def get_epochs(self) -> int:
+        return self._epochs
+    
+    def get_threshold(self) -> float:
+        return self._threshold
+    
+    def set_threshold(self, threshold: float) -> None:
+        self._threshold = threshold
     
 class Peak_Detection_Configuration(Get_Configuration_Details):
     """
@@ -84,7 +98,8 @@ class Peak_Detection_Configuration(Get_Configuration_Details):
     """
     def __init__(self, paths, datasets, device, save_path=None): 
         super().__init__()
-        self._model = m.Multi_Class_CNN2(output_channels=1)
+        # self._model = m.Multi_Class_CNN2(output_channels=1)
+        self._model = m.ResNetBinaryClassifier()
         self._feature = "peak"
         self._classes = 2
         self._labels = [0,1]
@@ -94,6 +109,7 @@ class Peak_Detection_Configuration(Get_Configuration_Details):
         self._weights = get_counts_weights(paths, datasets, self._classes)
         self._criterion = nn.BCEWithLogitsLoss(pos_weight=self._weights.to(device))
         self._save_path = save_path
+        self._epochs = 20
 
 
 class Photon_Energy_Configuration(Get_Configuration_Details):
@@ -105,21 +121,22 @@ class Photon_Energy_Configuration(Get_Configuration_Details):
     """ 
     def __init__(self, paths, datasets, device, save_path=None): 
         super().__init__()
-        self._model = m.Multi_Class_CNN1()
+        # self._model = m.Multi_Class_CNN1()
+        self._model = m.SimpleBenchMarkCNN()
         self._feature = "photon_energy"
         self._classes = 3
-        self._labels = [1,2,3]
+        self._labels = [0,1,2]
         self._attribute_mapping = {
-            6e3: 1,
-            7e3: 2,
-            8e3: 3
+            6e3: 0,
+            7e3: 1,
+            8e3: 2
         }
         self._threshold = None
         self._learning_rate = 0.000001
         self._weights = get_counts_weights(paths, datasets, self._classes)
         self._criterion = nn.CrossEntropyLoss(weight=self._weights.to(device))
         self._save_path = save_path
-        
+        self._epochs = 5
 
         
         
@@ -135,14 +152,15 @@ class Camera_Length_Configureation(Get_Configuration_Details):
         self._model = m.Multi_Class_CNN1()
         self._feature = "clen"
         self._classes = 3
-        self._labels = [1,2,3]
+        self._labels = [0,1,2]
         self._attribute_mapping = {
-            0.15: 1,
-            0.25: 2,
-            0.35: 3
+            0.15: 0,
+            0.25: 1,
+            0.35: 2
         }
         self._threshold = None
         self._learning_rate = 0.00001
         self._weights = get_counts_weights(paths, datasets, self._classes)
         self._criterion = nn.CrossEntropyLoss(weight=self._weights.to(device))
         self._save_path = save_path
+        self._epochs = 5

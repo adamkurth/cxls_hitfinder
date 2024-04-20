@@ -6,7 +6,6 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from pkg import *
 
-
 def parse_arguments():
     parser = argparse.ArgumentParser(description='PyTorch Training for Peak Detection')
     parser.add_argument('--datasets', nargs='+', type=int, default=[1, 4], help='List of dataset indices')
