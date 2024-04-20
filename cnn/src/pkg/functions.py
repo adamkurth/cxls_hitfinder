@@ -236,8 +236,12 @@ def get_counts_weights(paths: object, datasets: list, classes: int) -> torch.Ten
         torch.Tensor: weight tensor to use as an argument for the loss function.
     """
     
-    
-    size = torch.zeros(classes)
+    if classes == 2:
+        size = torch.zeros(classes)
+        # return torch.ones(1)
+    else:
+        # size = torch.zeros(len(datasets))
+        return torch.ones(classes)
     
     paths.refresh_all()
 

@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import logging
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, roc_curve, auc
 import matplotlib.pyplot as plt
 from pkg import *
 from torch.cuda.amp import GradScaler, autocast
@@ -31,7 +31,6 @@ class TrainTestModels:
         """
         self.train_loader, self.test_loader = cfg['loader']
         self.optimizer = cfg['optimizer']
-        self.epochs = cfg['num_epochs']
         self.device = cfg['device']
         self.batch = cfg['batch_size']
         self.scheduler = cfg['scheduler']
@@ -44,9 +43,10 @@ class TrainTestModels:
         self.labels = feature_class.get_labels()
         self.learning_rate = feature_class.get_learning_rate()
         self.save_path = feature_class.get_save_path()
+        self.epochs = feature_class.get_epochs()
         
         self.optimizer = self.optimizer(self.model.parameters(), lr=self.learning_rate)
-        self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.1, patience=2, threshold=0.1)
+        self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.1, patience=3, threshold=0.1)
         
         self.plot_train_accuracy = np.zeros(self.epochs)
         self.plot_train_loss = np.zeros(self.epochs)
@@ -56,8 +56,11 @@ class TrainTestModels:
         
         self.logger = logging.getLogger(__name__)
         self.scaler = GradScaler()
+        
+        self.fpr = 0
+        self.tpr = 0
+        self.roc_auc = 0
 
-           
     def train(self, epoch:int) -> None:
         
         """
@@ -68,30 +71,39 @@ class TrainTestModels:
 
         self.model.train()
         for inputs, labels, attributes in self.train_loader:
-            inputs, labels = inputs.to(self.device), labels.to(self.device)
+            inputs[0] = inputs[0].unsqueeze(1)
+            for i in inputs:
+                # inputs, labels = inputs.to(self.device), labels.to(self.device)
+                i = i.to(self.device)
 
-            self.optimizer.zero_grad()
-            
-            with autocast():
-                score = self.model(inputs)
-                image_attribute = attributes[self.feature]
+                self.optimizer.zero_grad()
                 
-                self.feature_class.format_image_attributes(image_attribute)
-                image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
-                
-                loss = self.criterion(score, image_attribute)
-
-            self.scaler.scale(loss).backward()
-            self.scaler.step(self.optimizer)
-            self.scaler.update()
-
-            running_loss_train += loss.item()
-
-            self.feature_class.format_prediction(score)
-            predictions = self.feature_class.get_formatted_prediction()
+                with autocast():
+                    score = self.model(i)
+                    image_attribute = attributes[self.feature]
                     
-            accuracy_train += (predictions == image_attribute.to(self.device)).float().sum()
-            total_predictions += torch.numel(image_attribute)
+                    self.feature_class.format_image_attributes(image_attribute)
+                    image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
+                    
+                    # print("Input shape:", score.shape)
+                    # print("----- score : ", score)
+                    # print("Target shape:", image_attribute.shape)
+                    # print("----- target : ", image_attribute)
+
+                    
+                    loss = self.criterion(score, image_attribute)
+
+                self.scaler.scale(loss).backward()
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+
+                running_loss_train += loss.item()
+
+                self.feature_class.format_prediction(score)
+                predictions = self.feature_class.get_formatted_prediction()
+                        
+                accuracy_train += (predictions == image_attribute.to(self.device)).float().sum()
+                total_predictions += torch.numel(image_attribute)
             
         loss_train = running_loss_train / len(self.train_loader)  # Assuming you want to average over all batches
         self.plot_train_loss[epoch] = loss_train
@@ -115,7 +127,7 @@ class TrainTestModels:
         self.model.eval()
         with torch.no_grad():
             for inputs, labels, attributes in self.test_loader:
-                inputs, labels = inputs.to(self.device), labels.to(self.device)
+                inputs, labels = inputs[1].to(self.device), labels.to(self.device)
 
                 with autocast():
                     score = self.model(inputs)
@@ -158,6 +170,7 @@ class TrainTestModels:
         plt.grid()
         plt.xlabel('epoch')
         plt.ylabel('loss/accuracy')
+        plt.title(f'Loss and Accuracy for {self.feature} with {self.model.__class__.__name__}')
         plt.legend(['accuracy train','accuracy test','loss train','loss test'])
         plt.show()
     
@@ -171,7 +184,7 @@ class TrainTestModels:
 
         with torch.no_grad():
             for inputs, labels, attributes in self.test_loader:  # Assuming self.loader[1] is the testing data loader
-                inputs, labels = inputs.to(self.device), labels.to(self.device)
+                inputs, labels = inputs[1].to(self.device), labels.to(self.device)
 
                 with autocast():
                     score = self.model(inputs)
@@ -192,13 +205,13 @@ class TrainTestModels:
         all_predictions = np.array(all_predictions)
 
         # Compute confusion matrix
-        print(f'-- Labels      : {all_labels}')
-        print(f'-- Predictions : {all_predictions}')
+        # print(f'-- Labels      : {all_labels}')
+        # print(f'-- Predictions : {all_predictions}')
         self.cm = confusion_matrix(all_labels, all_predictions, labels=self.labels, normalize='true')
 
         # Plotting the confusion matrix
         plt.matshow(self.cm, cmap="Blues")
-        plt.title('Confusion Matrix')
+        plt.title(f'Confusion Matrix for {self.feature} with {self.model.__class__.__name__}')
         plt.colorbar()
         plt.ylabel('True Label')
         plt.xlabel('Predicted Label')
@@ -262,3 +275,58 @@ class TrainTestModels:
             torch.save(self.model.state_dict(), path)
         else:
             torch.save(self.model.state_dict(), self.save_path)
+            
+    def find_optimal_threshold(self) -> None:
+        """
+        This function finds the optimal threshold for the model.
+        """
+        
+        self.model.eval()
+        probabilities = []
+        true_labels = []
+        
+        with torch.no_grad():
+            for inputs, labels, attributes in self.train_loader:
+                inputs, labels = inputs[1].to(self.device), labels.to(self.device)
+                
+                image_attribute = attributes[self.feature]
+                self.feature_class.format_image_attributes(image_attribute)
+                image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
+                
+                score = self.model(inputs)
+                
+                probabilities.extend(torch.sigmoid(score).cpu().numpy())
+                true_labels.extend(image_attribute.cpu().numpy())
+                
+        probabilities = np.array(probabilities)
+        true_labels = np.array(true_labels)
+        
+        self.fpr, self.tpr, thresholds = roc_curve(true_labels, probabilities)
+        self.roc_auc = auc(self.fpr, self.tpr)
+        
+        print(f'--- ROC AUC : {self.roc_auc}')
+        
+        optimal_idx = np.argmax(self.tpr - self.fpr)
+        optimal_threshold = thresholds[optimal_idx]
+        
+        print(f'--- Optimal threshold : {optimal_threshold}')
+        
+        self.feature_class.set_threshold(optimal_threshold)
+        
+        print(f'--- confirm threshold : {self.feature_class.get_threshold()}')
+                
+    def plot_roc_curve(self) -> None:
+        """
+        This function plots the ROC curve of the model.
+        """
+        
+        plt.figure()
+        plt.plot(self.fpr, self.tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % self.roc_auc)
+        plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('Receiver Operating Characteristic')
+        plt.legend(loc="lower right")
+        plt.show()
