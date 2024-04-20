@@ -24,9 +24,9 @@ This study primarily employs the Dectris Eiger 4M detector, with a focus on X-ra
 
 In this research, we specifically analyze the variables of interaction distance (camera length, denoted as "clen") and photon energy. Camera length is examined at increments of 0.15, 0.25, and 0.35 meters, while photon energy is tested at 6, 7, and 8 keV. These variables are organized into three discrete levels each, resulting in a matrix of nine unique combinations of these variables. This structured approach allows for a systematic examination of how each variable combination impacts the scattering patterns and the resultant data quality.
 
-Parameter matrix for `camlen` and `keV`:
+Parameter matrix for `camera length` and `photon energy`:
 
-| Dataset (`01`-`09`) | camlen (m) | photon energy (keV) |
+| Dataset (`01`-`09`) | camera length (m) | photon energy (keV) |
 |---------------|------------|---------------------|
 | `01`          | 0.15        | 6                   |
 | `02`          | 0.15        | 7                   |
