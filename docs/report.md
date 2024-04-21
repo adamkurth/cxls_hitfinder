@@ -322,7 +322,20 @@ pkg/
 The script `process_directory.py`, handles most of this. This script is found in `cnn/src` and is responsible for taking the simulated images from `images/peaks` and casting every pixel value to a binary value (0 or 1) based on a threshold. It is known that the simulated images contain no noise, thus the threshold can be set very low to identify all of the peaks. The script will then save the labeled images in `images/labels` for further use after the model training. This is important to keep for the identification of proteins based on the location of Bragg peaks, if this would be a helpful addition to the project and this will not be implemented in the model for training. The script also takes the corresponding water-background image from `images/water` (of the specific dataset) and overlays the peaks with the water background image, saving the images in `images/peaks_water_overlay`. These are the images are the only images that will be used in the model training.
 
 #### Model Architecture:
+
+The project employs CNNs because of their capability to perform heirarchical feature extraction which is important for our uses for peak detection. Early layers capture basic details, while deeper layers integrate these into more complex pattern, thus infering prediction for the camera distance and photon energy parameters. 
+
+The implemented architecture is defined by these parameters. After training is completed, the model predicts sequentially; whether there are peaks present in the image (peak detection), if so, it predicts photon energy then camera length. The model is trained in a pipeline style format, where the `pipe.py` file is instantiated and passed in classes corresponding to each attribute that hold the saved model data. The diagram below illustrates the model architecture:
+
+![Figure 3](./diagrams/png/deeplearningmodel-1.png "Model Architecture")
+
+The `pipe.py` file is responsible for running the method `run` which takes in an image tensor. This will first run the image through the trained peak detector model. If a peak is detected, it will then run the image through the photon energy and camera length models to identify the parameters.
+
+This being a binary classification problem, was deceptively difficult since futher inspection of the data did not show very outstanding peak intensities that could be easily identified, even with using convolutional layers. The model **must** be given both the `peaks` and `peak_water_overlay` images to help identify the features of the peaks, or else the model will give a very low accuracy and risk overfitting. At this stage, we use the `ResNet` 
+
+
 <!-- talk about pipeline as well -->
+
 For this project we utilized convolutional neural networks (CNN) using pytorch. CNNs are an excellent for for this task because of their ability to perform hierarchical feature extraction. This is crucial for x-ray scattering images where different layers can learn to identify various features, from peaks detection or specific shapes indicative of photon energy levels and camera length. The spatial hierarchy of features in CNNs mirrors the physical structure within x-ray scattering images. Early layers capture basic details, while deeper layers integrate these into more complex patterns that are vital for accurate predictions.
 
 Define DATALOADER, MODEL, LOSS FUNCTION, OPTIMIZER, and TRAINING LOOP.
