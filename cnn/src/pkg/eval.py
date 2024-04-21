@@ -99,8 +99,8 @@ class Peak_Detection_Configuration(Get_Configuration_Details):
     """
     def __init__(self, paths, datasets, device, save_path=None): 
         super().__init__()
-        # self._model = m.Multi_Class_CNN2(output_channels=1)
-        self._model = m.ResNetBinaryClassifier()
+        self._model = m.Multi_Class_CNN2(output_channels=1)
+        # self._model = m.ResNetBinaryClassifier()
         self._feature = "peak"
         self._classes = 2
         self._labels = [0,1]
@@ -110,7 +110,7 @@ class Peak_Detection_Configuration(Get_Configuration_Details):
         self._weights = get_counts_weights(paths, datasets, self._classes)
         self._criterion = nn.BCEWithLogitsLoss(pos_weight=self._weights.to(device))
         self._save_path = save_path
-        self._epochs = 10
+        self._epochs = 20
 
 
 class Photon_Energy_Configuration(Get_Configuration_Details):

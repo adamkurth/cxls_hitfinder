@@ -331,59 +331,6 @@ class SelfAttention(nn.Module):
 
         return self.unifyheads(out)
 
-class Multi_Class_CNN3(nn.Module):
-    def __init__(self, input_channels=1, input_size=(2163, 2069), output_channels=3):
-        super(Multi_Class_CNN3, self).__init__()
-
-        # Initial Convolutional Layers
-        self.conv1 = nn.Conv2d(input_channels, 32, kernel_size=25, stride=5, padding=1)
-        self.bn1 = nn.BatchNorm2d(32)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=5, stride=1, padding=1)
-        self.bn2 = nn.BatchNorm2d(64)
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
-        self.dropout1 = nn.Dropout(0.25)
-
-        # Adding more convolutional layers
-        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
-        self.bn3 = nn.BatchNorm2d(128)
-        self.conv4 = nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1)
-        self.bn4 = nn.BatchNorm2d(256)
-        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.dropout2 = nn.Dropout(0.25)
-
-        # Use a dummy input to pass through the conv layers to determine output size
-        dummy_input = torch.autograd.Variable(torch.zeros(1, input_channels, *input_size))
-        output_size = self._get_conv_output(dummy_input)
-
-        # Fully Connected Layers
-        self.fc1 = nn.Linear(output_size, 512)
-        self.fc2 = nn.Linear(512, output_channels)
-        
-    def _get_conv_output(self, x):
-        x = self.pool(F.relu(self.bn1(self.conv1(x))))
-        x = self.pool(F.relu(self.bn2(self.conv2(x))))
-        x = self.pool2(F.relu(self.bn3(self.conv3(x))))
-        x = self.pool2(F.relu(self.bn4(self.conv4(x))))
-        n_size = x.data.view(1, -1).size(1)
-        return n_size
-    
-    def forward(self, x):
-        x = self.dropout1(self.pool(F.relu(self.bn1(self.conv1(x)))))
-        x = self.dropout1(self.pool(F.relu(self.bn2(self.conv2(x)))))
-        x = self.dropout2(self.pool2(F.relu(self.bn3(self.conv3(x)))))
-        x = self.dropout2(self.pool2(F.relu(self.bn4(self.conv4(x)))))
-        x = x.view(-1, self.num_flat_features(x))
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
-    
-    def num_flat_features(self, x):
-        size = x.size()[1:]  # Excluding the batch dimension
-        num_features = 1
-        for s in size:
-            num_features *= s
-        return num_features
-
 
 
 

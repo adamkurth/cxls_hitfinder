@@ -258,14 +258,15 @@ def get_counts_weights(paths: object, datasets: list, classes: int) -> torch.Ten
             empty_files = [file for file in all_files if 'empty' in os.path.basename(file)]
             
             if classes == 2:
-                if directory_type == 'peaks_water_overlay':
+                if directory_type == 'peaks_water_overlay' or directory_type == 'peaks':
                     size[0] += len(normal_files)
-                    size[1] += len(empty_files)
+                    if directory_type == 'peaks_water_overlay':
+                        size[1] += len(empty_files)
             else:
                 if directory_type == 'peaks_water_overlay':
                     size[index] = len(all_files)
     if classes == 2:
-        weights = torch.Tensor([size[1]/size[0]])
+        weights = torch.Tensor([size[1]/size[0]]) 
     else:           
         weights = 1. / size
         weights = weights / weights.min()
