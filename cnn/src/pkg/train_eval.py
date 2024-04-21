@@ -214,7 +214,7 @@ class TrainTestModels:
 
         # Plotting the confusion matrix
         plt.matshow(self.cm, cmap="Blues")
-        plt.title(f'Confusion Matrix for {self.feature} with {self.model.__class__.__name__}')
+        plt.title(f'CM for {self.feature} {self.model.__class__.__name__}')
         plt.colorbar()
         plt.ylabel('True Label')
         plt.xlabel('Predicted Label')
