@@ -22,9 +22,9 @@ submit_job() {
   printf "#SBATCH --error=%s.err\n\n" "$run" >> "${slurmfile}"
 
   # Command lines to load environment and run the Python script
-  echo "module load mamba/latest" >> "${slurmfile}"
-  echo "source activate adam" >> "${slurmfile}"
-  echo "python ${path}" >> "${slurmfile}"
+  echo "module load mamba/latest" >> "${slurmfile}" # Load the mamba module
+  echo "source activate adam" >> "${slurmfile}" # adam is the name of the conda environment
+  echo "python ${path}" >> "${slurmfile}" # Run the Python script
   # Submit the job
   sbatch -p "$partition" -q "$qos" -t "${hours}:00:00" "${slurmfile}"
 }
