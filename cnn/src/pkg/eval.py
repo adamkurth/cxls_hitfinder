@@ -75,10 +75,11 @@ class Get_Configuration_Details:
     def get_save_path(self) -> str:
         return self._save_path
     
-    def get_model_diagram(self) -> None:
-        x = torch.randn(1, 1, 2163, 2069)
+    def get_model_diagram(self, filename:str, file_path:str, device) -> None:
+        x = torch.randn(1, 1, 2163, 2069).to(device)
         vis_graph = make_dot(self._model(x), params=dict(self._model.named_parameters()))
-        vis_graph.view()  
+        vis_graph.render(filename=filename, directory=file_path, format='png', view=True)
+        # vis_graph.view()  
     
     def get_epochs(self) -> int:
         return self._epochs
@@ -122,7 +123,7 @@ class Photon_Energy_Configuration(Get_Configuration_Details):
     def __init__(self, paths, datasets, device, save_path=None): 
         super().__init__()
         # self._model = m.Multi_Class_CNN1()
-        self._model = m.SimpleBenchMarkCNN()
+        self._model = m.MultiClassCNN()
         self._feature = "photon_energy"
         self._classes = 3
         self._labels = [0,1,2]
@@ -149,7 +150,7 @@ class Camera_Length_Configureation(Get_Configuration_Details):
     """
     def __init__(self, paths, datasets, device, save_path=None): 
         super().__init__()
-        self._model = m.Multi_Class_CNN1()
+        self._model = m.MultiClassCNN()
         self._feature = "clen"
         self._classes = 3
         self._labels = [0,1,2]
