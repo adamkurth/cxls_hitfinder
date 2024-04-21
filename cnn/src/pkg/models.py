@@ -384,34 +384,47 @@ class Multi_Class_CNN3(nn.Module):
             num_features *= s
         return num_features
 
-    
-class SimpleBenchMarkCNN(nn.Module):
+
+
+
+class MultiClassCNN(nn.Module):
     def __init__(self, input_channels=1, output_channels=3, input_size=(2163, 2069)):
-        super(SimpleBenchMarkCNN, self).__init__()
+        super(MultiClassCNN, self).__init__()
         
+        # Parameters for the convolutional layer
+        self.kernel_size = 10
+        self.stride = 1
+        self.padding = 1
+
         # Define a single convolutional layer
-        self.conv1 = nn.Conv2d(input_channels, 8, kernel_size=3, stride=1, padding=1)  # Keeps the size the same due to padding
+        self.conv1 = nn.Conv2d(input_channels, 8, kernel_size=self.kernel_size, stride=self.stride, padding=self.padding)
         
-        # Calculate the output size after the convolution (same as input size due to padding)
-        output_size = (input_size[0], input_size[1])
+        # Function to calculate output dimensions dynamically
+        self.output_height = self.calculate_output_dimension(input_size[0], self.kernel_size, self.stride, self.padding)
+        self.output_width = self.calculate_output_dimension(input_size[1], self.kernel_size, self.stride, self.padding)
         
         # Flatten the output dimensions for the fully connected layer
-        self.fc_size = 8 * output_size[0] * output_size[1]  # Number of features from the conv layer
+        self.fc_size = 8 * self.output_height * self.output_width  # Dynamic number of features
         
         # Define a fully connected layer that maps to the output channels
         self.fc = nn.Linear(self.fc_size, output_channels)
+
+    def calculate_output_dimension(self, input_dim, kernel_size, stride, padding):
+        return ((input_dim + 2 * padding - kernel_size) // stride) + 1
     
     def forward(self, x):
         # Apply the convolutional layer followed by a ReLU activation function
         x = F.relu(self.conv1(x))
         
         # Flatten the output for the fully connected layer
-        x = x.view(-1, self.fc_size)  # Flatten the tensor for the fully connected layer
+        x = x.view(-1, self.fc_size)  # Dynamically flatten the tensor
         
         # Apply the fully connected layer
         x = self.fc(x)
         
         return x
+
+
     
 
 class ResNetBinaryClassifier(nn.Module):
@@ -419,21 +432,16 @@ class ResNetBinaryClassifier(nn.Module):
         super(ResNetBinaryClassifier, self).__init__()
 
         # Initialize the ResNet model
-        base_model = models.resnet50(weights=ResNet50_Weights.DEFAULT)  # Using ResNet-18; choose other versions as needed
-        
+        base_model = models.resnet50(weights=ResNet50_Weights.DEFAULT)  
         # Adjust ResNet to take input_channels other than 3 (RGB)
         self.first_conv_layer = nn.Conv2d(input_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
-        
         # Replace the first conv layer of ResNet
         base_model.conv1 = self.first_conv_layer
-
         # Utilize the ResNet architecture but exclude the final fully connected layer
         self.feature_extractor = nn.Sequential(*list(base_model.children())[:-1])
-        
         # Calculate the size of the flattened features from ResNet
         with torch.no_grad():
             self.feature_size = self._get_resnet_feature_size(input_channels, input_size)
-        
         # Fully connected layers
         self.fc1 = nn.Linear(self.feature_size, 512)
         self.fc2 = nn.Linear(512, 1)  # Output layer for binary classification

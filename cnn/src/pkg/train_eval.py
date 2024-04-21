@@ -159,7 +159,7 @@ class TrainTestModels:
         print(f'Test loss: {loss_test}')
         print(f'Test accuracy: {accuracy_test}')          
                     
-    def plot_loss_accuracy(self) -> None:
+    def plot_loss_accuracy(self, path:str = None) -> None:
         """ 
         This function plots the loss and accuracy of the training and testing sets per epoch.
         """
@@ -172,10 +172,13 @@ class TrainTestModels:
         plt.ylabel('loss/accuracy')
         plt.title(f'Loss and Accuracy for {self.feature} with {self.model.__class__.__name__}')
         plt.legend(['accuracy train','accuracy test','loss train','loss test'])
+        
+        if path != None:
+            plt.savefig(path)
+            
         plt.show()
-    
 
-    def plot_confusion_matrix(self) -> None:
+    def plot_confusion_matrix(self, path:str = None) -> None:
         """ 
         This function plots the confusion matrix of the testing set.
         """
@@ -215,6 +218,10 @@ class TrainTestModels:
         plt.colorbar()
         plt.ylabel('True Label')
         plt.xlabel('Predicted Label')
+        
+        if path != None:
+            plt.savefig(path)
+            
         plt.show()
 
 
@@ -315,7 +322,7 @@ class TrainTestModels:
         
         print(f'--- confirm threshold : {self.feature_class.get_threshold()}')
                 
-    def plot_roc_curve(self) -> None:
+    def plot_roc_curve(self, path:str = None) -> None:
         """
         This function plots the ROC curve of the model.
         """
@@ -329,4 +336,9 @@ class TrainTestModels:
         plt.ylabel('True Positive Rate')
         plt.title('Receiver Operating Characteristic')
         plt.legend(loc="lower right")
+        
+        if path != None:
+            plt.savefig(path)
+            
         plt.show()
+
