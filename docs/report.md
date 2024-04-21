@@ -242,8 +242,8 @@ photon_energy = 8000
 In the diagrams below, the water-background noise images are displayed for two distinct photon energies (6000 eV and 8000 eV) with camera lengths held constant at 0.15 meters. It is clear with these images juxtaposed, the closer the protein sample is to the detector, the more pronounced the water-ring becomes. This phenomenon is due to the increased scattering of x-rays by the water content within the protein sample, resulting in a more prominent water background noise in the diffraction images. By incorporating this water background noise into the simulations, we aim to enhance the authenticity of the diffraction data, thereby facilitating more accurate and reliable analysis of the protein crystal structures.
 
 <p float="left">
-    <img src="./diagrams/water01.png" alt="water01.h5" width="400" />
-    <img src="./diagrams/water07.png" alt="water07.h5" width="400" /> 
+    <img src="./diagrams/png/water01.png" alt="water01.h5" width="400" />
+    <img src="./diagrams/png/water07.png" alt="water07.h5" width="400" /> 
 </p>
 
 *Figure 1: Water background noise comparison. Left: (`water01.png`) photon energy is 6000 eV, with camera length is 0.15m. Right: (`water07.png`) photon energy is 8000 eV, with camera length is 0.15m. Both images can be found in `docs/diagrams/`*
@@ -325,6 +325,10 @@ The script `process_directory.py`, handles most of this. This script is found in
 
 The project employs CNNs because of their capability to perform heirarchical feature extraction which is important for our uses for peak detection. Early layers capture basic details, while deeper layers integrate these into more complex pattern, thus infering prediction for the camera distance and photon energy parameters. 
 
+**TO BE CONTINUED...**
+
+#### Model Pipeline:
+
 The implemented architecture is defined by these parameters. After training is completed, the model predicts sequentially; whether there are peaks present in the image (peak detection), if so, it predicts photon energy then camera length. The model is trained in a pipeline style format, where the `pipe.py` file is instantiated and passed in classes corresponding to each attribute that hold the saved model data. The diagram below illustrates the model architecture:
 
 
@@ -358,6 +362,9 @@ Next, the model must predict the camera length. This is a regression problem, an
 Ideas were thrown around to use a model that predicts the parameters all at once, but we came to the conclusion that sequential order would be the best approach. Otherwise, the model would have to predict camera length and photon energy independently from one another, which is contradictory to the nature of the data because they are dynamically dependent on one another. 
 
 Instead of implimenting one neural network where each output node is a different combination of the possible attributes, 3 neural networks were implimented. We have done this in a pipeline sytle format. We instantiate the file pipe.py and pass in classes correspoding to each attribute that hold the saved model data. This will be elaborated on more in the training section. Once instantiated, we can run the method run in pipe.py, which takes in an image tensor. This will first run it though our trained peak detector model. This serves as a filter, were is a peak is not detected, it will not run through the other models. If an image is detected, it will run through the photon energy and camera length models and identify the 
+
+![Water-Background Sequence](./diagrams/png/estimationseq.png "Water-Background Sequence")
+
 
 #### Training:
 <!-- make sure to reference how much data was used, how to was put into the data loader, and the 80/20 split -->
