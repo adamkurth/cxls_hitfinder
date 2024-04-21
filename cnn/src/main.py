@@ -4,6 +4,7 @@ import os
 import torch
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+import torchvision
 import logging
 from pkg import *
 
@@ -25,6 +26,10 @@ def main(args):
     print('CUDA available:', torch.cuda.is_available())
     print('CUDA version:', torch.version.cuda)
     print('CUDNN version:', torch.backends.cudnn.version())
+    print('CUDA device count:', torch.cuda.device_count())
+    print('CUDA device name:', torch.cuda.get_device_name())
+    print('CUDA device:', torch.cuda.current_device())
+
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     logging.info(f'Using device: {device}')
 
