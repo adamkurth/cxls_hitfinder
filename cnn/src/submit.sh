@@ -22,9 +22,9 @@ submit_job() {
   printf "#SBATCH --error=%s.err\n\n" "$run" >> "${slurmfile}"
 
   # Command lines to load environment and run the Python script
-  echo "module load python/3.7.1" >> "${slurmfile}"
-  echo "python ${path}cnn.py" >> "${slurmfile}" # Assuming the script is named cnn.py and located in the specified path
-
+  echo "module load mamba/latest" >> "${slurmfile}"
+  echo "source activate adam" >> "${slurmfile}"
+  echo "python ${path}" >> "${slurmfile}"
   # Submit the job
   sbatch -p "$partition" -q "$qos" -t "${hours}:00:00" "${slurmfile}"
 }
