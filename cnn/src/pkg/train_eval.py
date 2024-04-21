@@ -46,7 +46,7 @@ class TrainTestModels:
         self.epochs = feature_class.get_epochs()
         
         self.optimizer = self.optimizer(self.model.parameters(), lr=self.learning_rate)
-        self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.1, patience=3, threshold=0.1)
+        self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.1, patience=2, threshold=0.1)
         
         self.plot_train_accuracy = np.zeros(self.epochs)
         self.plot_train_loss = np.zeros(self.epochs)
@@ -70,7 +70,7 @@ class TrainTestModels:
         running_loss_train, accuracy_train, predictions, total_predictions = 0.0, 0.0, 0.0, 0.0
 
         self.model.train()
-        for inputs, labels, attributes in self.train_loader:
+        for inputs, _, attributes in self.train_loader:
             inputs[0] = inputs[0].unsqueeze(1)
             for i in inputs:
                 # inputs, labels = inputs.to(self.device), labels.to(self.device)
@@ -126,8 +126,9 @@ class TrainTestModels:
         
         self.model.eval()
         with torch.no_grad():
-            for inputs, labels, attributes in self.test_loader:
-                inputs, labels = inputs[1].to(self.device), labels.to(self.device)
+            for inputs, _, attributes in self.test_loader:
+                # inputs, labels = inputs[1].to(self.device), labels.to(self.device)
+                inputs = inputs[1].to(self.device)
 
                 with autocast():
                     score = self.model(inputs)
@@ -186,8 +187,10 @@ class TrainTestModels:
         all_predictions = []
 
         with torch.no_grad():
-            for inputs, labels, attributes in self.test_loader:  # Assuming self.loader[1] is the testing data loader
-                inputs, labels = inputs[1].to(self.device), labels.to(self.device)
+            for inputs, _, attributes in self.test_loader:  # Assuming self.loader[1] is the testing data loader
+                # inputs, labels = inputs[1].to(self.device), labels.to(self.device)
+                inputs = inputs[1].to(self.device)
+
 
                 with autocast():
                     score = self.model(inputs)
@@ -294,7 +297,9 @@ class TrainTestModels:
         
         with torch.no_grad():
             for inputs, labels, attributes in self.train_loader:
-                inputs, labels = inputs[1].to(self.device), labels.to(self.device)
+                # inputs, labels = inputs[1].to(self.device), labels.to(self.device)
+                inputs = inputs[1].to(self.device)
+
                 
                 image_attribute = attributes[self.feature]
                 self.feature_class.format_image_attributes(image_attribute)

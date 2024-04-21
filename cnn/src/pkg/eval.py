@@ -106,11 +106,11 @@ class Peak_Detection_Configuration(Get_Configuration_Details):
         self._labels = [0,1]
         self._attribute_mapping = {}
         self._threshold = 0.5
-        self._learning_rate = 0.0001
+        self._learning_rate = 0.001
         self._weights = get_counts_weights(paths, datasets, self._classes)
         self._criterion = nn.BCEWithLogitsLoss(pos_weight=self._weights.to(device))
         self._save_path = save_path
-        self._epochs = 20
+        self._epochs = 10
 
 
 class Photon_Energy_Configuration(Get_Configuration_Details):
