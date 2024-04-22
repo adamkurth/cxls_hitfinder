@@ -225,7 +225,7 @@ Both, photon energy and camera length are specified in the `Eiger4M.geom` file, 
 
 The start of the `Eiger4M.geom` file is structured as follows:
 ```
-;Sabine -Eiger for CXLS simulations
+; Eiger for CXLS simulations
 ; EIGER 4M (2162, 2068) 
 ; Camera length (in m) and photon energy (eV)
 
@@ -351,7 +351,6 @@ This being a binary classification problem, was deceptively difficult since futh
 
 For this project we utilized convolutional neural networks (CNN) using pytorch. CNNs are an excellent for for this task because of their ability to perform hierarchical feature extraction. This is crucial for x-ray scattering images where different layers can learn to identify various features, from peaks detection or specific shapes indicative of photon energy levels and camera length. The spatial hierarchy of features in CNNs mirrors the physical structure within x-ray scattering images. Early layers capture basic details, while deeper layers integrate these into more complex patterns that are vital for accurate predictions.
 
-<<<<<<< HEAD
 Define DATALOADER, MODEL, LOSS FUNCTION, OPTIMIZER, and TRAINING LOOP.
 
 The model architecture is defined by the parameters that need to be predicted. Immediately after training, the model first must predict whether or not there are any peaks on the image. This being a binary classification problem, was deceptively difficult since futher inspection of the data did not show very outstanding peak intensities that could be easily identified, even with using convolutional layers. The model **must** be given both the `peaks` and `peak_water_overlay` images to help identify the features of the peaks, or else the model will give a very low accuracy and risk overfitting. At this stage, we use the `ResNet` 
@@ -366,66 +365,6 @@ Instead of implimenting one neural network where each output node is a different
 
 ![Water-Background Sequence](./diagrams/png/estimationseq.png "Water-Background Sequence")
 
-=======
-##### Binary CNN
-This paragraph will be on binary classification once that is finished.
-
-##### Multi-Class CNN
-For both multi-class classification features we used the same model, trained twice for to save different sets of training parameters. Unlike with binary classification, we were able to use a simpler CNN architecture and still get excellent training and evaluation results. 
-
-<p float="left">
-    <img src="./diagrams/photon_energy_model.png.png" alt="water01.h5" width="500" /> 
-</p>
-
-This model only impliments a convolutional layer, the ReLu activation function, and a fully connected final layer to output the scores for the three classes. 
-
-```python
-class MultiClassCNN(nn.Module):
-    def __init__(self, input_channels=1, output_channels=3, input_size=(2163, 2069)):
-        super(MultiClassCNN, self).__init__()
-    
-        # Parameters for the convolutional layer
-        self.kernel_size = 10
-        self.stride = 1
-        self.padding = 1
-
-        # Define a single convolutional layer
-        self.conv1 = nn.Conv2d(input_channels, 8, kernel_size=self.kernel_size, stride=self.stride, padding=self.padding)
-        
-        # Function to calculate output dimensions dynamically
-        self.output_height = self.calculate_output_dimension(input_size[0], self.kernel_size, self.stride, self.padding)
-        self.output_width = self.calculate_output_dimension(input_size[1], self.kernel_size, self.stride, self.padding)
-        
-        # Flatten the output dimensions for the fully connected layer
-        self.fc_size = 8 * self.output_height * self.output_width  # Dynamic number of features
-        
-        # Define a fully connected layer that maps to the output channels
-        self.fc = nn.Linear(self.fc_size, output_channels)
-
-    def calculate_output_dimension(self, input_dim, kernel_size, stride, padding):
-        return ((input_dim + 2 * padding - kernel_size) // stride) + 1
-    
-    def forward(self, x):
-        # Apply the convolutional layer followed by a ReLU activation function
-        x = F.relu(self.conv1(x))
-        
-        # Flatten the output for the fully connected layer
-        x = x.view(-1, self.fc_size)  # Dynamically flatten the tensor
-        
-        # Apply the fully connected layer
-        x = self.fc(x)
-        
-        return x
-```
-
- 
-##### CNN Pipeline 
-Instead of implimenting one neural network where each output node is a different combination of the possible attributes, 3 neural networks were implimented. We have done this in a pipeline sytle format. We instantiate the file pipe.py and pass in classes correspoding to each attribute that hold the saved model data. This will be elaborated on more in the training section. Once instantiated, we can run the method run in pipe.py, which takes in an image tensor. This will first run it though our trained peak detector model. This serves as a filter, were is a peak is not detected, it will not run through the other models. If an image is detected, it will run through the photon energy and camera length models and identify the 
-
-<!-- <p float="left">
-    <img src="./diagrams/water01.png" alt="water01.h5" width="500" />
-</p> -->
->>>>>>> progress-Everett
 
 #### Training:
 <!-- make sure to reference how much data was used, how to was put into the data loader, and the 80/20 split -->
@@ -439,36 +378,9 @@ The specific configuration, implemented through a class for each attribute, mana
 
 Critical elements in the specific configuration are the models, learning rates, criterion, and weights. Each attribute required a different model and learning rate due to performance improvements observed during training. The criterion varies with the first attribute, peaks, being a binary classification problem where BCEWithLogitsLoss is more appropriate, whereas CrossEntropyLoss is used for multi-class classification tasks like photon energy and camera length. Introducing weights to the training process was particularly advantageous for peak identification. The simulated data does not have an even distribution of data points with and without peaks, thus using weights with the criterion significantly improved the speed at which the model learned.
 
-
-
-\[
-\text{BCEWithLogitsLoss}\\
-L = \frac{1}{N} \sum_{i=1}^{N} \left( l_{i} \right)
-\]
-- \( \sigma \) denotes the sigmoid function.
-- \( x_{i} \): The input logits from the last layer of the model. These are the logits (outputs of the model before the sigmoid activation).
-- \( y_{i} \): The target labels for each input. These should be either 0 or 1. These are the true binary labels.
-- \( w_{i} \): Optional weights applied to the loss, typically used in cases of class imbalance. The weights increase the loss proportionally to their value. These are the weights associated with each sample.
-- \( N \): Total number of elements in the input batch.
-
-
-\[
-\text{CorssEntrpyLoss} \\
-L = - \sum_{i=1}^{N} \sum_{c=1}^{M} y_{i,c} \log(\hat{y}_{i,c})
-\]
-
-- \( N \) is the number of samples in the dataset.
-- \( M \) is the number of class categories.
-- \( y_{i,c} \) is a binary indicator (0 or 1) indicating whether class label \( c \) is the correct classification for sample \( i \).
-- \( \hat{y}_{i,c} \) represents the predicted probability that sample \( i \) belongs to class \( c \).
-
 In our program, we instantiate each specific attribute class and then create a corresponding training and evaluation class, train_eval.py, with the specific attribute class and global configuration dictionary as arguments. These arguments are organized in the constructor into global variables for all the encapsulated data. The training is initiated by calling the epoch_loop function within train_eval. This function loops over the specified number of epochs, and at each epoch, it calls a training and a testing function. This setup is advantageous because it allows for immediate evaluation of the updated parameters using the testing data, providing continuous feedback on the model’s performance during training.
 
 Inside the training function, two key enhancements from the standard PyTorch training loop are implemented: mixed precision training, which reduces the computational cost by utilizing both float32 and float16 tensors, and the addition of an accuracy calculation to directly measure how well the training data matches its labels.
-
-<p float="left">
-    <img src="./diagrams/epoch_loop.png" alt="water01.h5" width="500" />
-</p>
 
 In the testing function, we utilize the loss results from the test to dynamically control our scheduler, ReduceLROnPlateau, which has proven effective in improving outcomes by adjusting the learning rate during the training process based on performance, especially in binary classification scenarios.
 
