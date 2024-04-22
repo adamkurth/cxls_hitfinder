@@ -8,23 +8,25 @@ Repository can be found here: [cxls_hitfinder](https://github.com/adamkurth/cxls
 
 ### Abstract:
 
-This paper explores the application of deep learning techniques at Arizona State University's Compact X-ray Light Source (CXLS) to analyze experimental data from various modalities, primarily focusing on X-ray crystallography using the Dectris Eiger 4M detector. Traditional methods of predicting photon energy and sample-detector distance are challenged by dynamic scattering and intrinsic noise, prompting the need for more advanced solutions. Utilizing the CrystFEL software, we simulate diffraction images for protein 1IC6.pdb across a matrix of nine variable combinations involving photon energies and camera length. Our approach employs convolutional neural networks (CNNs), testing various architectures for binary classification of peak detection and prediction of experimental parameters. This research not only aims to refine parameter prediction in X-ray crystallography but also extends the model to incorporate material science spectroscopy data, enhancing the analytical capabilities of CXLS. By integrating different experimental contexts, we anticipate broader applications and improved experimental outcomes.
+This paper explores the application of deep learning techniques at Arizona State University's (ASU) Compact X-ray Light Source (CXLS) to analyze experimental data from various modalities, primarily focusing on X-ray crystallography using the Dectris Eiger 4M detector. Traditional methods of predicting photon energy and sample-detector distance are challenged by dynamic scattering and intrinsic noise, prompting the need for more advanced solutions. Utilizing the CrystFEL software, we simulate diffraction images for protein 1IC6.pdb across a matrix of nine variable combinations involving photon energies and camera length. Our approach employs convolutional neural networks (CNNs), testing various architectures for binary classification of peak detection and prediction of experimental parameters. The scope of this research wishes to further expand this with modifications in the architecture to accomadate for spectroscopy data, although this is beyond the extent of this manuscript. By integrating different experimental conditions, we anticipate broader applications and improved experimental outcomes.
 
 ### Introduction:
 
-At Arizona State University (ASU), we are pioneering the development of the world's first Compact X-ray Light Source (CXLS). This groundbreaking apparatus is capable of emitting x-ray pulses at the femtosecond scale, operating at a frequency of a kilohertz. While the functionality of the CXLS mirrors that of existing technologies in terms of its capabilities, it distinguishes itself through its remarkably reduced size. Traditional x-ray light sources necessitate the use of linear accelerators extending over a mile in length. In contrast, the accelerator integral to the CXLS measures approximately 60 feet, significantly reducing its physical footprint.
+At Arizona State University (ASU), we are at the forefront of developing the world's first Compact X-ray Light Source (CXLS), a scaled-down version of the traditionally large X-ray Free-Electron Lasers (XFELs), which typically extend over a kilometer. This revolutionary device emits X-ray pulses at the femtosecond scale and operates at a kilohertz frequency. Despite its scaled-down size, approximately 60 feet in length compared to the mile-long accelerators used in traditional sources, the CXLS retains the functional capabilities of its larger counterparts.
 
-This compact design not only translates into substantial cost savings but also paves the way for the proliferation of such machines. The accessibility and affordability of the CXLS are poised to have a transformative impact on a wide array of research domains, including materials science and pharmaceuticals. By democratizing access to advanced x-ray light sources, ASU is at the forefront of enabling groundbr eaking discoveries and innovations across these critical fields.
+The compact nature of the CXLS not only results in significant cost reductions but also facilitates the broader distribution of these advanced technological units. The affordability and accessibility provided by the CXLS have the potential to revolutionize a variety of research fields, including materials science and pharmaceuticals, positioning ASU as a leader in fostering innovative research across these vital areas.
 
-The CXLS is equipped with a Dectris Eiger 4M detector, which is integral to the facility's x-ray crystallography capabilities. This detector is renowned for its high resolution and sensitivity, enabling the capture of detailed diffraction patterns from protein crystals. However, the analysis of these diffraction patterns is a complex and labor-intensive process, often requiring manual intervention to correct for inaccuracies in the data. The dynamic scattering patterns resulting from the water content within the protein samples further complicate the analysis, necessitating the development of innovative methodologies to enhance the accuracy and efficiency of the process.
+Central to the functionality of the CXLS is the Dectris Eiger 4M detector, known for its high resolution and sensitivity, which are crucial for capturing intricate diffraction patterns from protein crystals. However, the analysis of these patterns is complex and often labor-intensive, necessitating manual corrections to address data inaccuracies. Additionally, the CXLS's low flux X-ray beam complicates peak detection in both crystallography and spectroscopy images. The presence of dynamic scattering patterns, largely due to the water content within protein samples, further complicates analyses. These challenges underscore the need for developing advanced methodologies that improve both the precision and efficiency of data processing at the CXLS.
 
 ### Methods:
 
-This study primarily employs the Dectris Eiger 4M detector, with a focus on X-ray crystallography. Typically, this method requires manual estimation of photon energy and the distance between the protein crystal sample and the detector, often necessitating subsequent adjustments and revision. Such estimations are further complicated by dynamic scattering patterns, which arise from intrinsic noise due to water within the protein samples.
+In this investigation, we utilize the capabilities of the Dectris Eiger 4M detector to refine X-ray crystallography methodologies at the CXLS facility. Given the challenges posed by the low flux X-ray beam and the complex relationship between photon energy and sample-detector distances, our research employs advanced computational strategies to enhance data analysis precision.
 
-In this research, we specifically analyze the variables of interaction distance (camera length, denoted as "clen") and photon energy. Camera length is examined at increments of 0.15, 0.25, and 0.35 meters, while photon energy is tested at 6, 7, and 8 keV. These variables are organized into three discrete levels each, resulting in a matrix of nine unique combinations of these variables. This structured approach allows for a systematic examination of how each variable combination impacts the scattering patterns and the resultant data quality.
+To mitigate these complexities, we have developed CNNs designed to improve the accuracy of predicting photon energy and sample-detector distances. The CNNs are trained on simulated diffraction images generated via the `pattern_sim` module of the CrystFEL[1] software suite. These simulations closely mimic the scattering patterns and intrinsic noise characteristic of real experimental data, providing a robust foundation for training our deep learning models.
 
-Parameter matrix for `camera length` and `photon energy`:
+Our experimental design is meticulously structured around a matrix of variables that include camera length, or "clen", and photon energy, assessed at three increments—0.15, 0.25, and 0.35 meters for camera length, and 6, 7, and 8 keV for photon energy. This setup results in nine distinct experimental conditions, each crafted to evaluate the CNNs' capability to process and analyze diverse and intricate data scenarios:
+
+Below is the matrix of parameters used in the data generation process:
 
 | Dataset (`01`-`09`) | camera length (m) | photon energy (keV) |
 |---------------|------------|---------------------|
@@ -38,8 +40,14 @@ Parameter matrix for `camera length` and `photon energy`:
 | `08`          | 0.35        | 7                   |
 | `09`          | 0.35        | 8                   |
 
-This matrix serves as the foundation for the subsequent data generation and analysis, where the backend programming focus enables the simulated images to dynamically adjust for different datasets to be loaded. The data generation process involves the simulation of diffraction images using the CrystFEL software suite, renowned for its capabilities in snapshot serial crystallography. The diffraction images are generated based on a specific protein (1IC6.pdb) and tailored to the nine unique parameter combinations outlined in the matrix.
+This systematic approach not only facilitates the rigorous examination of the various image appearences under different experimental conditions. Each parameter combination within the matrix is utilized to generate specific diffraction images, enabling a thorough analysis of the CNN’s efficacy under different experimental conditions. The application of these parameters in our CNN model is intended to create a tool that is adept at managing the complexities of real-world experimental settings. 
 
+First step is detecting whether or not a given image contains peaks, this is a binary classification problem. The nature of the data is such that the peaks are not very pronounced at our experimental parameters. Despite this deceptively simple task, the model must be given both the `peaks` and `peak_water_overlay` images to help identify the features of the peaks, or else the model will give a very low accuracy and risk overfitting. At this stage, we use the `ResNet` (?) architecture, which has been proven to be effective in image classification tasks. 
+
+After the model predicts the presense of peaks in the image data, the model must predict the parameters next. This is implemented in `pipe.py` and is the most crucial part of the model. At this stage, the model predicts first photon energy, and camera length in that order. This ordering is arbitrary, but both influence the appearance of the realistic diffraction images (called overlay images). 
+
+As photon energy increases, the photons will transfer more momentum during scattering causing a different scattered angle. And as the distance of the detector and the sample increase, the solid angle of the scattered photons will create a larger area of incident photons on the detector face. This conic shape of the scattered photons is what creates the water-ring in the diffraction images.
+ 
 #### Overall Structure of the Repository:
 
 The repository structure is organized to facilitate the efficient management of the project's codebase, documentation, and data. 
@@ -73,50 +81,38 @@ cxls_hitfinder/
     │   ├── temp/
     │   ├── water/
     ├── scripts/
-    │   ├── 01_09_dir_struc.sh
+    │   ├── param_01_09_directory_struct.sh
     │   ├── assign_params.py
     │   ├── checks.sh
     │   ├── peak_water_overlay_label_dir_struc.sh
     │   ├── reformat-h5.py
     │   ├── reformat-h5.sh
     │   ├── rename_directories_parameters.py
-    │   ├── test/
     ├── requirements.txt
-    ├── hitfinder_env.**yml**
     └── README.md
 ```
 
-- `.gitignore` and `.gitkeep` are files that specify which files and directories to ignore in Git, namely ignoring the large HDF5 files.
-- `.gitmodules` is a file that defines the Git submodules for `waterbackground_subtraction`.
-- `cnn/` is a directory containing files related to the Convolutional Neural Network (CNN) implementation.
-    - `models/` is a subdirectory that stores trained CNN models.
-    - `src/` is a subdirectory that contains source code for the CNN implementation.
-        - `pkg/` is a subdirectory that holds the main Python package for implementation.
-            - `waterbackground_subtraction/` is a subdirectory and submodule cloned in the Python module `pkg` that contains code related to water background detection and analysis.
-                - `finder/` is a Python package that includes code to analyze and estimate peaks using three-ring integration technique.
+- `.gitignore` and `.gitkeep` are utilized to manage the exclusion of files in Git, specifically targeting large HDF5 files.
+- `.gitmodules` outlines the submodules for the project, notably `waterbackground_subtraction`.
+- `cnn/` houses all files pertinent to the Convolutional Neural Network (CNN) models and source code.
+    - `models/` contains saved states of trained CNN models.
+    - `src/` holds the source code implementing the CNN.
+        - `pkg/` includes the primary Python package.
+            - `waterbackground_subtraction/` houses code for detecting and analyzing water backgrounds within protein samples.
+                - `finder/` contains the methods used for peak analysis through a three-ring integration technique.
 - `docs/` is a directory for storing documentation for this project.
-    - `diagrams/` is a subdirectory for storing diagrams used.
-    - `directions/` is a subdirectory for storing directions.
-    - `report.md` is a Markdown file that serves as a report.
-- `images/` is a directory for storing images used in the project, every dataset (`01`-`09`) is a unique combination of the parameter matrix.
-    - `labels/` is a subdirectory for storing labeled images with 01-09 directories.
-    - `peaks/` is a subdirectory for storing peak images with 01-09 directories.
-    - `peaks_water_overlay/` is a subdirectory for storing peak images with water overlays with 01-09 directories.
-    - `water/` is a subdirectory for storing the background water images, with 01-09 directories.
+    - `diagrams/` stores visual aids and diagrams.
+    - `directions/` includes guidelines and procedural instructions for the project.
+    - `report.md` is a comrehensive Markdown report detailing project findings.
+- `images/` stores all imagery data, organized by specific data sets corresponding to parameter combinations.
+  - `labels/`, `peaks/`, `peaks_water_overlay/`, and `water/` subdirectories categorize images based on their processing stage and content.
 - `scripts/` is a directory for storing scripts useful to use on the supercomputer.
-    - `param_01_09_directory_struct.sh` is a shell script for directory structure management of datasets 01-09, of the form `01_6keV_clen01`.
-    - `assign_params.py` is a Python script for assigning parameters of a directory in `images/**/**`.
-    - `checks.sh` is a shell script for performing checks of the number of images in `peaks`, `labels`, and `peak_water_overlay` (all in the main `images` directory) and all assigned the correct attributes.
-    - `peak_water_overlay_label_dir_struc.sh` is a shell script for creating a directory structure for `peaks`, `water`, and `label` images, of which all datasets directories are created.
-    - `reformat-h5.py` is a Python script for reformatting the name of H5 files (useful for uniform naming structure).
-    - `rename_directories_parameters.py` is a Python script for renaming directories based on parameters combinations (e.g. `01_6keV_clen01`).
-- `requirements.txt` is a file that lists the project's dependencies for easy environment setup.
-- `hitfinder_env.yml` is a YAML file that contains the environment configuration for the project.
-- `README.md` is a Markdown file that provides an overview of the project.
+  - `param_01_09_directory_struct.sh`, `assign_params.py`, `checks.sh`, `peak_water_overlay_label_dir_struc.sh`, `reformat-h5.py`, `reformat-h5.sh`, and `rename_directories_parameters.py` provide a range of functionalities from managing directory structures to renaming files for consistency.
+- `requirements.txt` lists all dependencies required for the project, ensuring reproducibility of the environment.
+- `README.md` offers a general introduction and guide to navigating the project repository.
 
 #### `pkg` Module:
-
-The `pkg` directory contains the main Python module for the project, which is responsible for the implementation of the Convolution Neural Network (CNN) model. The package is structured as follows:
+The `pkg` directory forms the core Python module for our project, housing the implementation of the Convolutional Neural Network (CNN) model. This package is meticulously organized as follows:
 
 ``` bash
 pkg/
@@ -128,7 +124,6 @@ pkg/
     ├── eval.py
     ├── train_eval.py
     ├── pipe.py
-    ├── arch.py
     ├── functions.py
     ├── transform.py
     ├── waterbackground_subtraction/
@@ -142,22 +137,19 @@ pkg/
     │   │   ├── threshold.py
 ```
 
-The following is a brief overview of the files in the `pkg` module:
-- `__init__.py` is the initialization file for the Python module.
-- `process.py` contains the class responsible for most of the preprocessing of the data, including the generation of the labeled images and overlaying the peaks with the water background images.
-- `path.py` contains the dynamic path configurations for the datasets selected for preprocessing, training, and testing. 
-- `data.py` is responsible for loading the data and creating the dataset for the models using PyTorch's `Dataset` class.
+Key Components of the `pkg` Module:
+-`__init__.py` initializes the Python module, setting up namespace and imports.
+- `process.py` handles most of the data preprocessing, including image labeling and overlaying peaks with water background images.
+- `path.py` manages dynamic path configurations for datasets across preprocessing, training, and testing phases.
+- `data.py` oversees data loading and dataset creation for models, utilizing PyTorch's `Dataset` class.
 - `model.py` contains the classes for the various models used in the project.
-- `eval.py` is responsible for evaluating the model's performance.
-- `train_eval.py` is responsible for training and evaluating the model, but is not implemented in the project.
-- `pipe.py` contains the pipeline for the model, which predicts the parameters based on the images from the DataLoader.
-- `arch.py` contains the architecture of the models used in the project.
+- `eval.py` assesses the performance of the models.
+- `train_eval.py` orchestrates model training and evaluation.
+- `pipe.py` establishes the pipeline for model predictions based on `DataLoader` images.
 - `functions.py` contains the miscellaneous functions used in the `pkg` module.
 
-**CLARIFY: Do we use `train_eval.py` in the project? Will we use `arch.py` in the project?**
-
 #### `waterbackground_subtraction` Submodule:
-The `waterbackground_subtraction` directory is a submodule from [waterbackground_subtraction](https://github.com/adamkurth/waterbackground_subtraction.git) under a refined branch called `simplified_for_hitfinder`, that contains code related to water background detection and analysis. The `finder` subdirectory includes code to analyze and estimate peaks using a three-ring integration technique. The following is a brief overview of the files in the `waterbackground_subtraction` directory:
+The `waterbackground_subtraction` directory is a submodule from [waterbackground_subtraction](https://github.com/adamkurth/waterbackground_subtraction.git) under the branch `simplified_for_hitfinder`. This submodule is dedicated to water background detection and analysis, crucial for accurate peak estimation using advanced techniques. Here's a breakdown of its structure:
 
 ``` bash
 waterbackground_subtraction/
@@ -170,15 +162,17 @@ waterbackground_subtraction/
     │   ├── region.py
     │   ├── threshold.py
 ```
+Files within `waterbackground_subtraction`:
 
 - `__init__.py` is the initialization file for the Python package.
-- `background.py` contains the refined class for single and multiple image three-ring integration technique, this is the main file of interest here.
+- `background.py` implements sophisticated single and multiple image three-ring integration techniques for background analysis.
 - `datahandler.py` contains the class for handling the data for the overwritting of the stream files, not necessary for the project.
-- `imageprocessor.py` contains the class for processing and visualizing the images.
-- `region.py` contains the class for the region of interest (ROI) for the images. This is utilized in the `background.py` three-ring integration technique.
-- `threshold.py` contains the class for the threshold of the images also used in the `background.py` three-ring integration technique.
+- `imageprocessor.py` processes and visualizes images for further analysis.
+- `region.py` defines regions of interest (ROI) used in the three-ring integration techniques described in `background.py`.
+- `threshold.py` sets thresholds for image analysis, also used in the three-ring techniques.
 
 #### Data Directory Structure:
+
 Located in the root directory of the repository, the `images/` directory contains the data used in the project. The data is structured as follows:
 
 ``` bash
@@ -211,19 +205,19 @@ Note the contents of `images/`:
 
 #### Data Generation:
 
-During the data generation phase of the project, we utilize the `pattern_sim`[5] module in CrystFEL software. This software is excellent for generating simulation diffraction images under conditions similar to those of the CXLS. The specific protein used in this study is designated as 1IC6.pdb, obtained from the RCSB Protein Data Bank[2]. Initially, our testing focuses on a medium-sized unit cell, to limit the complexities of the analysis but presents a promising avenue for future research enhancements.
+As stated previously, we use the `pattern_sim` module in CrystFEL. For our simulations, we use the protein designated as 1IC6.pdb, sourced from the RCSB Protein Data Bank[2]. Initially, our experiments are concentrated on a medium-sized unit cell, simplifying the complexity of the analysis while offering potential for future research expansion.
 
-Before commencing the `pattern_sim` simulations, it was essential to create a crystal file and a corresponding water-background image tailored to the specific photon energy and camera length parameter combination as stated in the parameter matrix above. Using the [reborn](https://gitlab.com/kirianlab/reborn)[3] software, we generate the required water-background images for all of the datasets. In reborn, the `water_background.py` the program generates the dynamic water-background images for the specified photon energy and camera length parameters, where these parameters are accessed from the `Eiger.geom` file. The water-background images are then stored in the `images/water` directory for subsequent use in the simulated images.
+Prior to initiating the `pattern_sim` simulations, it was imperative to construct a crystal file and generate corresponding water-background images tailored to specific photon energy and camera length parameters as outlined in our parameter matrix. To create these images, we utilize the [reborn](https://gitlab.com/kirianlab/reborn)[3] software, where the `water_background.py` script dynamically produces water-background images for designated photon energy and camera length settings extracted from the `Eiger.geom` file. These images are subsequently stored in the `images/water` directory for integration into our simulations
 
-For generating the crystal file, we employ the SFALL[4] (`sfall`) module from the CCP4 software suite to compute the structure factors of the protein under study. This module outputs an `.hkl` file, which contains the Miller indices associated with the specific `.pdb` file. Additionally, the resulting crystal file is a text document that captures essential details such as the unit-cell dimensions and the crystal’s space group. These data elements are critical as they ensure that our simulations faithfully reproduce the expected diffraction patterns from the protein crystal, facilitating accurate analysis of its structural properties.
+For the crystal file generation, we employ the sfall module from the CCP4[4] software suite to calculate the structure factors of the protein under study. This process yields an `.hkl` file containing the Miller indices relevant to the specific PDB file. The crystal file itself is a text document detailing critical structural information such as unit-cell dimensions and the crystal's space group. This information is crucial to ensuring that our simulations accurately replicate the expected diffraction patterns from the protein crystal, thereby enabling precise structural analysis.
 
 ##### Water-Background Noise:
 
 The water-background noise is a the main point of interest in this project. To preface, the water-background noise is a dynamic variable that adjusts based on the combination of photon energy and camera length.
 
-Both, photon energy and camera length are specified in the `Eiger4M.geom` file, which the reborn's `water_background.py` script accesses. The water background noise is essential as it mimics the scattering patterns resulting from the water content within the protein samples, thereby enhancing the authenticity of the diffraction data.
+Both, photon energy and camera length are specified in the `Eiger4M.geom` file, which the reborn's `water_background.py` script accesses. Water background noise is crucial as it accurately simulates the scattering patterns resulting from the water content within protein samples, thereby enhancing the authenticity of the simulated diffraction data.
 
-The start of the `Eiger4M.geom` file is structured as follows:
+The configuration of the `Eiger4M.geom` file is as follows:
 ```
 ; Eiger for CXLS simulations
 ; EIGER 4M (2162, 2068) 
@@ -232,19 +226,19 @@ The start of the `Eiger4M.geom` file is structured as follows:
 ;example!
 clen = 0.35
 photon_energy = 8000
-
-; adu_per_photon needs a relatively recent CrystFEL version.  If your version is
-; older, change it to adu_per_eV and set it to one over the photon energy in eV
-
 ;...
 ```
+Below are visual representations of water-background noise for two specific photon energies (6000 eV and 8000 eV), with the camera length held constant at 0.15 meters. These images demonstrate how variations in photon energy influence the momentum transfer during X-ray scattering, which directly affects the scattering angle. This change in angle impacts the solid angle of the scattered photons, altering the area they cover on the detector's surface. Higher photon energies result in greater momentum transfers, leading to altered scattering angles. Simultaneously, the fixed camera length means that as the distance between the sample and the detector increases, the solid angle expands, spreading the incident photons across a broader area of the detector face. This expansion and the conic dispersion pattern of the scattered photons are responsible for the formation of the water-ring observed in the diffraction images.
 
-In the diagrams below, the water-background noise images are displayed for two distinct photon energies (6000 eV and 8000 eV) with camera lengths held constant at 0.15 meters. It is clear with these images juxtaposed, the closer the protein sample is to the detector, the more pronounced the water-ring becomes. This phenomenon is due to the increased scattering of x-rays by the water content within the protein sample, resulting in a more prominent water background noise in the diffraction images. By incorporating this water background noise into the simulations, we aim to enhance the authenticity of the diffraction data, thereby facilitating more accurate and reliable analysis of the protein crystal structures.
+The proximity of the protein sample to the detector critically influences the visibility of the water-ring effect. This phenomenon occurs because the increased scattering of X-rays by the water within the protein sample intensifies the water background noise in the diffraction images. By integrating this noise into our simulations, we aim to enhance the authenticity of the data. This, in turn, improves the accuracy and reliability of our analyses of protein crystal structures, offering deeper insights into their molecular arrangements.
 
 <p float="left">
     <img src="./diagrams/png/water01.png" alt="water01.h5" width="400" />
     <img src="./diagrams/png/water07.png" alt="water07.h5" width="400" /> 
 </p>
+
+
+As photon energy increases, the photons will transfer more momentum during scattering causing a different scattered angle. And as the distance of the detector and the sample increase, the solid angle of the scattered photons will create a larger area of incident photons on the detector face. This conic shape of the scattered photons is what creates the water-ring in the diffraction images.
 
 *Figure 1: Water background noise comparison. Left: (`water01.png`) photon energy is 6000 eV, with camera length is 0.15m. Right: (`water07.png`) photon energy is 8000 eV, with camera length is 0.15m. Both images can be found in `docs/diagrams/`*
 
@@ -262,24 +256,25 @@ The `submit.sh` script, is located in the `scripts/` directory and is responsibl
 
 ```bash
 #!/bin/bash
-# Global configurations
-NAME="$1" # Experiment or job prefix
-TASKS="$2" #Number of tasks to request for each job
-PHOTON_ENERGY="$3" # Photon energy input
-# ...
 
-# Pattern_sim configurations
-GEOM="Eiger4M.geom" # Geometry file
-CRYSTAL="1IC6.cell" # Crystal file
-INPUT="1IC6.pdb.hkl" # Constant HKL input file 
-POINT_GROUP="4/mmm"                                            
-CRYSTAL_SIZE_MIN=1000  
+# Global configurations
+NAME="$1"                              # Experiment or job prefix
+TASKS="$2"                             # Number of tasks to request for each job
+PHOTON_ENERGY="$3"                     # Photon energy input
+# ...
+# pattern_sim specifications
+GEOM="Eiger4M.geom"                    # Geometry file
+CRYSTAL="1IC6.cell"                    # Crystal file
+INPUT="1IC6.pdb.hkl"                   # Constant HKL input file
+POINT_GROUP="4/mmm"
+CRYSTAL_SIZE_MIN=1000
 CRYSTAL_SIZE_MAX=1000
 SPECTRUM="tophat"
 SAMPLING=7
 BANDWIDTH=0.01
 N_PHOTONS=3e8
-BEAM_RADIUS=5e-6                                                              
+BEAM_RADIUS=5e-6
+NUMBER_OF_PATTERNS=10000
 # ...
 ```
 
