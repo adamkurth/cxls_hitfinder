@@ -469,8 +469,8 @@ class DualInputCNN(nn.Module):
             nn.MaxPool2d(2),
         )
         
-        self.attention1 = ChannelAttention(32)  
-        self.attention2 = ChannelAttention(32)  
+        # self.attention1 = ChannelAttention(32)  
+        # self.attention2 = ChannelAttention(32)  
 
         # Helper function to calculate output dimensions
         def calc_output_dim(input_dim, kernel_size, stride, padding):
@@ -498,8 +498,8 @@ class DualInputCNN(nn.Module):
         features1 = self.branch1(noisy_img)
         features2 = self.branch2(clean_img)
 
-        features1 = self.attention1(features1)
-        features2 = self.attention2(features2)
+        # features1 = self.attention1(features1)
+        # features2 = self.attention2(features2)
 
         # Flatten the output from each branch and concatenate along dimension 1 (feature dimension)
         combined_features = torch.cat((features1.view(features1.size(0), -1), 

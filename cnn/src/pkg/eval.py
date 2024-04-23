@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-# from torchviz import make_dot
+from torchviz import make_dot
 import pkg.models as m
 from pkg.functions import get_counts_weights, save_h5
 from scipy.signal import find_peaks
@@ -78,7 +78,8 @@ class Get_Configuration_Details:
     
     def get_model_diagram(self, filename:str, file_path:str, device) -> None:
         x = torch.randn(1, 1, 2163, 2069).to(device)
-        vis_graph = make_dot(self._model(x), params=dict(self._model.named_parameters()))
+        self._model = self._model.to(device)
+        vis_graph = make_dot(self._model(x,x), params=dict(self._model.named_parameters()))
         vis_graph.render(filename=filename, directory=file_path, format='png', view=True)
         # vis_graph.view()  
     
