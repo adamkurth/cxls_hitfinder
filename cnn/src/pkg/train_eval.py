@@ -72,38 +72,37 @@ class TrainTestModels:
         self.model.train()
         for inputs, _, attributes in self.train_loader:
             inputs[0] = inputs[0].unsqueeze(1)
-            for i in inputs:
-                # inputs, labels = inputs.to(self.device), labels.to(self.device)
-                i = i.to(self.device)
+            # inputs, labels = inputs.to(self.device), labels.to(self.device)
+            inputs[0], inputs[1] = inputs[0].to(self.device), inputs[1].to(self.device)
 
-                self.optimizer.zero_grad()
+            self.optimizer.zero_grad()
+            
+            with autocast():
+                score = self.model(inputs[0], inputs[1])
+                image_attribute = attributes[self.feature]
                 
-                with autocast():
-                    score = self.model(i)
-                    image_attribute = attributes[self.feature]
+                self.feature_class.format_image_attributes(image_attribute)
+                image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
+                
+                # print("Input shape:", score.shape)
+                # print("----- score : ", score)
+                # print("Target shape:", image_attribute.shape)
+                # print("----- target : ", image_attribute)
+
+                
+                loss = self.criterion(score, image_attribute)
+
+            self.scaler.scale(loss).backward()
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
+
+            running_loss_train += loss.item()
+
+            self.feature_class.format_prediction(score)
+            predictions = self.feature_class.get_formatted_prediction()
                     
-                    self.feature_class.format_image_attributes(image_attribute)
-                    image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
-                    
-                    # print("Input shape:", score.shape)
-                    # print("----- score : ", score)
-                    # print("Target shape:", image_attribute.shape)
-                    # print("----- target : ", image_attribute)
-
-                    
-                    loss = self.criterion(score, image_attribute)
-
-                self.scaler.scale(loss).backward()
-                self.scaler.step(self.optimizer)
-                self.scaler.update()
-
-                running_loss_train += loss.item()
-
-                self.feature_class.format_prediction(score)
-                predictions = self.feature_class.get_formatted_prediction()
-                        
-                accuracy_train += (predictions == image_attribute.to(self.device)).float().sum()
-                total_predictions += torch.numel(image_attribute)
+            accuracy_train += (predictions == image_attribute.to(self.device)).float().sum()
+            total_predictions += torch.numel(image_attribute)
             
         loss_train = running_loss_train / len(self.train_loader)  # Assuming you want to average over all batches
         self.plot_train_loss[epoch] = loss_train
@@ -128,10 +127,12 @@ class TrainTestModels:
         with torch.no_grad():
             for inputs, _, attributes in self.test_loader:
                 # inputs, labels = inputs[1].to(self.device), labels.to(self.device)
-                inputs = inputs[1].to(self.device)
+                inputs[0] = inputs[0].unsqueeze(1)
+                # inputs, labels = inputs.to(self.device), labels.to(self.device)
+                inputs[0], inputs[1] = inputs[0].to(self.device), inputs[1].to(self.device)
 
                 with autocast():
-                    score = self.model(inputs)
+                    score = self.model(inputs[0], inputs[1])
                                                         
                     image_attribute = attributes[self.feature]
                     
@@ -189,11 +190,13 @@ class TrainTestModels:
         with torch.no_grad():
             for inputs, _, attributes in self.test_loader:  # Assuming self.loader[1] is the testing data loader
                 # inputs, labels = inputs[1].to(self.device), labels.to(self.device)
-                inputs = inputs[1].to(self.device)
+                inputs[0] = inputs[0].unsqueeze(1)
+                # inputs, labels = inputs.to(self.device), labels.to(self.device)
+                inputs[0], inputs[1] = inputs[0].to(self.device), inputs[1].to(self.device)
 
 
                 with autocast():
-                    score = self.model(inputs)
+                    score = self.model(inputs[0], inputs[1])
 
                 # Flatten and append labels to all_labels
                 image_attribute = attributes[self.feature].reshape(-1)

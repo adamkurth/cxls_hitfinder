@@ -7,6 +7,7 @@ from torchvision.models.resnet import ResNet50_Weights
 from torchvision.models.densenet import DenseNet121_Weights
 import os
 import torch.nn.functional as F
+from scipy.signal import find_peaks
 
 def get_models():
     """
@@ -409,3 +410,61 @@ class ResNetBinaryClassifier(nn.Module):
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return x
+
+
+class PeakNet(nn.Module):
+    def __init__(self, input_size):
+        super(PeakNet, self).__init__()
+        self.fc1 = nn.Linear(input_size, 128)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(128, 64)
+        self.fc3 = nn.Linear(64, 1)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)
+        x = self.relu(x)
+        x = self.fc3(x)
+        return x
+    
+class DualInputCNN(nn.Module):
+    def __init__(self, input_height=2163, input_width=2069):
+        super(DualInputCNN, self).__init__()
+        
+        # Assume input dimensions [BatchSize, Channels, Height, Width] = [B, 1, 64, 64]
+        output_height = input_height // 2  # After one pooling layer
+        output_width = input_width // 2   # After one pooling layer
+        
+        # Define the first branch for noisy images
+        self.branch1 = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+        )
+        # Define the second branch for clean images
+        self.branch2 = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+        )
+        # Calculate the number of features entering the fully connected layer
+        # Each branch has the same number of output features: output_height * output_width * num_channels
+        num_features_per_branch = output_height * output_width * 32  # 32 is the number of channels from Conv2d
+        total_features = num_features_per_branch * 2  # Two branches
+
+        # Combine features from both branches
+        self.classifier = nn.Sequential(
+            nn.Linear(total_features, 128),
+            nn.ReLU(),
+            nn.Linear(128, 1),
+        )
+    
+    def forward(self, clean_img, noisy_img):
+        features1 = self.branch1(noisy_img)
+        features2 = self.branch2(clean_img)
+        # Flatten the output from each branch and concatenate along dimension 1 (features dimension)
+        combined_features = torch.cat((features1.view(features1.size(0), -1), 
+                                       features2.view(features2.size(0), -1)), dim=1)
+        output = self.classifier(combined_features)
+        return output

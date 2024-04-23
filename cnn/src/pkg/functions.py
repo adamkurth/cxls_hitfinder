@@ -238,7 +238,7 @@ def get_counts_weights(paths: object, datasets: list, classes: int) -> torch.Ten
     
     if classes == 2:
         size = torch.zeros(classes)
-        # return torch.ones(1)
+        return torch.ones(1)
     else:
         # size = torch.zeros(len(datasets))
         return torch.ones(classes)
@@ -260,8 +260,8 @@ def get_counts_weights(paths: object, datasets: list, classes: int) -> torch.Ten
             if classes == 2:
                 if directory_type == 'peaks_water_overlay' or directory_type == 'peaks':
                     size[0] += len(normal_files)
-                    if directory_type == 'peaks_water_overlay':
-                        size[1] += len(empty_files)
+                    # if directory_type == 'peaks_water_overlay':
+                    size[1] += len(empty_files)
             else:
                 if directory_type == 'peaks_water_overlay':
                     size[index] = len(all_files)
