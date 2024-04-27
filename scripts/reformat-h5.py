@@ -5,9 +5,10 @@ import sys
 
 def extract_kev_clen(filename):
     patterns = [
-        r'master_[0-9]+_([0-9]+)keV_clen([0-9]+)_',
-        r'img_([0-9]+)keV_clen([0-9]+)_',
-        r'processed_img_([0-9]+)keV_clen([0-9]+)_'
+        # r'master_[0-9]+_([0-9]+)keV_clen([0-9]+)_',
+        # r'img_([0-9]+)keV_clen([0-9]+)_',
+        # r'processed_img_([0-9]+)keV_clen([0-9]+)_',
+        r'_([0-9]+)keV_clen([0-9]+)_'
     ]
     for pattern in patterns:
         match = re.search(pattern, filename)

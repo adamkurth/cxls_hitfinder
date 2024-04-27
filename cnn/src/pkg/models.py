@@ -469,9 +469,6 @@ class DualInputCNN(nn.Module):
             nn.MaxPool2d(2),
         )
         
-        # self.attention1 = ChannelAttention(32)  
-        # self.attention2 = ChannelAttention(32)  
-
         # Helper function to calculate output dimensions
         def calc_output_dim(input_dim, kernel_size, stride, padding):
             return (input_dim + 2 * padding - (kernel_size - 1) - 1) // stride + 1
@@ -498,9 +495,6 @@ class DualInputCNN(nn.Module):
         features1 = self.branch1(noisy_img)
         features2 = self.branch2(clean_img)
 
-        # features1 = self.attention1(features1)
-        # features2 = self.attention2(features2)
-
         # Flatten the output from each branch and concatenate along dimension 1 (feature dimension)
         combined_features = torch.cat((features1.view(features1.size(0), -1), 
                                        features2.view(features2.size(0), -1)), dim=1)
@@ -508,3 +502,43 @@ class DualInputCNN(nn.Module):
         # Pass the combined features through the classifier to get the final output
         output = self.classifier(combined_features)
         return output
+    
+    
+class MultiClassCNN_Linear(nn.Module):
+    def __init__(self, input_channels=1, output_channels=3, input_size=(2163, 2069)):
+        super(MultiClassCNN_Linear, self).__init__()
+        
+        # # Parameters for the convolutional layer
+        # self.kernel_size = 3
+        # self.stride = 1
+        # self.padding = 1
+
+        # # Define a single convolutional layer
+        # # self.conv1 = nn.Conv2d(input_channels, 8, kernel_size=self.kernel_size, stride=self.stride, padding=self.padding)
+        
+        # # Function to calculate output dimensions dynamically
+        # self.output_height = self.calculate_output_dimension(input_size[0], self.kernel_size, self.stride, self.padding)
+        # self.output_width = self.calculate_output_dimension(input_size[1], self.kernel_size, self.stride, self.padding)
+        
+        # # Flatten the output dimensions for the fully connected layer
+        # self.fc_size = 8 * self.output_height * self.output_width  # Dynamic number of features
+        
+        # Define a fully connected layer that maps to the output channels
+        # self.fc = nn.Linear(self.fc_size, output_channels)
+        self.fc_size = input_size[0] * input_size[1]
+        self.fc = nn.Linear(self.fc_size, 3)
+
+    # def calculate_output_dimension(self, input_dim, kernel_size, stride, padding):
+    #     return ((input_dim + 2 * padding - kernel_size) // stride) + 1
+    
+    def forward(self, x):
+        # Apply the convolutional layer followed by a ReLU activation function
+        # x = self.conv1(x)
+        
+        # Flatten the output for the fully connected layer
+        x = x.view(-1, self.fc_size)  # Dynamically flatten the tensor
+        
+        # Apply the fully connected layer
+        x = self.fc(x)
+        
+        return x

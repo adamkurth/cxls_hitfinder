@@ -30,7 +30,6 @@ class TrainTestModels:
             feature_class: class which holds the feature specific configuration details.
         """
         self.train_loader, self.test_loader = cfg['loader']
-        self.optimizer = cfg['optimizer']
         self.device = cfg['device']
         self.batch = cfg['batch_size']
         self.scheduler = cfg['scheduler']
@@ -44,9 +43,10 @@ class TrainTestModels:
         self.learning_rate = feature_class.get_learning_rate()
         self.save_path = feature_class.get_save_path()
         self.epochs = feature_class.get_epochs()
+        self.optimizer = feature_class.get_optimizer()
         
         self.optimizer = self.optimizer(self.model.parameters(), lr=self.learning_rate)
-        self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.1, patience=5, threshold=0.1)
+        self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.1, patience=3, threshold=0.1)
         
         self.plot_train_accuracy = np.zeros(self.epochs)
         self.plot_train_loss = np.zeros(self.epochs)
@@ -78,7 +78,7 @@ class TrainTestModels:
             self.optimizer.zero_grad()
             
             with autocast():
-                score = self.model(inputs[0], inputs[1])
+                score = self.model(inputs[1])
                 image_attribute = attributes[self.feature]
                 
                 self.feature_class.format_image_attributes(image_attribute)
@@ -132,7 +132,7 @@ class TrainTestModels:
                 inputs[0], inputs[1] = inputs[0].to(self.device), inputs[1].to(self.device)
 
                 with autocast():
-                    score = self.model(inputs[0], inputs[1])
+                    score = self.model(inputs[1])
                                                         
                     image_attribute = attributes[self.feature]
                     
@@ -196,7 +196,7 @@ class TrainTestModels:
 
 
                 with autocast():
-                    score = self.model(inputs[0], inputs[1])
+                    score = self.model(inputs[1])
 
                 # Flatten and append labels to all_labels
                 image_attribute = attributes[self.feature].reshape(-1)
