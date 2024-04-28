@@ -72,21 +72,25 @@ class TrainTestModels:
 
         self.model.train()
         for inputs, labels, attributes in self.train_loader:
-            inputs[0] = inputs[0].unsqueeze(1)
-            labels = labels.to(self.device)
-            inputs[0], inputs[1] = inputs[0].to(self.device), inputs[1].to(self.device)
+            # inputs[0] = inputs[0].unsqueeze(1)
+            # labels = labels.to(self.device)
+            # inputs[0], inputs[1] = inputs[0].to(self.device), inputs[1].to(self.device)
+            
+            model_input = inputs[1].to(self.device)
 
             self.optimizer.zero_grad()
             
             with autocast():
-                score = self.model(inputs[1])
-                image_attribute = attributes[self.feature]
+                score = self.model(model_input)
                 
-                self.feature_class.format_image_attributes(image_attribute)
-                image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
-
+                if self.feature != 'peak_location':
+                    image_attribute = attributes[self.feature]
+                    self.feature_class.format_image_attributes(image_attribute)
+                    true_value = self.feature_class.get_formatted_image_attribute().to(self.device)
+                else:
+                    true_value = labels.to(self.device)
                 
-                loss = self.criterion(score, labels)
+                loss = self.criterion(score, true_value)
 
             self.scaler.scale(loss).backward()
             self.scaler.step(self.optimizer)
@@ -97,8 +101,8 @@ class TrainTestModels:
             self.feature_class.format_prediction(score)
             predictions = self.feature_class.get_formatted_prediction()
                     
-            accuracy_train += (predictions == labels.to(self.device)).float().sum()
-            total_predictions += torch.numel(labels)
+            accuracy_train += (predictions == true_value).float().sum()
+            total_predictions += torch.numel(true_value)
             
         loss_train = running_loss_train / len(self.train_loader)  # Assuming you want to average over all batches
         self.plot_train_loss[epoch] = loss_train
@@ -122,28 +126,32 @@ class TrainTestModels:
         self.model.eval()
         with torch.no_grad():
             for inputs, labels, attributes in self.test_loader:
-                # inputs, labels = inputs[1].to(self.device), labels.to(self.device)
-                inputs[0] = inputs[0].unsqueeze(1)
-                labels = labels.to(self.device)
-                inputs[0], inputs[1] = inputs[0].to(self.device), inputs[1].to(self.device)
+
+                # inputs[0] = inputs[0].unsqueeze(1)
+                # labels = labels.to(self.device)
+                # inputs[0], inputs[1] = inputs[0].to(self.device), inputs[1].to(self.device)
+                
+                model_input = inputs[1].to(self.device)
 
                 with autocast():
-                    score = self.model(inputs[1])
-                                                        
-                    image_attribute = attributes[self.feature]
-                    
-                    self.feature_class.format_image_attributes(image_attribute)
-                    image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
+                    score = self.model(model_input)
+                             
+                    if self.feature != 'peak_location':                           
+                        image_attribute = attributes[self.feature]
+                        self.feature_class.format_image_attributes(image_attribute)
+                        true_value = self.feature_class.get_formatted_image_attribute().to(self.device)
+                    else:
+                        true_value = labels.to(self.device)
                         
-                    loss = self.criterion(score, labels)
+                    loss = self.criterion(score, true_value)
             
                 running_loss_test += loss.item()  # Convert to Python number with .item()
                 
                 self.feature_class.format_prediction(score)
                 predictions = self.feature_class.get_formatted_prediction()
                     
-                accuracy_test += (predictions == labels.to(self.device)).float().sum()
-                total += torch.numel(labels)
+                accuracy_test += (predictions == true_value).float().sum()
+                total += torch.numel(true_value)
 
         loss_test = running_loss_test/self.batch
         self.scheduler.step(loss_test)

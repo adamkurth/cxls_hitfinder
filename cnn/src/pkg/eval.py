@@ -191,7 +191,7 @@ class Peak_Location_Configuration(Get_Configuration_Details):
         super().__init__()
         # self._model = m.MultiClassCNN()
         self._model = m.UNetCustom()
-        self._feature = "peak"
+        self._feature = "peak_location"
         self._classes = 3
         self._labels = None
         self._attribute_mapping = None
