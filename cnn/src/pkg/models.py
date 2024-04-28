@@ -512,3 +512,91 @@ class Linear(nn.Module):
         x = self.fc(x)
         
         return x
+    
+    
+class HeatmapCNN(nn.Module):
+    def __init__(self, input_channels=1, output_channels=1, heatmap_size=(2163, 2069)):
+        super(HeatmapCNN, self).__init__()
+        
+        self.heatmap_size = heatmap_size
+        self.conv1 = nn.Conv2d(input_channels, 16, kernel_size=5, stride=1, padding=2)
+        self.bn1 = nn.BatchNorm2d(16)  # Added batch normalization
+        self.pool = nn.MaxPool2d(kernel_size=4, stride=4, padding=0)
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)  # Additional conv layer
+        self.bn2 = nn.BatchNorm2d(32)  # Added batch normalization
+        self.heatmap_conv = nn.Conv2d(32, output_channels, kernel_size=3, stride=1, padding=1)
+        self.upsample = nn.Upsample(size=heatmap_size, mode='bilinear', align_corners=True)
+
+    def forward(self, x):
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = self.pool(x)
+        x = F.relu(self.bn2(self.conv2(x)))  # Additional relu activation
+        x = self.heatmap_conv(x)
+        x = self.upsample(x)
+        return x
+
+
+
+class DoubleConv(nn.Module):
+    """(convolution => GN => ReLU) * 2"""
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        num_groups = max(1, out_channels // 8)  # Dynamic number of groups
+        self.double_conv = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
+            nn.GroupNorm(num_groups, out_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
+            nn.GroupNorm(num_groups, out_channels),
+            nn.ReLU(inplace=True)
+        )
+
+    def forward(self, x):
+        return self.double_conv(x)
+
+class UNetCustom(nn.Module):
+    def __init__(self):
+        super(UNetCustom, self).__init__()
+        n_channels = 1  # Fixed as per grayscale input
+        n_classes = 1   # Fixed as per single-channel heatmap output
+
+        self.inc = DoubleConv(n_channels, 64)
+        self.down1 = DoubleConv(64, 128)
+        self.down2 = DoubleConv(128, 256)
+        self.down3 = DoubleConv(256, 512)
+        self.up1 = DoubleConv(768, 256)  # Account for concat of features from down3
+        self.up2 = DoubleConv(384, 128)  # Account for concat of features from down2
+        self.up3 = DoubleConv(192, 64)   # Account for concat of features from down1
+        self.outc = nn.Conv2d(64, n_classes, 1)
+
+    def forward(self, x):
+        x1 = self.inc(x)
+        x2 = F.max_pool2d(x1, 2)
+        x2 = self.down1(x2)
+        x3 = F.max_pool2d(x2, 2)
+        x3 = self.down2(x3)
+        x4 = F.max_pool2d(x3, 2)
+        x4 = self.down3(x4)
+        x = F.interpolate(x4, scale_factor=2, mode='bilinear', align_corners=True)
+
+        # Resize x to match x3 dimensions if they don't match
+        if x.size()[2:] != x3.size()[2:]:
+            x = F.interpolate(x, size=x3.size()[2:], mode='bilinear', align_corners=True)
+        x = torch.cat([x, x3], dim=1)
+        x = self.up1(x)
+        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
+
+        # Resize x to match x2 dimensions if they don't match
+        if x.size()[2:] != x2.size()[2:]:
+            x = F.interpolate(x, size=x2.size()[2:], mode='bilinear', align_corners=True)
+        x = torch.cat([x, x2], dim=1)
+        x = self.up2(x)
+        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
+
+        # Resize x to match x1 dimensions if they don't match
+        if x.size()[2:] != x1.size()[2:]:
+            x = F.interpolate(x, size=x1.size()[2:], mode='bilinear', align_corners=True)
+        x = torch.cat([x, x1], dim=1)
+        x = self.up3(x)
+        logits = self.outc(x)
+        return logits

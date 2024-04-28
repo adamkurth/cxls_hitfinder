@@ -48,8 +48,8 @@ class ModelPipeline:
         self.water_background_subtraction = background.BackgroundSubtraction(threshold=20)
 
         self.pipeline_results = {
-            'photon_energy': None,
-            'clen': None
+            'clen': None,
+            'photon_energy': None
         }
         
         self.attributes = (0, 0)  
@@ -71,20 +71,19 @@ class ModelPipeline:
               
             if peak_detected == 1:
                 _, x_ray_energy = torch.max(self.energy_model(image),1)
-                x_ray_energy = x_ray_energy * 1000 + 5000       
+                x_ray_energy = (x_ray_energy + 1) * 1000 + 5000       
                  
                 _, clen = torch.max(self.clen_model(image),1)
-                clen = clen * 0.1 + 0.05
+                clen = (clen + 1) * 0.1 + 0.05
                 
                 self.pipeline_results['photon_energy'] = x_ray_energy
                 self.pipeline_results['clen'] = clen
                 
-                dataframe = self.water_background_subtraction.main(image)
+                # dataframe = self.water_background_subtraction.main(image)
                 
-                print(dataframe)
+                # print(dataframe)
                 
-                # literally does not work
-                self.water_background_subtraction.visualize_peaks(image, dataframe) 
+                # self.water_background_subtraction.visualize_peaks(image, dataframe) 
                 
                 return self.pipeline_results
             else:

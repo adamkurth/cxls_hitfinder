@@ -107,8 +107,8 @@ class Peak_Detection_Configuration(Get_Configuration_Details):
     def __init__(self, paths, datasets, device, save_path=None): 
         super().__init__()
         # self._model = m.ComparisonCNN(output_channels=1)
-        # self._model = m.Binary_Classification(output_channels=1)
-        self._model = m.ResNetBinaryClassifier()
+        self._model = m.Binary_Classification(output_channels=1)
+        # self._model = m.ResNetBinaryClassifier()
         # self._model = m.BaseCNN(output_channels=1)
         self._feature = "peak"
         self._classes = 2
@@ -179,3 +179,26 @@ class Camera_Length_Configureation(Get_Configuration_Details):
         self._save_path = save_path
         self._epochs = 5
         self._optim = optim.SGD
+        
+class Peak_Location_Configuration(Get_Configuration_Details):
+    """
+    This class is the specific configureation for the peak location model.
+
+    Args:
+        Get_Configuration_Details (class): Class used for retreiving configuration details.
+    """
+    def __init__(self, paths, datasets, device, save_path=None): 
+        super().__init__()
+        # self._model = m.MultiClassCNN()
+        self._model = m.UNetCustom()
+        self._feature = "peak"
+        self._classes = 3
+        self._labels = None
+        self._attribute_mapping = None
+        self._threshold = 0.5
+        self._learning_rate = 0.0001
+        self._weights = None
+        self._criterion = nn.MSELoss()
+        self._save_path = save_path
+        self._epochs = 10
+        self._optim = optim.Adam

@@ -47,7 +47,7 @@ class TrainTestModels:
         self.optimizer = feature_class.get_optimizer()
         
         self.optimizer = self.optimizer(self.model.parameters(), lr=self.learning_rate)
-        self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.1, patience=100, threshold=0.1)
+        self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.1, patience=3, threshold=0.1)
         
         self.plot_train_accuracy = np.zeros(self.epochs)
         self.plot_train_loss = np.zeros(self.epochs)
@@ -71,9 +71,9 @@ class TrainTestModels:
         running_loss_train, accuracy_train, predictions, total_predictions = 0.0, 0.0, 0.0, 0.0
 
         self.model.train()
-        for inputs, _, attributes in self.train_loader:
+        for inputs, labels, attributes in self.train_loader:
             inputs[0] = inputs[0].unsqueeze(1)
-            # inputs, labels = inputs.to(self.device), labels.to(self.device)
+            labels = labels.to(self.device)
             inputs[0], inputs[1] = inputs[0].to(self.device), inputs[1].to(self.device)
 
             self.optimizer.zero_grad()
@@ -84,14 +84,9 @@ class TrainTestModels:
                 
                 self.feature_class.format_image_attributes(image_attribute)
                 image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
-                
-                # print("Input shape:", score.shape)
-                # print("----- score : ", score)
-                # print("Target shape:", image_attribute.shape)
-                # print("----- target : ", image_attribute)
 
                 
-                loss = self.criterion(score, image_attribute)
+                loss = self.criterion(score, labels)
 
             self.scaler.scale(loss).backward()
             self.scaler.step(self.optimizer)
@@ -102,8 +97,8 @@ class TrainTestModels:
             self.feature_class.format_prediction(score)
             predictions = self.feature_class.get_formatted_prediction()
                     
-            accuracy_train += (predictions == image_attribute.to(self.device)).float().sum()
-            total_predictions += torch.numel(image_attribute)
+            accuracy_train += (predictions == labels.to(self.device)).float().sum()
+            total_predictions += torch.numel(labels)
             
         loss_train = running_loss_train / len(self.train_loader)  # Assuming you want to average over all batches
         self.plot_train_loss[epoch] = loss_train
@@ -126,10 +121,10 @@ class TrainTestModels:
         
         self.model.eval()
         with torch.no_grad():
-            for inputs, _, attributes in self.test_loader:
+            for inputs, labels, attributes in self.test_loader:
                 # inputs, labels = inputs[1].to(self.device), labels.to(self.device)
                 inputs[0] = inputs[0].unsqueeze(1)
-                # inputs, labels = inputs.to(self.device), labels.to(self.device)
+                labels = labels.to(self.device)
                 inputs[0], inputs[1] = inputs[0].to(self.device), inputs[1].to(self.device)
 
                 with autocast():
@@ -140,15 +135,15 @@ class TrainTestModels:
                     self.feature_class.format_image_attributes(image_attribute)
                     image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
                         
-                    loss = self.criterion(score, image_attribute)
+                    loss = self.criterion(score, labels)
             
                 running_loss_test += loss.item()  # Convert to Python number with .item()
                 
                 self.feature_class.format_prediction(score)
                 predictions = self.feature_class.get_formatted_prediction()
                     
-                accuracy_test += (predictions == image_attribute.to(self.device)).float().sum()
-                total += torch.numel(image_attribute)
+                accuracy_test += (predictions == labels.to(self.device)).float().sum()
+                total += torch.numel(labels)
 
         loss_test = running_loss_test/self.batch
         self.scheduler.step(loss_test)
@@ -160,7 +155,12 @@ class TrainTestModels:
         self.logger.info(f'Test loss: {loss_test}')
         self.logger.info(f'Test accuracy: {accuracy_test}')
         print(f'Test loss: {loss_test}')
-        print(f'Test accuracy: {accuracy_test}')          
+        print(f'Test accuracy: {accuracy_test}')      
+        
+        plt.imshow(score.squeeze(0).squeeze(0).cpu().numpy())
+        plt.show()
+        plt.imshow(labels.squeeze(0).squeeze(0).cpu().numpy())
+        plt.show()    
                     
     def plot_loss_accuracy(self, path:str = None) -> None:
         """ 
@@ -189,10 +189,10 @@ class TrainTestModels:
         all_predictions = []
 
         with torch.no_grad():
-            for inputs, _, attributes in self.test_loader:  # Assuming self.loader[1] is the testing data loader
+            for inputs, labels, attributes in self.test_loader:  # Assuming self.loader[1] is the testing data loader
                 # inputs, labels = inputs[1].to(self.device), labels.to(self.device)
                 inputs[0] = inputs[0].unsqueeze(1)
-                # inputs, labels = inputs.to(self.device), labels.to(self.device)
+                labels = labels.to(self.device)
                 inputs[0], inputs[1] = inputs[0].to(self.device), inputs[1].to(self.device)
 
 
