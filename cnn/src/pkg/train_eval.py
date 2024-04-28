@@ -7,6 +7,7 @@ from sklearn.metrics import confusion_matrix, roc_curve, auc
 import matplotlib.pyplot as plt
 from pkg import *
 from torch.cuda.amp import GradScaler, autocast
+from skimage.filters import gaussian, sobel
 
 
 
@@ -46,7 +47,7 @@ class TrainTestModels:
         self.optimizer = feature_class.get_optimizer()
         
         self.optimizer = self.optimizer(self.model.parameters(), lr=self.learning_rate)
-        self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.1, patience=3, threshold=0.1)
+        self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.1, patience=100, threshold=0.1)
         
         self.plot_train_accuracy = np.zeros(self.epochs)
         self.plot_train_loss = np.zeros(self.epochs)
@@ -349,4 +350,20 @@ class TrainTestModels:
             plt.savefig(path)
             
         plt.show()
+        
+    
+    def filter_image(self, image: torch.Tensor) -> torch.Tensor:
+        """
+        This function filters the image using the Sobel filter.
+        """
+        # print(image.shape)
+        image = image.squeeze(0).squeeze(0).numpy()
+        # print(image.shape)
+        smoothed_image = gaussian(image, sigma=1)
+        # print(smoothed_image.shape)
+        edges = sobel(smoothed_image)
+        # print(edges.shape)
+        image = torch.tensor(edges)
+        # print(image.shape)
+        return image
 

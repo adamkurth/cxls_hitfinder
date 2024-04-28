@@ -79,7 +79,7 @@ class Get_Configuration_Details:
     def get_model_diagram(self, filename:str, file_path:str, device) -> None:
         x = torch.randn(1, 1, 2163, 2069).to(device)
         self._model = self._model.to(device)
-        vis_graph = make_dot(self._model(x,x), params=dict(self._model.named_parameters()))
+        vis_graph = make_dot(self._model(x), params=dict(self._model.named_parameters()))
         vis_graph.render(filename=filename, directory=file_path, format='png', view=True)
         # vis_graph.view()  
     
@@ -106,10 +106,10 @@ class Peak_Detection_Configuration(Get_Configuration_Details):
     """
     def __init__(self, paths, datasets, device, save_path=None): 
         super().__init__()
-        # self._model = m.Multi_Class_CNN2(output_channels=1)
-        self._model = m.MultiClassCNN(output_channels=1)
-        # self._model = m.ResNetBinaryClassifier()
-        # self._model = m.DualInputCNN()
+        # self._model = m.ComparisonCNN(output_channels=1)
+        # self._model = m.Binary_Classification(output_channels=1)
+        self._model = m.ResNetBinaryClassifier()
+        # self._model = m.BaseCNN(output_channels=1)
         self._feature = "peak"
         self._classes = 2
         self._labels = [0,1]
@@ -119,7 +119,7 @@ class Peak_Detection_Configuration(Get_Configuration_Details):
         self._weights = get_counts_weights(paths, datasets, self._classes)
         self._criterion = nn.BCEWithLogitsLoss(pos_weight=self._weights.to(device))
         self._save_path = save_path
-        self._epochs = 20
+        self._epochs = 30
         self._optim = optim.Adam
 
 
@@ -133,7 +133,8 @@ class Photon_Energy_Configuration(Get_Configuration_Details):
     def __init__(self, paths, datasets, device, save_path=None): 
         super().__init__()
         # self._model = m.Multi_Class_CNN1()
-        self._model = m.MultiClassCNN()
+        # self._model = m.MultiClassCNN()
+        self._model = m.Linear()
         self._feature = "photon_energy"
         self._classes = 3
         self._labels = [0,1,2]
@@ -161,7 +162,8 @@ class Camera_Length_Configureation(Get_Configuration_Details):
     """
     def __init__(self, paths, datasets, device, save_path=None): 
         super().__init__()
-        self._model = m.MultiClassCNN()
+        # self._model = m.MultiClassCNN()
+        self._model = m.Linear()
         self._feature = "clen"
         self._classes = 3
         self._labels = [0,1,2]

@@ -238,7 +238,7 @@ def get_counts_weights(paths: object, datasets: list, classes: int) -> torch.Ten
     
     if classes == 2:
         size = torch.zeros(classes)
-        return torch.ones(1)
+        # return torch.ones(1)
     else:
         # size = torch.zeros(len(datasets))
         return torch.ones(classes)

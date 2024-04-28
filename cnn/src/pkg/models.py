@@ -258,11 +258,11 @@ class Multi_Class_CNN1(nn.Module):
             num_features *= s
         return num_features
     
-class Multi_Class_CNN2(nn.Module):
+class ComparisonCNN(nn.Module):
     def __init__(self, input_channels=1, input_size=(2163, 2069), output_channels=3):
-        super(Multi_Class_CNN2, self).__init__()
+        super(ComparisonCNN, self).__init__()
         
-        self.conv1 = nn.Conv2d(input_channels, 32, kernel_size=10, stride=5, padding=1)
+        self.conv1 = nn.Conv2d(input_channels, 32, kernel_size=25, stride=5, padding=1)
         self.bn1 = nn.BatchNorm2d(32)  
         self.conv2 = nn.Conv2d(32, 64, kernel_size=5, stride=1, padding=1)
         self.bn2 = nn.BatchNorm2d(64)  
@@ -297,62 +297,26 @@ class Multi_Class_CNN2(nn.Module):
             num_features *= s
         return num_features
     
-class SelfAttention(nn.Module):
-    def __init__(self, k, heads=8):
-        super().__init__()
-        self.k, self.heads = k, heads
 
-        self.tokeys    = nn.Linear(k, k * heads, bias=False)
-        self.toqueries = nn.Linear(k, k * heads, bias=False)
-        self.tovalues  = nn.Linear(k, k * heads, bias=False)
-
-        self.unifyheads = nn.Linear(heads * k, k)
-
-    def forward(self, x):
-        b, t, k = x.size()
-        h = self.heads
-
-        queries = self.toqueries(x).view(b, t, h, k)
-        keys    = self.tokeys(x).view(b, t, h, k)
-        values  = self.tovalues(x).view(b, t, h, k)
-
-        keys = keys.transpose(1, 2).contiguous().view(b * h, t, k)
-        queries = queries.transpose(1, 2).contiguous().view(b * h, t, k)
-        values = values.transpose(1, 2).contiguous().view(b * h, t, k)
-
-        queries = queries / (k ** (1/4))
-        keys    = keys / (k ** (1/4))
-
-        dot = torch.bmm(queries, keys.transpose(1, 2))
-        dot = F.softmax(dot, dim=2)
-
-        out = torch.bmm(dot, values).view(b, h, t, k)
-
-        out = out.transpose(1, 2).contiguous().view(b, t, h * k)
-
-        return self.unifyheads(out)
-
-
-
-
-class MultiClassCNN(nn.Module):
+class BaseCNN(nn.Module):
     def __init__(self, input_channels=1, output_channels=3, input_size=(2163, 2069)):
-        super(MultiClassCNN, self).__init__()
+        super(BaseCNN, self).__init__()
         
         # Parameters for the convolutional layer
-        self.kernel_size = 10
-        self.stride = 1
+        self.kernel_size = 25
+        self.stride = 10
         self.padding = 1
+        self.conv_output = 2
 
         # Define a single convolutional layer
-        self.conv1 = nn.Conv2d(input_channels, 8, kernel_size=self.kernel_size, stride=self.stride, padding=self.padding)
+        self.conv1 = nn.Conv2d(input_channels, self.conv_output, kernel_size=self.kernel_size, stride=self.stride, padding=self.padding)
         
         # Function to calculate output dimensions dynamically
         self.output_height = self.calculate_output_dimension(input_size[0], self.kernel_size, self.stride, self.padding)
         self.output_width = self.calculate_output_dimension(input_size[1], self.kernel_size, self.stride, self.padding)
         
         # Flatten the output dimensions for the fully connected layer
-        self.fc_size = 8 * self.output_height * self.output_width  # Dynamic number of features
+        self.fc_size = self.conv_output * self.output_height * self.output_width  # Dynamic number of features
         
         # Define a fully connected layer that maps to the output channels
         self.fc = nn.Linear(self.fc_size, output_channels)
@@ -412,21 +376,6 @@ class ResNetBinaryClassifier(nn.Module):
         return x
 
 
-class PeakNet(nn.Module):
-    def __init__(self, input_size):
-        super(PeakNet, self).__init__()
-        self.fc1 = nn.Linear(input_size, 128)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(128, 64)
-        self.fc3 = nn.Linear(64, 1)
-
-    def forward(self, x):
-        x = self.fc1(x)
-        x = self.relu(x)
-        x = self.fc2(x)
-        x = self.relu(x)
-        x = self.fc3(x)
-        return x
 
 class ChannelAttention(nn.Module):
     def __init__(self, num_channels):
@@ -445,6 +394,52 @@ class ChannelAttention(nn.Module):
         max_out = self.fc(self.max_pool(x).view(x.size(0), -1))
         out = avg_out + max_out
         return x * out.view(x.size(0), x.size(1), 1, 1)
+    
+    
+class Binary_Classification(nn.Module):
+    def __init__(self, input_channels=1, output_channels=3, input_size=(2163, 2069)):
+        super(Binary_Classification, self).__init__()
+        
+        # Parameters for the convolutional layers
+        self.kernel_size1 = 10
+        self.stride1 = 1
+        self.padding1 = 1
+        self.kernel_size2 = 3  # Smaller kernel for capturing finer details
+        self.stride2 = 1
+        self.padding2 = 1
+
+        # Number of groups for Group Normalization
+        num_groups1 = 4  # For the first convolutional layer
+        num_groups2 = 4  # For the second convolutional layer
+
+        # Define the convolutional layers and group normalization
+        self.conv1 = nn.Conv2d(input_channels, 8, kernel_size=self.kernel_size1, stride=self.stride1, padding=self.padding1)
+        self.gn1 = nn.GroupNorm(num_groups=num_groups1, num_channels=8)
+        self.pool1 = nn.MaxPool2d(2, 2)  # Adding pooling to reduce dimensionality
+        self.conv2 = nn.Conv2d(8, 16, kernel_size=self.kernel_size2, stride=self.stride2, padding=self.padding2)
+        self.gn2 = nn.GroupNorm(num_groups=num_groups2, num_channels=16)
+
+        # Dynamically calculate output dimensions after each layer
+        out_height1 = self.calculate_output_dimension(input_size[0], self.kernel_size1, self.stride1, self.padding1)
+        out_width1 = self.calculate_output_dimension(input_size[1], self.kernel_size1, self.stride1, self.padding1)
+        out_height2 = self.calculate_output_dimension(out_height1 // 2, self.kernel_size2, self.stride2, self.padding2)  # Pooling reduces size
+        out_width2 = self.calculate_output_dimension(out_width1 // 2, self.kernel_size2, self.stride2, self.padding2)
+        
+        # Flatten the output dimensions for the fully connected layer
+        self.fc_size = 16 * out_height2 * out_width2
+        self.fc = nn.Linear(self.fc_size, output_channels)
+
+    def calculate_output_dimension(self, input_dim, kernel_size, stride, padding):
+        return ((input_dim + 2 * padding - kernel_size) // stride) + 1
+
+    def forward(self, x):
+        x = self.pool1(F.relu(self.gn1(self.conv1(x))))
+        x = F.relu(self.gn2(self.conv2(x)))
+        x = x.view(-1, self.fc_size)  # Dynamically flatten the tensor based on computed output sizes
+        x = self.fc(x)
+        return x
+    
+    
 
 class DualInputCNN(nn.Module):
     def __init__(self, input_height=2163, input_width=2069):
@@ -504,41 +499,16 @@ class DualInputCNN(nn.Module):
         return output
     
     
-class MultiClassCNN_Linear(nn.Module):
+class Linear(nn.Module):
     def __init__(self, input_channels=1, output_channels=3, input_size=(2163, 2069)):
-        super(MultiClassCNN_Linear, self).__init__()
-        
-        # # Parameters for the convolutional layer
-        # self.kernel_size = 3
-        # self.stride = 1
-        # self.padding = 1
+        super(Linear, self).__init__()
 
-        # # Define a single convolutional layer
-        # # self.conv1 = nn.Conv2d(input_channels, 8, kernel_size=self.kernel_size, stride=self.stride, padding=self.padding)
-        
-        # # Function to calculate output dimensions dynamically
-        # self.output_height = self.calculate_output_dimension(input_size[0], self.kernel_size, self.stride, self.padding)
-        # self.output_width = self.calculate_output_dimension(input_size[1], self.kernel_size, self.stride, self.padding)
-        
-        # # Flatten the output dimensions for the fully connected layer
-        # self.fc_size = 8 * self.output_height * self.output_width  # Dynamic number of features
-        
-        # Define a fully connected layer that maps to the output channels
-        # self.fc = nn.Linear(self.fc_size, output_channels)
         self.fc_size = input_size[0] * input_size[1]
         self.fc = nn.Linear(self.fc_size, 3)
-
-    # def calculate_output_dimension(self, input_dim, kernel_size, stride, padding):
-    #     return ((input_dim + 2 * padding - kernel_size) // stride) + 1
     
     def forward(self, x):
-        # Apply the convolutional layer followed by a ReLU activation function
-        # x = self.conv1(x)
-        
-        # Flatten the output for the fully connected layer
-        x = x.view(-1, self.fc_size)  # Dynamically flatten the tensor
-        
-        # Apply the fully connected layer
+
+        x = x.view(-1, self.fc_size)  
         x = self.fc(x)
         
         return x
