@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 from torchviz import make_dot
 import pkg.models as m
 from pkg.functions import get_counts_weights, save_h5
@@ -190,15 +191,30 @@ class Peak_Location_Configuration(Get_Configuration_Details):
     def __init__(self, paths, datasets, device, save_path=None): 
         super().__init__()
         # self._model = m.MultiClassCNN()
-        self._model = m.UNetCustom()
+        # self._model = m.HeatmapCNN()
+        self._model = m.DnCNN()
         self._feature = "peak_location"
-        self._classes = 3
+        self._classes = 2
         self._labels = None
         self._attribute_mapping = None
         self._threshold = 0.5
         self._learning_rate = 0.0001
-        self._weights = None
-        self._criterion = nn.MSELoss()
+        self._weights = torch.Tensor([1e-3])
+        # self._criterion = nn.MSELoss()
+        self._criterion = nn.BCEWithLogitsLoss()
+        # self._criterion = FocalLoss()
         self._save_path = save_path
-        self._epochs = 10
+        self._epochs = 20
         self._optim = optim.Adam
+        
+class FocalLoss(nn.Module):
+    def __init__(self, alpha=0.25, gamma=2.0):
+        super(FocalLoss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+
+    def forward(self, inputs, targets):
+        BCE_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction='none')
+        pt = torch.exp(-BCE_loss)  # Prevents nans when probability is 0
+        F_loss = self.alpha * (1 - pt) ** self.gamma * BCE_loss
+        return F_loss.mean()

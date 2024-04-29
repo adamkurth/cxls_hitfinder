@@ -376,24 +376,6 @@ class ResNetBinaryClassifier(nn.Module):
         return x
 
 
-
-class ChannelAttention(nn.Module):
-    def __init__(self, num_channels):
-        super(ChannelAttention, self).__init__()
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.max_pool = nn.AdaptiveMaxPool2d(1)
-        self.fc = nn.Sequential(
-            nn.Linear(num_channels, num_channels // 8, bias=False),
-            nn.ReLU(),
-            nn.Linear(num_channels // 8, num_channels, bias=False),
-            nn.Sigmoid()
-        )
-
-    def forward(self, x):
-        avg_out = self.fc(self.avg_pool(x).view(x.size(0), -1))
-        max_out = self.fc(self.max_pool(x).view(x.size(0), -1))
-        out = avg_out + max_out
-        return x * out.view(x.size(0), x.size(1), 1, 1)
     
     
 class Binary_Classification(nn.Module):
@@ -512,91 +494,109 @@ class Linear(nn.Module):
         x = self.fc(x)
         
         return x
+
+class ChannelAttention(nn.Module):
+    def __init__(self, num_channels, reduction_ratio=16):
+        super(ChannelAttention, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+
+        # Separate pathways for avg and max pooling
+        self.fc_avg = nn.Sequential(
+            nn.Linear(num_channels, num_channels // reduction_ratio, bias=False),
+            nn.ReLU(),
+            nn.Linear(num_channels // reduction_ratio, num_channels, bias=False),
+            nn.Sigmoid()
+        )
+        
+        self.fc_max = nn.Sequential(
+            nn.Linear(num_channels, num_channels // reduction_ratio, bias=False),
+            nn.ReLU(),
+            nn.Linear(num_channels // reduction_ratio, num_channels, bias=False),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        b, c, _, _ = x.size()
+        avg_out = self.fc_avg(self.avg_pool(x).view(b, c))
+        max_out = self.fc_max(self.max_pool(x).view(b, c))
+        out = avg_out + max_out
+        return x * out.view(b, c, 1, 1)
     
-    
+class SpatialAttention(nn.Module):
+    def __init__(self, num_channels):
+        super(SpatialAttention, self).__init__()
+        self.conv1 = nn.Conv2d(2, num_channels, kernel_size=7, padding=3, dilation=2, bias=False)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        x = torch.cat([max_out, avg_out], dim=1)
+        x = self.sigmoid(self.conv1(x))
+        return x * x  # Multiplying the feature map by the attention map
+
+
+class ResidualBlock(nn.Module):
+    def __init__(self, in_channels):
+        super(ResidualBlock, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=2, dilation=2, bias=False)
+        self.bn1 = nn.BatchNorm2d(in_channels)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv2 = nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=2, dilation=2, bias=False)
+        self.bn2 = nn.BatchNorm2d(in_channels)
+
+    def forward(self, x):
+        residual = x
+        out = self.relu(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+        out += residual
+        return self.relu(out)
+
+
 class HeatmapCNN(nn.Module):
-    def __init__(self, input_channels=1, output_channels=1, heatmap_size=(2163, 2069)):
+    def __init__(self, input_channels=1, output_channels=1, heatmap_size=(2163, 2069), dropout_rate=0):
         super(HeatmapCNN, self).__init__()
         
         self.heatmap_size = heatmap_size
         self.conv1 = nn.Conv2d(input_channels, 16, kernel_size=5, stride=1, padding=2)
-        self.bn1 = nn.BatchNorm2d(16)  # Added batch normalization
+        self.bn1 = nn.BatchNorm2d(16)
+        self.dropout1 = nn.Dropout2d(dropout_rate)  # Spatial dropout
         self.pool = nn.MaxPool2d(kernel_size=4, stride=4, padding=0)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)  # Additional conv layer
-        self.bn2 = nn.BatchNorm2d(32)  # Added batch normalization
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
+        self.bn2 = nn.BatchNorm2d(32)
+        self.dropout2 = nn.Dropout2d(dropout_rate)  # Spatial dropout
+        self.ca = ChannelAttention(32)
+        self.sa = SpatialAttention(32)  # Assuming this is defined elsewhere
         self.heatmap_conv = nn.Conv2d(32, output_channels, kernel_size=3, stride=1, padding=1)
         self.upsample = nn.Upsample(size=heatmap_size, mode='bilinear', align_corners=True)
 
     def forward(self, x):
-        x = F.relu(self.bn1(self.conv1(x)))
+        x = self.dropout1(F.relu(self.bn1(self.conv1(x))))
         x = self.pool(x)
-        x = F.relu(self.bn2(self.conv2(x)))  # Additional relu activation
+        x = self.dropout2(F.relu(self.bn2(self.conv2(x))))
+        x = self.ca(x)
+        x = self.sa(x)
         x = self.heatmap_conv(x)
         x = self.upsample(x)
         return x
 
+class DnCNN(nn.Module):
+    def __init__(self, input_channels=1, output_channels=1, num_layers=17, features=64):
+        super(DnCNN, self).__init__()
+        layers = []
+        layers.append(nn.Conv2d(input_channels, features, kernel_size=3, padding=1, bias=False))
+        layers.append(nn.ReLU(inplace=True))
 
+        for _ in range(num_layers-2):
+            layers.append(nn.Conv2d(features, features, kernel_size=3, padding=1, bias=False))
+            layers.append(nn.BatchNorm2d(features))
+            layers.append(nn.ReLU(inplace=True))
 
-class DoubleConv(nn.Module):
-    """(convolution => GN => ReLU) * 2"""
-    def __init__(self, in_channels, out_channels):
-        super().__init__()
-        num_groups = max(1, out_channels // 8)  # Dynamic number of groups
-        self.double_conv = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
-            nn.GroupNorm(num_groups, out_channels),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
-            nn.GroupNorm(num_groups, out_channels),
-            nn.ReLU(inplace=True)
-        )
-
-    def forward(self, x):
-        return self.double_conv(x)
-
-class UNetCustom(nn.Module):
-    def __init__(self):
-        super(UNetCustom, self).__init__()
-        n_channels = 1  # Fixed as per grayscale input
-        n_classes = 1   # Fixed as per single-channel heatmap output
-
-        self.inc = DoubleConv(n_channels, 64)
-        self.down1 = DoubleConv(64, 128)
-        self.down2 = DoubleConv(128, 256)
-        self.down3 = DoubleConv(256, 512)
-        self.up1 = DoubleConv(768, 256)  # Account for concat of features from down3
-        self.up2 = DoubleConv(384, 128)  # Account for concat of features from down2
-        self.up3 = DoubleConv(192, 64)   # Account for concat of features from down1
-        self.outc = nn.Conv2d(64, n_classes, 1)
+        layers.append(nn.Conv2d(features, output_channels, kernel_size=3, padding=1, bias=False))
+        self.dncnn = nn.Sequential(*layers)
+        self.threshold = 0.5  # Set a threshold for binarization
 
     def forward(self, x):
-        x1 = self.inc(x)
-        x2 = F.max_pool2d(x1, 2)
-        x2 = self.down1(x2)
-        x3 = F.max_pool2d(x2, 2)
-        x3 = self.down2(x3)
-        x4 = F.max_pool2d(x3, 2)
-        x4 = self.down3(x4)
-        x = F.interpolate(x4, scale_factor=2, mode='bilinear', align_corners=True)
-
-        # Resize x to match x3 dimensions if they don't match
-        if x.size()[2:] != x3.size()[2:]:
-            x = F.interpolate(x, size=x3.size()[2:], mode='bilinear', align_corners=True)
-        x = torch.cat([x, x3], dim=1)
-        x = self.up1(x)
-        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
-
-        # Resize x to match x2 dimensions if they don't match
-        if x.size()[2:] != x2.size()[2:]:
-            x = F.interpolate(x, size=x2.size()[2:], mode='bilinear', align_corners=True)
-        x = torch.cat([x, x2], dim=1)
-        x = self.up2(x)
-        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
-
-        # Resize x to match x1 dimensions if they don't match
-        if x.size()[2:] != x1.size()[2:]:
-            x = F.interpolate(x, size=x1.size()[2:], mode='bilinear', align_corners=True)
-        x = torch.cat([x, x1], dim=1)
-        x = self.up3(x)
-        logits = self.outc(x)
-        return logits
+        x = self.dncnn(x)
+        return x

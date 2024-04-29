@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from pkg import *
 from torch.cuda.amp import GradScaler, autocast
 from skimage.filters import gaussian, sobel
-
+from scipy.signal import find_peaks
 
 
 """
@@ -114,6 +114,13 @@ class TrainTestModels:
         self.logger.info(f'Train accuracy: {accuracy_train}')
         print(f'Train accuracy: {accuracy_train}')
         
+        if self.feature == 'peak_location':
+            predicted_peaks, _ = find_peaks(torch.flatten(predictions).cpu().numpy())
+            known_peaks, _ = find_peaks(torch.flatten(true_value).cpu().numpy())
+
+            print(f'learned peaks ({len(predicted_peaks)}) : {known_peaks}')
+            print(f'true peaks ({len(known_peaks)}) : {known_peaks}')
+            
         
     def test(self, epoch:int) -> None:
         
@@ -165,10 +172,7 @@ class TrainTestModels:
         print(f'Test loss: {loss_test}')
         print(f'Test accuracy: {accuracy_test}')      
         
-        plt.imshow(score.squeeze(0).squeeze(0).cpu().numpy())
-        plt.show()
-        plt.imshow(labels.squeeze(0).squeeze(0).cpu().numpy())
-        plt.show()    
+
                     
     def plot_loss_accuracy(self, path:str = None) -> None:
         """ 
