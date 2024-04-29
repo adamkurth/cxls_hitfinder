@@ -118,7 +118,7 @@ class TrainTestModels:
             predicted_peaks, _ = find_peaks(torch.flatten(predictions).cpu().numpy())
             known_peaks, _ = find_peaks(torch.flatten(true_value).cpu().numpy())
 
-            print(f'learned peaks ({len(predicted_peaks)}) : {known_peaks}')
+            print(f'learned peaks ({len(predicted_peaks)}) : {predicted_peaks}')
             print(f'true peaks ({len(known_peaks)}) : {known_peaks}')
             
         
@@ -203,24 +203,27 @@ class TrainTestModels:
         with torch.no_grad():
             for inputs, labels, attributes in self.test_loader:  # Assuming self.loader[1] is the testing data loader
                 # inputs, labels = inputs[1].to(self.device), labels.to(self.device)
-                inputs[0] = inputs[0].unsqueeze(1)
-                labels = labels.to(self.device)
-                inputs[0], inputs[1] = inputs[0].to(self.device), inputs[1].to(self.device)
-
+                # inputs[0] = inputs[0].unsqueeze(1)
+                # labels = labels.to(self.device)
+                # inputs[0], inputs[1] = inputs[0].to(self.device), inputs[1].to(self.device)
+                model_input = inputs[1].to(self.device)
 
                 with autocast():
-                    score = self.model(inputs[1])
+                    score = self.model(model_input)
 
                 # Flatten and append labels to all_labels
-                image_attribute = attributes[self.feature].reshape(-1)
-                self.feature_class.format_image_attributes(image_attribute)
-                image_attribute = self.feature_class.get_formatted_image_attribute().cpu().numpy()
-                all_labels.extend(image_attribute)
+                if self.feature != 'peak_location':                           
+                    image_attribute = attributes[self.feature]
+                    self.feature_class.format_image_attributes(image_attribute)
+                    true_value = self.feature_class.get_formatted_image_attribute().to(self.device)
+                else:
+                    true_value = labels.to(self.device)
+                all_labels.extend(torch.flatten(true_value.cpu()))
                                 
                 self.feature_class.format_prediction(score)
                 predictions = self.feature_class.get_formatted_prediction().cpu()
                                         
-                all_predictions.extend(predictions)
+                all_predictions.extend(torch.flatten(predictions))
 
         # No need to reshape - arrays should already be flat
         all_labels = np.array(all_labels)
@@ -229,6 +232,15 @@ class TrainTestModels:
         # Compute confusion matrix
         # print(f'-- Labels      : {all_labels}')
         # print(f'-- Predictions : {all_predictions}')
+
+        # if all_labels.dtype.kind in 'UO':  # Check if labels are string or object
+        #     all_labels = np.array(all_labels).astype(int)
+        # if all_predictions.dtype.kind in 'UO':  # Check if predictions are string or object
+        #     all_predictions = np.array(all_predictions).astype(int)
+            
+        # unique_labels = np.unique(np.concatenate((all_labels, all_predictions)))
+        # print("Using labels for confusion matrix:", unique_labels)
+        
         self.cm = confusion_matrix(all_labels, all_predictions, labels=self.labels, normalize='true')
 
         # Plotting the confusion matrix

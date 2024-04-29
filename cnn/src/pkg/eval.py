@@ -191,20 +191,20 @@ class Peak_Location_Configuration(Get_Configuration_Details):
     def __init__(self, paths, datasets, device, save_path=None): 
         super().__init__()
         # self._model = m.MultiClassCNN()
-        # self._model = m.HeatmapCNN()
-        self._model = m.DnCNN()
+        self._model = m.HeatmapCNN()
+        # self._model = m.DnCNN()
         self._feature = "peak_location"
         self._classes = 2
-        self._labels = None
+        self._labels = [0,1]
         self._attribute_mapping = None
         self._threshold = 0.5
-        self._learning_rate = 0.0001
+        self._learning_rate = 0.00001
         self._weights = torch.Tensor([1e-3])
         # self._criterion = nn.MSELoss()
-        self._criterion = nn.BCEWithLogitsLoss()
-        # self._criterion = FocalLoss()
+        # self._criterion = nn.BCEWithLogitsLoss()
+        self._criterion = FocalLoss()
         self._save_path = save_path
-        self._epochs = 20
+        self._epochs = 1
         self._optim = optim.Adam
         
 class FocalLoss(nn.Module):

@@ -534,7 +534,7 @@ class SpatialAttention(nn.Module):
         avg_out = torch.mean(x, dim=1, keepdim=True)
         x = torch.cat([max_out, avg_out], dim=1)
         x = self.sigmoid(self.conv1(x))
-        return x * x  # Multiplying the feature map by the attention map
+        return x * x
 
 
 class ResidualBlock(nn.Module):
@@ -555,26 +555,26 @@ class ResidualBlock(nn.Module):
 
 
 class HeatmapCNN(nn.Module):
-    def __init__(self, input_channels=1, output_channels=1, heatmap_size=(2163, 2069), dropout_rate=0):
+    def __init__(self, input_channels=1, output_channels=1, heatmap_size=(2163, 2069)):
         super(HeatmapCNN, self).__init__()
         
         self.heatmap_size = heatmap_size
         self.conv1 = nn.Conv2d(input_channels, 16, kernel_size=5, stride=1, padding=2)
         self.bn1 = nn.BatchNorm2d(16)
-        self.dropout1 = nn.Dropout2d(dropout_rate)  # Spatial dropout
         self.pool = nn.MaxPool2d(kernel_size=4, stride=4, padding=0)
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
         self.bn2 = nn.BatchNorm2d(32)
-        self.dropout2 = nn.Dropout2d(dropout_rate)  # Spatial dropout
         self.ca = ChannelAttention(32)
         self.sa = SpatialAttention(32)  # Assuming this is defined elsewhere
         self.heatmap_conv = nn.Conv2d(32, output_channels, kernel_size=3, stride=1, padding=1)
         self.upsample = nn.Upsample(size=heatmap_size, mode='bilinear', align_corners=True)
+        self.dropout = nn.Dropout(0.5)
 
     def forward(self, x):
-        x = self.dropout1(F.relu(self.bn1(self.conv1(x))))
+        x = F.relu(self.bn1(self.conv1(x)))
         x = self.pool(x)
-        x = self.dropout2(F.relu(self.bn2(self.conv2(x))))
+        x = F.relu(self.bn2(self.conv2(x)))
+        # x = self.dropout(x)
         x = self.ca(x)
         x = self.sa(x)
         x = self.heatmap_conv(x)
@@ -590,7 +590,7 @@ class DnCNN(nn.Module):
 
         for _ in range(num_layers-2):
             layers.append(nn.Conv2d(features, features, kernel_size=3, padding=1, bias=False))
-            layers.append(nn.BatchNorm2d(features))
+            layers.append(nn.GroupNorm(1, features))
             layers.append(nn.ReLU(inplace=True))
 
         layers.append(nn.Conv2d(features, output_channels, kernel_size=3, padding=1, bias=False))
