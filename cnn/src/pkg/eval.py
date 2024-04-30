@@ -204,7 +204,7 @@ class Peak_Location_Configuration(Get_Configuration_Details):
         # self._criterion = nn.BCEWithLogitsLoss()
         self._criterion = FocalLoss()
         self._save_path = save_path
-        self._epochs = 1
+        self._epochs = 15
         self._optim = optim.Adam
         
 class FocalLoss(nn.Module):

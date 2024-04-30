@@ -568,7 +568,7 @@ class HeatmapCNN(nn.Module):
         self.sa = SpatialAttention(32)  # Assuming this is defined elsewhere
         self.heatmap_conv = nn.Conv2d(32, output_channels, kernel_size=3, stride=1, padding=1)
         self.upsample = nn.Upsample(size=heatmap_size, mode='bilinear', align_corners=True)
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(0.8)
 
     def forward(self, x):
         x = F.relu(self.bn1(self.conv1(x)))
