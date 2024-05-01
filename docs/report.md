@@ -237,9 +237,6 @@ The proximity of the protein sample to the detector critically influences the vi
     <img src="./diagrams/png/water07.png" alt="water07.h5" width="400" /> 
 </p>
 
-
-As photon energy increases, the photons will transfer more momentum during scattering causing a different scattered angle. And as the distance of the detector and the sample increase, the solid angle of the scattered photons will create a larger area of incident photons on the detector face. This conic shape of the scattered photons is what creates the water-ring in the diffraction images.
-
 *Figure 1: Water background noise comparison. Left: (`water01.png`) photon energy is 6000 eV, with camera length is 0.15m. Right: (`water07.png`) photon energy is 8000 eV, with camera length is 0.15m. Both images can be found in `docs/diagrams/`*
 
 ##### Crystal Used in Simulations:
@@ -248,7 +245,7 @@ According to the RCSB Protein Data Bank, the *proteinase K from Tritirachium alb
 
 ![Tetragonal Crystal System](https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Tetragonal.svg/200px-Tetragonal.svg.png  "Tetragonal Crystal System")
 
-*Figure 2: Tetragonal Crystal System*. Available from: [Wikipedia](https://en.m.wikipedia.org/wiki/File:Tetragonal.svg)
+*Figure 2: Tetragonal Crystal System*. Available from: [Wikipedia](**https**://en.m.wikipedia.org/wiki/File:Tetragonal.svg)
 
 #### `pattern_sim` Parameters:
 
