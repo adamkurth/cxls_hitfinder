@@ -107,10 +107,8 @@ class Peak_Detection_Configuration(Get_Configuration_Details):
     """
     def __init__(self, paths, datasets, device, save_path=None): 
         super().__init__()
-        # self._model = m.ComparisonCNN(output_channels=1)
-        self._model = m.Binary_Classification(output_channels=1)
-        # self._model = m.ResNetBinaryClassifier()
-        # self._model = m.BaseCNN(output_channels=1)
+        # self._model = m.Binary_Classification(output_channels=1)
+        self._model = m.Binary_Classification_With_Parameters()
         self._feature = "peak"
         self._classes = 2
         self._labels = [0,1]
@@ -120,7 +118,7 @@ class Peak_Detection_Configuration(Get_Configuration_Details):
         self._weights = get_counts_weights(paths, datasets, self._classes)
         self._criterion = nn.BCEWithLogitsLoss(pos_weight=self._weights.to(device))
         self._save_path = save_path
-        self._epochs = 30
+        self._epochs = 10
         self._optim = optim.Adam
 
 

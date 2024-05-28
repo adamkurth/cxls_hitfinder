@@ -82,7 +82,11 @@ class TrainTestModels:
                 self.optimizer.zero_grad()
                 
                 with autocast():
-                    score = self.model(model_input)
+                    
+                    if self.feature == 'peak':
+                        score = self.model(model_input, attributes['clen'].to(self.device).float(), attributes['photon_energy'].to(self.device).float())
+                    else:
+                        score = self.model(model_input)
                     
                     if self.feature != 'peak_location':
                         image_attribute = attributes[self.feature]
@@ -142,7 +146,10 @@ class TrainTestModels:
                 model_input = inputs[1].to(self.device)
 
                 with autocast():
-                    score = self.model(model_input)
+                    if self.feature == 'peak':
+                        score = self.model(model_input, attributes['clen'], attributes['photon_energy'])
+                    else:
+                        score = self.model(model_input)
                              
                     if self.feature != 'peak_location':                           
                         image_attribute = attributes[self.feature]
@@ -210,7 +217,10 @@ class TrainTestModels:
                 model_input = inputs[1].to(self.device)
 
                 with autocast():
-                    score = self.model(model_input)
+                    if self.feature == 'peak':
+                        score = self.model(model_input, attributes['clen'], attributes['photon_energy'])
+                    else:
+                        score = self.model(model_input)
 
                 # Flatten and append labels to all_labels
                 if self.feature != 'peak_location':                           
