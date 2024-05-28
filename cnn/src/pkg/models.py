@@ -537,23 +537,6 @@ class SpatialAttention(nn.Module):
         return x * x
 
 
-class ResidualBlock(nn.Module):
-    def __init__(self, in_channels):
-        super(ResidualBlock, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=2, dilation=2, bias=False)
-        self.bn1 = nn.BatchNorm2d(in_channels)
-        self.relu = nn.ReLU(inplace=True)
-        self.conv2 = nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=2, dilation=2, bias=False)
-        self.bn2 = nn.BatchNorm2d(in_channels)
-
-    def forward(self, x):
-        residual = x
-        out = self.relu(self.bn1(self.conv1(x)))
-        out = self.bn2(self.conv2(out))
-        out += residual
-        return self.relu(out)
-
-
 class HeatmapCNN(nn.Module):
     def __init__(self, input_channels=1, output_channels=1, heatmap_size=(2163, 2069)):
         super(HeatmapCNN, self).__init__()
@@ -568,13 +551,13 @@ class HeatmapCNN(nn.Module):
         self.sa = SpatialAttention(32)  # Assuming this is defined elsewhere
         self.heatmap_conv = nn.Conv2d(32, output_channels, kernel_size=3, stride=1, padding=1)
         self.upsample = nn.Upsample(size=heatmap_size, mode='bilinear', align_corners=True)
-        self.dropout = nn.Dropout(0.8)
+        self.dropout = nn.Dropout(0.5)
 
     def forward(self, x):
         x = F.relu(self.bn1(self.conv1(x)))
         x = self.pool(x)
         x = F.relu(self.bn2(self.conv2(x)))
-        # x = self.dropout(x)
+        x = self.dropout(x)
         x = self.ca(x)
         x = self.sa(x)
         x = self.heatmap_conv(x)

@@ -181,7 +181,7 @@ class Camera_Length_Configureation(Get_Configuration_Details):
         self._epochs = 5
         self._optim = optim.SGD
         
-class Peak_Location_Configuration(Get_Configuration_Details):
+class Peak_Finder_Configuration(Get_Configuration_Details):
     """
     This class is the specific configureation for the peak location model.
 
@@ -199,10 +199,10 @@ class Peak_Location_Configuration(Get_Configuration_Details):
         self._attribute_mapping = None
         self._threshold = 0.5
         self._learning_rate = 0.00001
-        self._weights = torch.Tensor([1e-3])
+        self._weights = torch.Tensor([100000])
         # self._criterion = nn.MSELoss()
-        # self._criterion = nn.BCEWithLogitsLoss()
-        self._criterion = FocalLoss()
+        self._criterion = nn.BCEWithLogitsLoss(pos_weight=self._weights.to(device))
+        # self._criterion = FocalLoss()
         self._save_path = save_path
         self._epochs = 15
         self._optim = optim.Adam
@@ -215,6 +215,6 @@ class FocalLoss(nn.Module):
 
     def forward(self, inputs, targets):
         BCE_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction='none')
-        pt = torch.exp(-BCE_loss)  # Prevents nans when probability is 0
+        pt = torch.exp(-BCE_loss)  
         F_loss = self.alpha * (1 - pt) ** self.gamma * BCE_loss
         return F_loss.mean()
