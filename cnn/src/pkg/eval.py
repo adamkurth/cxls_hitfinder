@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-from torchviz import make_dot
+# from torchviz import make_dot
 import pkg.models as m
 from pkg.functions import get_counts_weights, save_h5
 from scipy.signal import find_peaks
@@ -118,7 +118,7 @@ class Peak_Detection_Configuration(Get_Configuration_Details):
         self._weights = get_counts_weights(paths, datasets, self._classes)
         self._criterion = nn.BCEWithLogitsLoss(pos_weight=self._weights.to(device))
         self._save_path = save_path
-        self._epochs = 10
+        self._epochs = 30
         self._optim = optim.Adam
 
 

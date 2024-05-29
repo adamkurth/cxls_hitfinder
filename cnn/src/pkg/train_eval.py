@@ -84,7 +84,7 @@ class TrainTestModels:
                 with autocast():
                     
                     if self.feature == 'peak':
-                        score = self.model(model_input, attributes['clen'].to(self.device).float(), attributes['photon_energy'].to(self.device).float())
+                        score = self.model(model_input, attributes['clen'], attributes['photon_energy'])
                     else:
                         score = self.model(model_input)
                     
