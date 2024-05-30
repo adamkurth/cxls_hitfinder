@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import logging
-from sklearn.metrics import confusion_matrix, roc_curve, auc
+from sklearn.metrics import confusion_matrix, roc_curve, auc, classification_report
 import matplotlib.pyplot as plt
 from pkg import *
 from torch.cuda.amp import GradScaler, autocast
@@ -54,6 +54,9 @@ class TrainTestModels:
         self.plot_test_accuracy = np.zeros(self.epochs)
         self.plot_test_loss = np.zeros(self.epochs)
         self.cm = np.zeros((self.classes,self.classes), dtype=int)
+        self.all_labels = []
+        self.all_predictions = []
+        self.classification_report_dict = {}
         
         self.logger = logging.getLogger(__name__)
         self.scaler = GradScaler()
@@ -201,12 +204,10 @@ class TrainTestModels:
             
         plt.show()
 
-    def plot_confusion_matrix(self, path:str = None) -> None:
+    def evaluate_model(self) -> None:
         """ 
-        This function plots the confusion matrix of the testing set.
+        Evaluates model post training. 
         """
-        all_labels = []
-        all_predictions = []
 
         with torch.no_grad():
             for inputs, labels, attributes in self.test_loader:  # Assuming self.loader[1] is the testing data loader
@@ -229,16 +230,16 @@ class TrainTestModels:
                     true_value = self.feature_class.get_formatted_image_attribute().to(self.device)
                 else:
                     true_value = labels.to(self.device)
-                all_labels.extend(torch.flatten(true_value.cpu()))
+                self.all_labels.extend(torch.flatten(true_value.cpu()))
                                 
                 self.feature_class.format_prediction(score)
                 predictions = self.feature_class.get_formatted_prediction().cpu()
                                         
-                all_predictions.extend(torch.flatten(predictions))
+                self.all_predictions.extend(torch.flatten(predictions))
 
         # No need to reshape - arrays should already be flat
-        all_labels = np.array(all_labels)
-        all_predictions = np.array(all_predictions)
+        self.all_labels = np.array(self.all_labels)
+        self.all_predictions = np.array(self.all_predictions)
 
         # Compute confusion matrix
         # print(f'-- Labels      : {all_labels}')
@@ -252,7 +253,28 @@ class TrainTestModels:
         # unique_labels = np.unique(np.concatenate((all_labels, all_predictions)))
         # print("Using labels for confusion matrix:", unique_labels)
         
-        self.cm = confusion_matrix(all_labels, all_predictions, labels=self.labels, normalize='true')
+
+    def make_classification_report(self) -> None:
+        """
+        This function creates a classification report for the model.
+        """
+        
+        self.classification_report_dict = classification_report(self.all_labels, self.all_predictions, labels=self.labels, output_dict=True)
+        print(self.classification_report_dict)
+        
+    def get_classification_report(self) -> dict:
+        """
+        This function returns the classification report for the model.
+        """
+        return self.classification_report_dict
+
+        
+    def plot_confusion_matrix(self, path:str = None) -> None:
+        """ 
+        This function plots the confusion matrix of the testing set.
+        """
+        
+        self.cm = confusion_matrix(self.all_labels, self.all_predictions, labels=self.labels, normalize='true')
 
         # Plotting the confusion matrix
         plt.matshow(self.cm, cmap="Blues")
