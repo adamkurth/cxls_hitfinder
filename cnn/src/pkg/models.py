@@ -16,7 +16,7 @@ class Binary_Classification(nn.Module):
         self.kernel_size1 = 10
         self.stride1 = 1
         self.padding1 = 1
-        self.kernel_size2 = 3  
+        self.kernel_size2 = 3
         self.stride2 = 1
         self.padding2 = 1
         num_groups1 = 4  
