@@ -260,7 +260,7 @@ class TrainTestModels:
         """
         
         self.classification_report_dict = classification_report(self.all_labels, self.all_predictions, labels=self.labels, output_dict=True)
-        print(self.classification_report_dict)
+        [print(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
         
     def get_classification_report(self) -> dict:
         """

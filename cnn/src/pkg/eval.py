@@ -77,12 +77,12 @@ class Get_Configuration_Details:
     def get_save_path(self) -> str:
         return self._save_path
     
-    def get_model_diagram(self, filename:str, file_path:str, device) -> None:
-        x = torch.randn(1, 1, 2163, 2069).to(device)
-        self._model = self._model.to(device)
-        vis_graph = make_dot(self._model(x), params=dict(self._model.named_parameters()))
-        vis_graph.render(filename=filename, directory=file_path, format='png', view=True)
-        # vis_graph.view()  
+    # def get_model_diagram(self, filename:str, file_path:str, device) -> None:
+    #     x = torch.randn(1, 1, 2163, 2069).to(device)
+    #     self._model = self._model.to(device)
+    #     vis_graph = make_dot(self._model(x), params=dict(self._model.named_parameters()))
+    #     vis_graph.render(filename=filename, directory=file_path, format='png', view=True)
+    #     # vis_graph.view()  
     
     def get_epochs(self) -> int:
         return self._epochs
