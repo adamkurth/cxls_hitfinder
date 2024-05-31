@@ -240,6 +240,22 @@ class TrainTestModels:
         # No need to reshape - arrays should already be flat
         self.all_labels = np.array(self.all_labels)
         self.all_predictions = np.array(self.all_predictions)
+        
+        """
+        all_image_file_paths = []
+        correctly_classified_image_paths = []
+        incorrectly_classified_image_paths = []
+        all_image_file_paths.extend(paths)
+        # paths for peak_water_overlay will be added to the data loader.
+        prediction_labels_array_comparison = self.all_labels == self.all_predictions
+        
+        for i in range(all_image_file_paths):
+            if prediction_labels_array_comparision[i] == true:
+                correctly_classified_image_paths.extend(all_image_file_paths[i])
+            elif prediction_labels_array_comparision[i] == false:
+                incorrectly_classified_image_paths.extend(all_image_file_paths[i])
+        
+        """
 
         # Compute confusion matrix
         # print(f'-- Labels      : {all_labels}')
@@ -423,4 +439,5 @@ class TrainTestModels:
         image = torch.tensor(edges)
         # print(image.shape)
         return image
+
 
