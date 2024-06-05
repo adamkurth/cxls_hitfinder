@@ -277,6 +277,7 @@ class TrainTestModels:
         
         self.classification_report_dict = classification_report(self.all_labels, self.all_predictions, labels=self.labels, output_dict=True)
         [print(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
+        [self.logger.info(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
         
     def get_classification_report(self) -> dict:
         """
@@ -317,6 +318,7 @@ class TrainTestModels:
         """
         
         self.logger.info(f'Model training and testing: {self.model.__class__.__name__}')
+        self.logger.info(f'Looking for the feature: {self.feature}')  
         print(f'Model testing and validating: {self.model.__class__.__name__}')     
         print(f'Looking for the feature: {self.feature}')  
         
