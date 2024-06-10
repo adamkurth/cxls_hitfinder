@@ -28,7 +28,7 @@ params = myProcessor.get_parameters()
 f.get_counts(paths=myPaths, datasets=datasets)
 
 f.check_attributes(paths=myPaths, datasets=f.convert2str(datasets), dir_type='peak')
-
+ny
 transform = None
 myDataManager = data.DatasetManager(paths=myPaths, datasets=datasets, transform=transform)
 train_loader, test_loader = f.prepare(data_manager=myDataManager, batch_size=20)
@@ -44,13 +44,23 @@ cfg = {
     }
 
 
-peak_config = class_configs.Peak_Detection_Configuration(myPaths, datasets, device, save_path='../models/peak_model.pt')
+peak_config = class_config.Peak_Detection_Configuration(myPaths, datasets, device, save_path='../models/peak_model.pt')
 print(f'weights for peak : {peak_config.get_loss_weights()}')
+
+# a = train.TrainTestModels(cfg, peak_config)
+# a.epoch_loop()
+# a.plot_loss_accuracy('../models/loss_accuracy_plot.png')
+# a.evaluate_model()
+# a.plot_confusion_matrix('../models/confusion_matrix.png')
+# a.make_classification_report()
+# a.save_model()
 
 a = train.TrainTestModels(cfg, peak_config)
 a.epoch_loop()
-a.plot_loss_accuracy('../models/loss_accuracy_plot.png')
-a.evaluate_model()
-a.plot_confusion_matrix('../models/confusion_matrix.png')
-a.make_classification_report()
 a.save_model()
+
+evaluate_a = evaluate_model.Model_Evaluation(cfg, peak_config)
+evaluate_a.load_model()
+evaluate_a.run_model()
+evaluate_a.plot_confusion_matrix()
+evaluate_a.make_classification_report()
