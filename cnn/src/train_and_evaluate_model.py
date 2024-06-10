@@ -44,10 +44,10 @@ cfg = {
     }
 
 
-peak_config = eval.Peak_Detection_Configuration(myPaths, datasets, device, save_path='../models/peak_model.pt')
+peak_config = class_configs.Peak_Detection_Configuration(myPaths, datasets, device, save_path='../models/peak_model.pt')
 print(f'weights for peak : {peak_config.get_loss_weights()}')
 
-a = train_eval.TrainTestModels(cfg, peak_config)
+a = train.TrainTestModels(cfg, peak_config)
 a.epoch_loop()
 a.plot_loss_accuracy('../models/loss_accuracy_plot.png')
 a.evaluate_model()

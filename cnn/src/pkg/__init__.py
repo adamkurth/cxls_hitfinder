@@ -6,8 +6,9 @@ from . import data
 from . import pipe
 from . import process
 from . import transform
-from . import train_eval
-from . import eval
+from . import train
+from . import class_config
+from . import evaluate_model
 
 # finder utilities
 
