@@ -28,7 +28,7 @@ params = myProcessor.get_parameters()
 f.get_counts(paths=myPaths, datasets=datasets)
 
 f.check_attributes(paths=myPaths, datasets=f.convert2str(datasets), dir_type='peak')
-ny
+
 transform = None
 myDataManager = data.DatasetManager(paths=myPaths, datasets=datasets, transform=transform)
 train_loader, test_loader = f.prepare(data_manager=myDataManager, batch_size=20)
