@@ -16,7 +16,7 @@ This file is for creating the new train_eval file using the new inputs and class
 """
 
 
-class TrainTestModels:
+class TrainModel:
     """ 
     This class trains, tests, and plots the loss, accuracy, and confusion matrix of a model.
     There are two methods for training: test_model_no_freeze and test_model_freeze.
@@ -53,17 +53,17 @@ class TrainTestModels:
         self.plot_train_loss = np.zeros(self.epochs)
         self.plot_test_accuracy = np.zeros(self.epochs)
         self.plot_test_loss = np.zeros(self.epochs)
-        self.cm = np.zeros((self.classes,self.classes), dtype=int)
-        self.all_labels = []
-        self.all_predictions = []
-        self.classification_report_dict = {}
+        # self.cm = np.zeros((self.classes,self.classes), dtype=int)
+        # self.all_labels = []
+        # self.all_predictions = []
+        # self.classification_report_dict = {}
         
         self.logger = logging.getLogger(__name__)
         self.scaler = GradScaler()
         
-        self.fpr = 0
-        self.tpr = 0
-        self.roc_auc = 0
+        # self.fpr = 0
+        # self.tpr = 0
+        # self.roc_auc = 0
 
     def train(self, epoch:int) -> None:
         
@@ -204,58 +204,43 @@ class TrainTestModels:
             
         plt.show()
 
-    def evaluate_model(self) -> None:
-        """ 
-        Evaluates model post training. 
-        """
+    # def evaluate_model(self) -> None:
+    #     """ 
+    #     Evaluates model post training. 
+    #     """
 
-        with torch.no_grad():
-            for inputs, labels, attributes in self.test_loader:  # Assuming self.loader[1] is the testing data loader
-                # inputs, labels = inputs[1].to(self.device), labels.to(self.device)
-                # inputs[0] = inputs[0].unsqueeze(1)
-                # labels = labels.to(self.device)
-                # inputs[0], inputs[1] = inputs[0].to(self.device), inputs[1].to(self.device)
-                model_input = inputs[1].to(self.device)
+    #     with torch.no_grad():
+    #         for inputs, labels, attributes in self.test_loader:  # Assuming self.loader[1] is the testing data loader
+    #             # inputs, labels = inputs[1].to(self.device), labels.to(self.device)
+    #             # inputs[0] = inputs[0].unsqueeze(1)
+    #             # labels = labels.to(self.device)
+    #             # inputs[0], inputs[1] = inputs[0].to(self.device), inputs[1].to(self.device)
+    #             model_input = inputs[1].to(self.device)
 
-                with autocast():
-                    if self.feature == 'peak':
-                        score = self.model(model_input, attributes['clen'], attributes['photon_energy'])
-                    else:
-                        score = self.model(model_input)
+    #             with autocast():
+    #                 if self.feature == 'peak':
+    #                     score = self.model(model_input, attributes['clen'], attributes['photon_energy'])
+    #                 else:
+    #                     score = self.model(model_input)
 
-                # Flatten and append labels to all_labels
-                if self.feature != 'peak_location':                           
-                    image_attribute = attributes[self.feature]
-                    self.feature_class.format_image_attributes(image_attribute)
-                    true_value = self.feature_class.get_formatted_image_attribute().to(self.device)
-                else:
-                    true_value = labels.to(self.device)
-                self.all_labels.extend(torch.flatten(true_value.cpu()))
+    #             # Flatten and append labels to all_labels
+    #             if self.feature != 'peak_location':                           
+    #                 image_attribute = attributes[self.feature]
+    #                 self.feature_class.format_image_attributes(image_attribute)
+    #                 true_value = self.feature_class.get_formatted_image_attribute().to(self.device)
+    #             else:
+    #                 true_value = labels.to(self.device)
+    #             self.all_labels.extend(torch.flatten(true_value.cpu()))
                                 
-                self.feature_class.format_prediction(score)
-                predictions = self.feature_class.get_formatted_prediction().cpu()
+    #             self.feature_class.format_prediction(score)
+    #             predictions = self.feature_class.get_formatted_prediction().cpu()
                                         
-                self.all_predictions.extend(torch.flatten(predictions))
+    #             self.all_predictions.extend(torch.flatten(predictions))
 
-        # No need to reshape - arrays should already be flat
-        self.all_labels = np.array(self.all_labels)
-        self.all_predictions = np.array(self.all_predictions)
+    #     # No need to reshape - arrays should already be flat
+    #     self.all_labels = np.array(self.all_labels)
+    #     self.all_predictions = np.array(self.all_predictions)
         
-        """
-        all_image_file_paths = []
-        correctly_classified_image_paths = []
-        incorrectly_classified_image_paths = []
-        all_image_file_paths.extend(paths)
-        # paths for peak_water_overlay will be added to the data loader.
-        prediction_labels_array_comparison = self.all_labels == self.all_predictions
-        
-        for i in range(all_image_file_paths):
-            if prediction_labels_array_comparision[i] == true:
-                correctly_classified_image_paths.extend(all_image_file_paths[i])
-            elif prediction_labels_array_comparision[i] == false:
-                incorrectly_classified_image_paths.extend(all_image_file_paths[i])
-        
-        """
 
         # Compute confusion matrix
         # print(f'-- Labels      : {all_labels}')
@@ -270,47 +255,47 @@ class TrainTestModels:
         # print("Using labels for confusion matrix:", unique_labels)
         
 
-    def make_classification_report(self) -> None:
-        """
-        This function creates a classification report for the model.
-        """
+    # def make_classification_report(self) -> None:
+    #     """
+    #     This function creates a classification report for the model.
+    #     """
         
-        self.classification_report_dict = classification_report(self.all_labels, self.all_predictions, labels=self.labels, output_dict=True)
-        [print(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
-        [self.logger.info(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
+    #     self.classification_report_dict = classification_report(self.all_labels, self.all_predictions, labels=self.labels, output_dict=True)
+    #     [print(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
+    #     [self.logger.info(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
         
-    def get_classification_report(self) -> dict:
-        """
-        This function returns the classification report for the model.
-        """
-        return self.classification_report_dict
+    # def get_classification_report(self) -> dict:
+    #     """
+    #     This function returns the classification report for the model.
+    #     """
+    #     return self.classification_report_dict
 
         
-    def plot_confusion_matrix(self, path:str = None) -> None:
-        """ 
-        This function plots the confusion matrix of the testing set.
-        """
+    # def plot_confusion_matrix(self, path:str = None) -> None:
+    #     """ 
+    #     This function plots the confusion matrix of the testing set.
+    #     """
         
-        self.cm = confusion_matrix(self.all_labels, self.all_predictions, labels=self.labels, normalize='true')
+    #     self.cm = confusion_matrix(self.all_labels, self.all_predictions, labels=self.labels, normalize='true')
 
-        # Plotting the confusion matrix
-        plt.matshow(self.cm, cmap="Blues")
-        plt.title(f'CM for {self.feature} {self.model.__class__.__name__}')
-        plt.colorbar()
-        plt.ylabel('True Label')
-        plt.xlabel('Predicted Label')
+    #     # Plotting the confusion matrix
+    #     plt.matshow(self.cm, cmap="Blues")
+    #     plt.title(f'CM for {self.feature} {self.model.__class__.__name__}')
+    #     plt.colorbar()
+    #     plt.ylabel('True Label')
+    #     plt.xlabel('Predicted Label')
         
-        if path != None:
-            plt.savefig(path)
+    #     if path != None:
+    #         plt.savefig(path)
             
-        plt.show()
+    #     plt.show()
 
 
-    def get_confusion_matrix(self) -> np.ndarray:
-        """ 
-        This function returns the confusion matrix of the testing set.
-        """
-        return self.cm
+    # def get_confusion_matrix(self) -> np.ndarray:
+    #     """ 
+    #     This function returns the confusion matrix of the testing set.
+    #     """
+    #     return self.cm
     
     def epoch_loop(self) -> None: 
         """
@@ -365,81 +350,81 @@ class TrainTestModels:
         else:
             torch.save(self.model.state_dict(), self.save_path)
             
-    def find_optimal_threshold(self) -> None:
-        """
-        This function finds the optimal threshold for the model.
-        """
+    # def find_optimal_threshold(self) -> None:
+    #     """
+    #     This function finds the optimal threshold for the model.
+    #     """
         
-        self.model.eval()
-        probabilities = []
-        true_labels = []
+    #     self.model.eval()
+    #     probabilities = []
+    #     true_labels = []
         
-        with torch.no_grad():
-            for inputs, labels, attributes in self.train_loader:
-                # inputs, labels = inputs[1].to(self.device), labels.to(self.device)
-                inputs = inputs[1].to(self.device)
+    #     with torch.no_grad():
+    #         for inputs, labels, attributes in self.train_loader:
+    #             # inputs, labels = inputs[1].to(self.device), labels.to(self.device)
+    #             inputs = inputs[1].to(self.device)
 
                 
-                image_attribute = attributes[self.feature]
-                self.feature_class.format_image_attributes(image_attribute)
-                image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
+    #             image_attribute = attributes[self.feature]
+    #             self.feature_class.format_image_attributes(image_attribute)
+    #             image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
                 
-                score = self.model(inputs)
+    #             score = self.model(inputs)
                 
-                probabilities.extend(torch.sigmoid(score).cpu().numpy())
-                true_labels.extend(image_attribute.cpu().numpy())
+    #             probabilities.extend(torch.sigmoid(score).cpu().numpy())
+    #             true_labels.extend(image_attribute.cpu().numpy())
                 
-        probabilities = np.array(probabilities)
-        true_labels = np.array(true_labels)
+    #     probabilities = np.array(probabilities)
+    #     true_labels = np.array(true_labels)
         
-        self.fpr, self.tpr, thresholds = roc_curve(true_labels, probabilities)
-        self.roc_auc = auc(self.fpr, self.tpr)
+    #     self.fpr, self.tpr, thresholds = roc_curve(true_labels, probabilities)
+    #     self.roc_auc = auc(self.fpr, self.tpr)
         
-        print(f'--- ROC AUC : {self.roc_auc}')
+    #     print(f'--- ROC AUC : {self.roc_auc}')
         
-        optimal_idx = np.argmax(self.tpr - self.fpr)
-        optimal_threshold = thresholds[optimal_idx]
+    #     optimal_idx = np.argmax(self.tpr - self.fpr)
+    #     optimal_threshold = thresholds[optimal_idx]
         
-        print(f'--- Optimal threshold : {optimal_threshold}')
+    #     print(f'--- Optimal threshold : {optimal_threshold}')
         
-        self.feature_class.set_threshold(optimal_threshold)
+    #     self.feature_class.set_threshold(optimal_threshold)
         
-        print(f'--- confirm threshold : {self.feature_class.get_threshold()}')
+    #     print(f'--- confirm threshold : {self.feature_class.get_threshold()}')
                 
-    def plot_roc_curve(self, path:str = None) -> None:
-        """
-        This function plots the ROC curve of the model.
-        """
+    # def plot_roc_curve(self, path:str = None) -> None:
+    #     """
+    #     This function plots the ROC curve of the model.
+    #     """
         
-        plt.figure()
-        plt.plot(self.fpr, self.tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % self.roc_auc)
-        plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.05])
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
-        plt.title('Receiver Operating Characteristic')
-        plt.legend(loc="lower right")
+    #     plt.figure()
+    #     plt.plot(self.fpr, self.tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % self.roc_auc)
+    #     plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    #     plt.xlim([0.0, 1.0])
+    #     plt.ylim([0.0, 1.05])
+    #     plt.xlabel('False Positive Rate')
+    #     plt.ylabel('True Positive Rate')
+    #     plt.title('Receiver Operating Characteristic')
+    #     plt.legend(loc="lower right")
         
-        if path != None:
-            plt.savefig(path)
+    #     if path != None:
+    #         plt.savefig(path)
             
-        plt.show()
+    #     plt.show()
         
     
-    def filter_image(self, image: torch.Tensor) -> torch.Tensor:
-        """
-        This function filters the image using the Sobel filter.
-        """
-        # print(image.shape)
-        image = image.squeeze(0).squeeze(0).numpy()
-        # print(image.shape)
-        smoothed_image = gaussian(image, sigma=1)
-        # print(smoothed_image.shape)
-        edges = sobel(smoothed_image)
-        # print(edges.shape)
-        image = torch.tensor(edges)
-        # print(image.shape)
-        return image
+    # def filter_image(self, image: torch.Tensor) -> torch.Tensor:
+    #     """
+    #     This function filters the image using the Sobel filter.
+    #     """
+    #     # print(image.shape)
+    #     image = image.squeeze(0).squeeze(0).numpy()
+    #     # print(image.shape)
+    #     smoothed_image = gaussian(image, sigma=1)
+    #     # print(smoothed_image.shape)
+    #     edges = sobel(smoothed_image)
+    #     # print(edges.shape)
+    #     image = torch.tensor(edges)
+    #     # print(image.shape)
+    #     return image
 
 

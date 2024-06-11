@@ -55,7 +55,7 @@ print(f'weights for peak : {peak_config.get_loss_weights()}')
 # a.make_classification_report()
 # a.save_model()
 
-a = train.TrainTestModels(cfg, peak_config)
+a = train.TrainModel(cfg, peak_config)
 a.epoch_loop()
 a.save_model()
 
