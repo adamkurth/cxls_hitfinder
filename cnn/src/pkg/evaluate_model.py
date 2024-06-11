@@ -47,10 +47,10 @@ class Model_Evaluation:
     def load_model(self) -> None:
         model_path = self.feature_class.get_save_path()
         state_dict = torch.load(model_path)
-        model = feature_class.get_model()
+        model = self.feature_class.get_model()
         model.load_state_dict(state_dict)
         self.model = model.eval() 
-        self.model.to(device)
+        self.model.to(self.device)
    
 
     def run_model(self) -> None:
