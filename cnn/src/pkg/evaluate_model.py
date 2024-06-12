@@ -15,27 +15,16 @@ class Model_Evaluation:
 
         self.train_loader, self.test_loader = cfg['loader']
         self.device = cfg['device']
-        # self.batch = cfg['batch_size']
-        # self.scheduler = cfg['scheduler']
         
         self.feature_class = feature_class
         self.model = feature_class.get_model().to(self.device)
-        # self.criterion = feature_class.get_criterion()
+
         self.classes = feature_class.get_classes()
         self.feature = feature_class.get_feature()
         self.labels = feature_class.get_labels()
-        # self.learning_rate = feature_class.get_learning_rate()
+
         self.save_path = feature_class.get_save_path()
-        # self.epochs = feature_class.get_epochs()
-        # self.optimizer = feature_class.get_optimizer()
-        
-        # self.optimizer = self.optimizer(self.model.parameters(), lr=self.learning_rate)
-        # self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.1, patience=3, threshold=0.1)
-        
-        # self.plot_train_accuracy = np.zeros(self.epochs)
-        # self.plot_train_loss = np.zeros(self.epochs)
-        # self.plot_test_accuracy = np.zeros(self.epochs)
-        # self.plot_test_loss = np.zeros(self.epochs)
+
         self.cm = np.zeros((self.classes,self.classes), dtype=int)
         self.all_labels = []
         self.all_predictions = []
@@ -44,8 +33,8 @@ class Model_Evaluation:
         self.logger = logging.getLogger(__name__)
         self.scaler = GradScaler()
         
-    def load_model(self) -> None:
-        model_path = self.feature_class.get_save_path()
+    def load_model(self, model_state_path) -> None:
+        model_path = model_state_path
         state_dict = torch.load(model_path)
         model = self.feature_class.get_model()
         model.load_state_dict(state_dict)

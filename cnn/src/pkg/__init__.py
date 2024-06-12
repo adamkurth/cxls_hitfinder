@@ -9,6 +9,8 @@ from . import transform
 from . import train
 from . import class_config
 from . import evaluate_model
+from . import data_path_manager
+from . import run_model
 
 # finder utilities
 
