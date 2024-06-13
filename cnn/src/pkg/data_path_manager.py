@@ -8,12 +8,9 @@ logger = logging.getLogger(__name__)
 class Paths:
     
     def __init__(self, list_path):
-        # self.parser = argparse.ArgumentParser(description='file path')
-        # self.list_path = self.arguments()
         self.list_path = list_path
         self.h5_files = self.read_file_paths()
         self.h5_tensor_list = self.load_h5_tensor_list()
-
         
     def arguments(self) -> str: 
         """
@@ -62,21 +59,3 @@ class Paths:
             
     
         
-def main() -> None:
-    """
-    This main is used for testing this file seperate of the complete code base. 
-    """
-    paths = Paths()
-    h5_file_path_list = paths.get_file_paths()
-    print(h5_file_path_list)
-    logger.info(h5_file_path_list)
-
-    h5_tensor_list = paths.get_h5_tensor_list()
-    print(h5_tensor_list)
-    logger.info(h5_tensor_list)
-    
-    
-
-# if __name__ == '__main__':
-#     main()
-    

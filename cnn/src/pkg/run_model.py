@@ -1,20 +1,18 @@
 from pkg import *
-import argparse
 import logging
 import torch
 import importlib
 import datetime
+import os 
 
-class RunHitfinder:
+class RunModel:
     
-    def __init__(self, model_class, model_architecture):
+    def __init__(self, model_arch, model_path, save_output_list):
         self.logger = logging.getLogger(__name__)
         
-        self.parser = argparse.ArgumentParser(description='file path')
-        self.args = self.arguments()
-        self.h5_file_ilst = self.args.list
-        self.model_arch = self.args.model
-        self.model_path =self.args.dict
+        self.model_arch = model_arch
+        self.model_path = model_path
+        self.save_output_list = save_output_list
         
         self.model = self.make_model_instance()
         
@@ -23,21 +21,6 @@ class RunHitfinder:
         self.list_containing_peaks = None
         self.list_not_containing_peaks = None
         
-    def arguments(self) -> str: 
-        """
-        This function is for adding an argument when running the python file. 
-        It needs to take an lst file of the h5 files for the model use. 
-        """
-        self.parser.add_argument('-l', '--list', type=str, help='file path to h5 list file')
-        self.parser.add_argument('-m', '--model', type=str, help='name of the model architecture')
-        self.parser.add_argument('-d', '--dict', type=str, help='file path to the model state dict')
-        self.parser.add_argument('-o', '--output', type=str, help='output file path for the lst files without file names')
-        args = self.parser.parse_args()
-        if args:
-            return args
-        else:
-            print('Input file needed.')
-            self.logger.info('Input file needed.')
     
     def make_model_instance(self):
         """
@@ -64,21 +47,23 @@ class RunHitfinder:
         self.model = self.model.eval() 
         self.model.to(self.device)
         
-    def classify_data(self, input_data) -> None: 
+    def classify_data(self, input_data, photon_energy, camera_length, file_paths) -> None: 
         """
         This function takes input data and classifies the data. 
-        
-        ! This input_data should be broken up so that it contains the image tensor, meta data, and file path (either as tuple or seperate params).
-        ! input_data is being used as a dummy variable for now. 
         """
-        for data in input_data:
-            score = self.model(data)
+        
+        if len(input_data) != len(file_paths):
+            print('Input data size does not match number of file paths.')
+            self.logger.info('Input data size does not match number of file paths.')
+        
+        for index in len(input_data):
+            score = self.model(input_data[index], camera_length, photon_energy)
             prediction = (torch.sigmoid(score) > 0.5).long()
             
             if prediction == 1:
-                self.list_containing_peaks.append(input_data)
+                self.list_containing_peaks.append(file_paths[index])
             elif prediction == 0:
-                self.list_not_containing_peaks(input_data)
+                self.list_not_containing_peaks(file_paths[index])
             
     def get_classification_results(self) -> tuple:
         """
@@ -94,4 +79,26 @@ class RunHitfinder:
         """
         This model creates the lst files of the predictions. 
         """
-        pass 
+        now = datetime.datetime.now()
+        formatted_date_time = now.strftime("%m%d%y-%H:%M")
+        
+        filename_peaks = f"found_peaks-{formatted_date_time}.lst"
+        file_path_peaks = os.path.join(self.save_output_list, filename_peaks)
+        
+        filename_no_peaks = f"no_peaks-{formatted_date_time}.lst"
+        file_path_no_peaks = os.path.join(self.save_output_list, filename_no_peaks)
+        
+        with open(file_path_peaks, 'w') as file:
+            file.write(self.list_containing_peaks)
+            
+        print("Created lst file for predicted peak files.")
+        self.logger.info("Created lst file for predicted peak files.")
+        
+        with open(file_path_no_peaks, 'w') as file:
+            file.write(self.list_not_containing_peaks)
+            
+        print("Created lst file for predicted empty files.")
+        self.logger.info("Created lst file for predicted empty files.")
+        
+        
+        
