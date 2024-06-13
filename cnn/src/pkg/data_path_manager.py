@@ -1,4 +1,3 @@
-import argparse
 import logging
 import h5py as h5
 import torch
@@ -11,19 +10,6 @@ class Paths:
         self.list_path = list_path
         self.h5_files = self.read_file_paths()
         self.h5_tensor_list = self.load_h5_tensor_list()
-        
-    def arguments(self) -> str: 
-        """
-        This function is for adding an argument when running the python file. 
-        It needs to take an lst file of the h5 files for the model use. 
-        """
-        self.parser.add_argument('-f', '--file', type=str, help='file path to h5 list file')
-        args = self.parser.parse_args()
-        if args.file:
-            return args.file
-        else:
-            print('Input file needed.')
-            logger.info('Input file needed.')
         
     def read_file_paths(self) -> list:
         """

@@ -1,6 +1,7 @@
 import argparse
 import logging
 from pkg import *
+import torch
 
 
 def arguments(parser) -> str: 
@@ -13,8 +14,8 @@ def arguments(parser) -> str:
     parser.add_argument('-d', '--dict', type=str, help='file path to the model state dict')
     parser.add_argument('-o', '--output', type=str, help='output file path for the lst files without file names')
     
-    parser.add_argument('-pe', '--photon_energy', type=str, help='incident x-ray energy for this input')
-    parser.add_argument('-cl', '--camera_length', type=str, help='detector distance from the samlple')
+    parser.add_argument('-pe', '--photon_energy', type=int, help='incident x-ray energy for this input')
+    parser.add_argument('-cl', '--camera_length', type=float, help='detector distance from the samlple')
     args = parser.parse_args()
     if args:
         return args
@@ -25,6 +26,10 @@ def arguments(parser) -> str:
 
 def main():
     parser = argparse.ArgumentParser(description='parameters for running the model')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(device)
+    logger.info(device)
+
     args = arguments(parser)
     h5_file_list = args.list
     model_arch = args.model
@@ -41,7 +46,7 @@ def main():
     h5_file_paths = data_manager.get_file_paths()
     classification_data = data_manager.get_h5_tensor_list()
     
-    process_data = run_model.RunModel(model_arch, model_path, save_output_list)
+    process_data = run_model.RunModel(model_arch, model_path, save_output_list, device)
     process_data.make_model_instance()
     process_data.load_model()
     process_data.classify_data(classification_data, photon_energy, camera_length, h5_file_paths)

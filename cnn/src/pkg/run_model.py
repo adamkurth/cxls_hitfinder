@@ -7,8 +7,9 @@ import os
 
 class RunModel:
     
-    def __init__(self, model_arch, model_path, save_output_list):
+    def __init__(self, model_arch, model_path, save_output_list, device):
         self.logger = logging.getLogger(__name__)
+        self.device = device
         
         self.model_arch = model_arch
         self.model_path = model_path
@@ -29,13 +30,16 @@ class RunModel:
         Returns:
             class instance
         """
-        module = importlib.import_module('models')
         try:
-            model_class = getattr(module, self.model_arch)
+            model_class = getattr(m, self.model_arch)
             return model_class()
         except:
             print("Model not found.")
             self.logger.info("Model not found.")
+            print(self.model_arch)
+            self.logger.info(self.model_arch)
+            print(model_class)
+            self.logger.info(model_class)
             
     def load_model(self) -> None:
         """
@@ -56,7 +60,11 @@ class RunModel:
             print('Input data size does not match number of file paths.')
             self.logger.info('Input data size does not match number of file paths.')
         
-        for index in len(input_data):
+        for index in range(len(input_data)):
+            input_data[index] = input_data[index].unsqueeze(0).unsqueeze(0).to(self.device)
+            # camera_length, photon_energy = camera_length.float(), photon_energy.float()
+            camera_length, photon_energy = camera_length.to(self.device), photon_energy.to(self.device)
+             
             score = self.model(input_data[index], camera_length, photon_energy)
             prediction = (torch.sigmoid(score) > 0.5).long()
             
