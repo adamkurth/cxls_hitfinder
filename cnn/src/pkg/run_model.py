@@ -1,7 +1,6 @@
 from pkg import *
 import logging
 import torch
-import importlib
 import datetime
 import os 
 
@@ -19,8 +18,8 @@ class RunModel:
         
         self.load_model()
         
-        self.list_containing_peaks = None
-        self.list_not_containing_peaks = None
+        self.list_containing_peaks = []
+        self.list_not_containing_peaks = []
         
     
     def make_model_instance(self):
@@ -62,7 +61,8 @@ class RunModel:
         
         for index in range(len(input_data)):
             input_data[index] = input_data[index].unsqueeze(0).unsqueeze(0).to(self.device)
-            # camera_length, photon_energy = camera_length.float(), photon_energy.float()
+            camera_length, photon_energy = torch.Tensor([camera_length]), torch.Tensor([photon_energy])
+            camera_length, photon_energy = camera_length.float(), photon_energy.float()
             camera_length, photon_energy = camera_length.to(self.device), photon_energy.to(self.device)
              
             score = self.model(input_data[index], camera_length, photon_energy)
@@ -71,7 +71,7 @@ class RunModel:
             if prediction == 1:
                 self.list_containing_peaks.append(file_paths[index])
             elif prediction == 0:
-                self.list_not_containing_peaks(file_paths[index])
+                self.list_not_containing_peaks.append(file_paths[index])
             
     def get_classification_results(self) -> tuple:
         """
@@ -97,13 +97,15 @@ class RunModel:
         file_path_no_peaks = os.path.join(self.save_output_list, filename_no_peaks)
         
         with open(file_path_peaks, 'w') as file:
-            file.write(self.list_containing_peaks)
+            for item in self.list_containing_peaks:
+                file.write(f"{item}\n")
             
         print("Created lst file for predicted peak files.")
         self.logger.info("Created lst file for predicted peak files.")
         
         with open(file_path_no_peaks, 'w') as file:
-            file.write(self.list_not_containing_peaks)
+            for item in self.list_not_containing_peaks:
+                file.write(f"{item}\n")
             
         print("Created lst file for predicted empty files.")
         self.logger.info("Created lst file for predicted empty files.")
