@@ -4,7 +4,7 @@ from pkg import *
 import torch
 
 
-def arguments(parser) -> argparse.ArgumentParser: 
+def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser: 
     """
     This function is for adding an argument when running the python file. 
     It needs to take an lst file of the h5 files for the model use. 

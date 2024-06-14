@@ -1,13 +1,13 @@
 import logging
 import h5py as h5
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
 logger = logging.getLogger(__name__)
 
 class Paths:
     
-    def __init__(self, list_path):
+    def __init__(self, list_path: list):
         self.list_path = list_path
         self.h5_files = self.read_file_paths()
         self.h5_tensor_list, self.h5_attr_list = self.load_h5_data()
@@ -67,21 +67,24 @@ class Paths:
 !WIP
 """ 
 
-class Data:
+class Data(Dataset):
     
-    def __init__(self, classification_data):
+    def __init__(self, classification_data: list, attribute_data: list):
         self.data = classification_data
         
         self.train_loader = None
         self.test_loader = None
         
-    def __len__(self):
+        self.image_data = classification_data
+        self.meta_data = attribute_data
+        
+    def __len__(self) -> int:
         return len(self.data)
     
-    def __getitem__(self):
-        pass
+    def __getitem__(self, idx: int) -> tuple:
+        return self.image_data[idx], self.meta_data[idx]
         
-    def split_data(self, batch_size): 
+    def split_data(self, batch_size: int) -> None: 
         
         num_items = len(self.data)
         
@@ -98,4 +101,4 @@ class Data:
         logger.info(f"Test size: {len(test_dataset)}")
         
     def get_data_loaders(self) -> tuple:
-        return (self.train_loader, self.test_loader)
+        return self.train_loader, self.test_loader

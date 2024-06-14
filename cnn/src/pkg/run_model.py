@@ -6,7 +6,7 @@ import os
 
 class RunModel:
     
-    def __init__(self, model_arch, model_path, save_output_list, h5_file_paths, device):
+    def __init__(self, model_arch: str, model_path: str, save_output_list: str, h5_file_paths: list, device: torch.device):
         self.logger = logging.getLogger(__name__)
         self.device = device
         
@@ -51,7 +51,7 @@ class RunModel:
         self.model = self.model.eval() 
         self.model.to(self.device)
         
-    def classify_data(self, input_data, meta_data) -> None: 
+    def classify_data(self, input_data: list, meta_data: list) -> None: 
         """
         This function takes input data and classifies the data. 
         """
