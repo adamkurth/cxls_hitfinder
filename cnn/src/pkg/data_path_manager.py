@@ -10,7 +10,7 @@ class Paths:
     def __init__(self, list_path):
         self.list_path = list_path
         self.h5_files = self.read_file_paths()
-        self.h5_tensor_list = self.load_h5_tensor_list()
+        self.h5_tensor_list, self.h5_attr_list = self.load_h5_data()
         
     def read_file_paths(self) -> list:
         """
@@ -25,20 +25,22 @@ class Paths:
         """
         return self.h5_files
     
-    def load_h5_tensor_list(self) -> None:
+    def load_h5_data(self) -> None:
         """
-        This function takes the list of h5 files and loads them into a pytorch tensor. 
+        This function takes the list of h5 files and loads them into a pytorch tensor and pulls the metadata.
         """
         tensor_list = []
+        attribute_list = []
         for file_path in self.h5_files: 
             try:
                 with h5.File(file_path, 'r') as file:
                     tensor_list.append(torch.Tensor(file['entry/data/data']))
+                    
             except:
                 print("Incorrect file path : ", file_path)
                 logger.info("Incorrect file path : ", file_path)
                 
-        return tensor_list
+        return tensor_list, attribute_list
                 
     def get_h5_tensor_list(self) -> list:
         
