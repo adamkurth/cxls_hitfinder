@@ -25,28 +25,48 @@ class Paths:
         """
         return self.h5_files
     
-    def load_h5_data(self) -> None:
+    def load_h5_data(self) -> tuple:
         """
-        This function takes the list of h5 files and loads them into a pytorch tensor and pulls the metadata.
+        This function takes the list of h5 files and loads them into a PyTorch tensor and pulls the metadata.
         """
         tensor_list = []
         attribute_list = []
+
         for file_path in self.h5_files: 
             try:
                 with h5.File(file_path, 'r') as file:
+                    # Load data into tensor
                     tensor_list.append(torch.Tensor(file['entry/data/data']))
+
+                    # Retrieve attributes
+                    attributes = {}
+                    for attr in file.attrs:
+                        try:
+                            attributes[attr] = file.attrs.get(attr)
+                        except:
+                            attributes[attr] = None
+                            print(f"Attribute '{attr}' not found in file.")
+                            logger.info(f"Attribute '{attr}' not found in file.")
+                    
+                    attribute_list.append(attributes)
                     
             except:
-                print("Incorrect file path : ", file_path)
-                logger.info("Incorrect file path : ", file_path)
-                
+                print("Incorrect file path: ", file_path)
+                logger.info("Incorrect file path: ", file_path)
+                    
         return tensor_list, attribute_list
                 
     def get_h5_tensor_list(self) -> list:
-        
         return self.h5_tensor_list
             
-    
+    def get_h5_attribute_list(self) -> list:
+        return self.h5_attr_list
+
+
+"""
+!WIP
+""" 
+
 class Data:
     
     def __init__(self, classification_data):

@@ -51,17 +51,19 @@ class RunModel:
         self.model = self.model.eval() 
         self.model.to(self.device)
         
-    def classify_data(self, input_data, photon_energy, camera_length) -> None: 
+    def classify_data(self, input_data, meta_data) -> None: 
         """
         This function takes input data and classifies the data. 
         """
-        
+        # attributes['clen'], attributes['photon_energy']
         if len(input_data) != len(self.h5_file_paths):
             print('Input data size does not match number of file paths.')
             self.logger.info('Input data size does not match number of file paths.')
         
         for index in range(len(input_data)):
             input_data[index] = input_data[index].unsqueeze(0).unsqueeze(0).to(self.device)
+            
+            camera_length, photon_energy = meta_data[index]['clen'], meta_data[index]['photon_energy']
             camera_length, photon_energy = torch.Tensor([camera_length]), torch.Tensor([photon_energy])
             camera_length, photon_energy = camera_length.float(), photon_energy.float()
             camera_length, photon_energy = camera_length.to(self.device), photon_energy.to(self.device)
