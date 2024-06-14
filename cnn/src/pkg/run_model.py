@@ -6,13 +6,14 @@ import os
 
 class RunModel:
     
-    def __init__(self, model_arch, model_path, save_output_list, device):
+    def __init__(self, model_arch, model_path, save_output_list, h5_file_paths, device):
         self.logger = logging.getLogger(__name__)
         self.device = device
         
         self.model_arch = model_arch
         self.model_path = model_path
         self.save_output_list = save_output_list
+        self.h5_file_paths = h5_file_paths
         
         self.model = self.make_model_instance()
         
@@ -50,12 +51,12 @@ class RunModel:
         self.model = self.model.eval() 
         self.model.to(self.device)
         
-    def classify_data(self, input_data, photon_energy, camera_length, file_paths) -> None: 
+    def classify_data(self, input_data, photon_energy, camera_length) -> None: 
         """
         This function takes input data and classifies the data. 
         """
         
-        if len(input_data) != len(file_paths):
+        if len(input_data) != len(self.h5_file_paths):
             print('Input data size does not match number of file paths.')
             self.logger.info('Input data size does not match number of file paths.')
         
@@ -69,9 +70,11 @@ class RunModel:
             prediction = (torch.sigmoid(score) > 0.5).long()
             
             if prediction == 1:
-                self.list_containing_peaks.append(file_paths[index])
+                self.list_containing_peaks.append(self.h5_file_paths[index])
             elif prediction == 0:
-                self.list_not_containing_peaks.append(file_paths[index])
+                self.list_not_containing_peaks.append(self.h5_file_paths[index])
+                
+
             
     def get_classification_results(self) -> tuple:
         """
@@ -85,7 +88,7 @@ class RunModel:
     
     def create_model_output_lst_files(self) -> None:
         """
-        This model creates the lst files of the predictions. 
+        This function creates the lst files of the predictions. 
         """
         now = datetime.datetime.now()
         formatted_date_time = now.strftime("%m%d%y-%H:%M")
@@ -110,5 +113,17 @@ class RunModel:
         print("Created lst file for predicted empty files.")
         self.logger.info("Created lst file for predicted empty files.")
         
+    
+    def output_verification(self) -> None:
+        """
+        This function compares the input file path list size two the sum of the two output file path list sizes.
+        """
         
-        
+        if len(self.h5_file_paths) == len(self.list_containing_peaks) + len(self.list_not_containing_peaks):
+            print("There is the same amount of input files as output files.")
+            self.logger.info('There is the same amount of input files as output files.')
+        else:
+            print("OUTPUT VERIFICATION FAILED: The input paths do not match the output paths.")
+            self.logger.info('OUTPUT VERIFICATION FAILED: The input paths do not match the output paths.')
+            
+            print(f'Input H5 files : {len(self.h5_file_paths)}\nOutput peak files : {len(self.list_containing_peaks)}\nOutput empty files : {len(self.list_not_containing_peaks)}')

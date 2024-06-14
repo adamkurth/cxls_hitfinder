@@ -4,10 +4,16 @@ from pkg import *
 import torch
 
 
-def arguments(parser) -> str: 
+def arguments(parser) -> argparse.ArgumentParser: 
     """
     This function is for adding an argument when running the python file. 
     It needs to take an lst file of the h5 files for the model use. 
+    
+    Args:
+        parser (argparse.ArgumentParser): The argument parser to which the arguments will be added.
+        
+    Returns:
+        argparse.ArgumentParser: The parser with the added arugments.
     """
     parser.add_argument('-l', '--list', type=str, help='file path to the lst file for the model to use')
     parser.add_argument('-m', '--model', type=str, help='name of the model architecture')
@@ -46,11 +52,12 @@ def main():
     h5_file_paths = data_manager.get_file_paths()
     classification_data = data_manager.get_h5_tensor_list()
     
-    process_data = run_model.RunModel(model_arch, model_path, save_output_list, device)
+    process_data = run_model.RunModel(model_arch, model_path, save_output_list, h5_file_paths, device)
     process_data.make_model_instance()
     process_data.load_model()
-    process_data.classify_data(classification_data, photon_energy, camera_length, h5_file_paths)
+    process_data.classify_data(classification_data, photon_energy, camera_length)
     process_data.create_model_output_lst_files()
+    process_data.output_verification()
 
 if __name__ == '__main__':
     logger = logging.getLogger(__name__)
