@@ -76,8 +76,6 @@ class RunModel:
             elif prediction == 0:
                 self.list_not_containing_peaks.append(self.h5_file_paths[index])
                 
-
-            
     def get_classification_results(self) -> tuple:
         """
         This function returns the results from the model classicication. 

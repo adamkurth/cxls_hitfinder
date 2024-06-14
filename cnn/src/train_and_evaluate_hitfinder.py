@@ -45,11 +45,14 @@ def main():
     batch_size = args.batch
     
     data_manager = data_path_manager.Paths(h5_file_list)
-    data_manager.read_file_paths()
-    data_manager.load_h5_tensor_list()
+
+    h5_tensor_list = data_manager.get_h5_tensor_list()
+    h5_attribute_list = data_manager.get_h5_attribute_list()
     
-    h5_file_paths = data_manager.get_file_paths()
-    classification_data = data_manager.get_h5_tensor_list()
+    training_data_manager = data_path_manager.Data(h5_tensor_list, h5_attribute_list)
+    training_data_manager.split_data(batch_size)
+    train_loader, test_loader = training_data_manager.get_data_loaders()
+
     
 if __name__ == '__main__':
     logger = logging.getLogger(__name__)

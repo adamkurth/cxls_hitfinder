@@ -62,11 +62,6 @@ class Paths:
     def get_h5_attribute_list(self) -> list:
         return self.h5_attr_list
 
-
-"""
-!WIP
-""" 
-
 class Data(Dataset):
     
     def __init__(self, classification_data: list, attribute_data: list):
@@ -93,7 +88,7 @@ class Data(Dataset):
         
         train_dataset, test_dataset = torch.utils.data.random_split(self.data, [num_train, num_test])
         self.train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
-        self.test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, pin_memory=True)  
+        self.test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)  
         
         print(f"Train size: {len(train_dataset)}")
         logger.info(f"Train size: {len(train_dataset)}")
