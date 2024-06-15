@@ -20,6 +20,14 @@ def arguments(parser) -> argparse.ArgumentParser:
     
     parser.add_argument('-e', '--epoch', type=int, help='number of training epochs')
     parser.add_argument('-b', '--batch', type=int, help='batch size for training')
+    parser.add_argument('-op', '--optimizer', type=str, help='training optimizer function')
+    parser.add_argument('-s', '--scheduler', type=str, help='training learning rate scheduler')
+    parser.add_argument('-c', '--criteroin', type=str, help='training loss function')
+    parser.add_argument('-lr', '--learning_rate', type=float, help='training learning rate')
+    
+    parser.add_argument('-cl', '--camera_length', type=str, help='attribute name for the camera length parameter')
+    parser.add_argument('-pe', '--photon_energy', type=str, help='attribute name for the camera length parameter')
+    parser.add_argument('-pk', '--peaks', tyep=str, help='attribute name for is there are peaks present')
     
     args = parser.parse_args()
     
@@ -43,16 +51,48 @@ def main():
     
     num_epoch = args.epoch
     batch_size = args.batch
+    optimizer = args.optimizer
+    scheduler = args.scheduler
+    criterion = args.criterion
+    learning_rate = args.learning_rate
     
-    data_manager = data_path_manager.Paths(h5_file_list)
-
-    h5_tensor_list = data_manager.get_h5_tensor_list()
-    h5_attribute_list = data_manager.get_h5_attribute_list()
+    camera_length = args.camera_length
+    photon_energy = args.photon_energy
+    peak = args.peaks
     
-    training_data_manager = data_path_manager.Data(h5_tensor_list, h5_attribute_list)
-    training_data_manager.split_data(batch_size)
-    train_loader, test_loader = training_data_manager.get_data_loaders()
+    attributes = {
+        'camera length': camera_length,
+        'photon energy': photon_energy,
+        'peak': peak
+    }
+    
+    path_manager = data_path_manager.Paths(h5_file_list)
 
+    h5_tensor_list = path_manager.get_h5_tensor_list()
+    h5_attribute_list = path_manager.get_h5_attribute_list()
+    
+    data_manager = data_path_manager.Data(h5_tensor_list, h5_attribute_list)
+    data_manager.split_data(batch_size)
+    train_loader, test_loader = data_manager.get_data_loaders()
+    
+    cfg = {
+        'train data': train_loader,
+        'test data': test_loader,
+        'batch size': batch_size,
+        'device': device,
+        'epochs': num_epoch,
+        'optimizer': optimizer,
+        'scheduler': scheduler,
+        'criterion': criterion,
+        'learning rate': learning_rate,
+        'model': model_arch
+    }
+
+    training_manager = train_model.TrainModel(cfg, attributes)
+    training_manager.epoch_loop()
+    training_manager.plot_loss_accuracy()
+    
+    
     
 if __name__ == '__main__':
     logger = logging.getLogger(__name__)

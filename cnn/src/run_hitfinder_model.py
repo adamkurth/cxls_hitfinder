@@ -19,6 +19,8 @@ def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument('-m', '--model', type=str, help='name of the model architecture')
     parser.add_argument('-d', '--dict', type=str, help='file path to the model state dict')
     parser.add_argument('-o', '--output', type=str, help='output file path for the lst files without file names')
+    parser.add_argument('-cl', '--camera_length', type=str, help='attribute name for the camera length parameter')
+    parser.add_argument('-pe', '--photon_energy', type=str, help='attribute name for the camera length parameter')
     
     args = parser.parse_args()
     if args:
@@ -40,6 +42,9 @@ def main():
     model_path = args.dict
     save_output_list = args.output 
     
+    camera_length = args.camera_length
+    photon_energy = args.photon_energy
+    
     data_manager = data_path_manager.Paths(h5_file_list)
     
     h5_file_paths = data_manager.get_file_paths()
@@ -49,7 +54,7 @@ def main():
     process_data = run_model.RunModel(model_arch, model_path, save_output_list, h5_file_paths, device)
     process_data.make_model_instance()
     process_data.load_model()
-    process_data.classify_data(h5_tensor_list, h5_attribute_list) 
+    process_data.classify_data(h5_tensor_list, h5_attribute_list, camera_length, photon_energy) 
     process_data.create_model_output_lst_files()
     process_data.output_verification()
 
