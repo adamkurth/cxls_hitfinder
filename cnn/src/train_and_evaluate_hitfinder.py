@@ -90,7 +90,13 @@ def main():
 
     training_manager = train_model.TrainModel(cfg, attributes)
     training_manager.epoch_loop()
-    training_manager.plot_loss_accuracy()
+    training_manager.plot_loss_accuracy(training_results)
+    training_manager.save_model(model_dict_save_path)
+    
+    evaluation_manager = evaluate_model.ModelEvaluation(cfg, attributes)
+    evaluation_manager.run_testing_set()
+    evaluation_manager.make_classification_report()
+    evaluation_manager.plot_confusion_matrix()
     
     
     

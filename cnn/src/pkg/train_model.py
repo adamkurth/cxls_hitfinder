@@ -135,7 +135,7 @@ class TrainModel:
             
                 running_loss_test += loss.item()  # Convert to Python number with .item()
                 
-                predictions (torch.sigmoid(score) > 0.5).long()
+                predictions = (torch.sigmoid(score) > 0.5).long()
                     
                 accuracy_test += (predictions == truth).float().sum()
                 total += torch.numel(truth)

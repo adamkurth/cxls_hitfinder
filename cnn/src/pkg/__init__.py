@@ -8,10 +8,11 @@ from . import process
 from . import transform
 from . import train
 from . import class_config
-from . import evaluate_model
+from . import evaluate
 from . import data_path_manager
 from . import run_model
 from . import train_model
+from . import evaluate_model
 
 # finder utilities
 

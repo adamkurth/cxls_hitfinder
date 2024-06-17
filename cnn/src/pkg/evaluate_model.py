@@ -9,70 +9,45 @@ from pkg import *
 from torch.cuda.amp import GradScaler, autocast
 
 
-class Model_Evaluation:
+class ModelEvaluation:
     
-    def __init__(self, cfg: dict, feature_class: object) -> None:
-
-        self.train_loader, self.test_loader = cfg['loader']
-        self.device = cfg['device']
+    def __init__(self, cfg: dict, attributes: dict):
+        self.logger = logging.getLogger(__name__)
         
-        self.feature_class = feature_class
-        self.model = feature_class.get_model().to(self.device)
-
-        self.classes = feature_class.get_classes()
-        self.feature = feature_class.get_feature()
-        self.labels = feature_class.get_labels()
-
-        self.save_path = feature_class.get_save_path()
-
+        self.test_loader = cfg['test data']
+        self.batch_size = cfg['batch size']
+        self.device = cfg['device']
+        self.model = cfg['model']
+        
+        self.camera_length = attributes['camera length']
+        self.photon_energy = attributes['photon energy']
+        self.peak = attributes['peak']
+        
         self.cm = np.zeros((self.classes,self.classes), dtype=int)
         self.all_labels = []
         self.all_predictions = []
         self.classification_report_dict = {}
-        
-        self.logger = logging.getLogger(__name__)
-        self.scaler = GradScaler()
-        
-    def load_model(self, model_state_path) -> None:
-        model_path = model_state_path
-        state_dict = torch.load(model_path)
-        model = self.feature_class.get_model()
-        model.load_state_dict(state_dict)
-        self.model = model.eval() 
-        self.model.to(self.device)
-   
 
-    def run_model(self) -> None:
+
+    def run_testing_set(self) -> None:
         """ 
         Evaluates model post training. 
         """
-
+        
+        self.model.eval()
         with torch.no_grad():
-            for inputs, labels, attributes in self.test_loader:  # Assuming self.loader[1] is the testing data loader
-                # inputs, labels = inputs[1].to(self.device), labels.to(self.device)
-                # inputs[0] = inputs[0].unsqueeze(1)
-                # labels = labels.to(self.device)
-                # inputs[0], inputs[1] = inputs[0].to(self.device), inputs[1].to(self.device)
-                model_input = inputs[1].to(self.device)
+            for inputs, attributes in self.test_loader:
+                
+                inputs = inputs.unsqueeze(0).unsqueeze(0).to(self.device)
 
                 with autocast():
-                    if self.feature == 'peak':
-                        score = self.model(model_input, attributes['clen'], attributes['photon_energy'])
-                    else:
-                        score = self.model(model_input)
-
-                # Flatten and append labels to all_labels
-                if self.feature != 'peak_location':                           
-                    image_attribute = attributes[self.feature]
-                    self.feature_class.format_image_attributes(image_attribute)
-                    true_value = self.feature_class.get_formatted_image_attribute().to(self.device)
-                else:
-                    true_value = labels.to(self.device)
-                self.all_labels.extend(torch.flatten(true_value.cpu()))
-                                
-                self.feature_class.format_prediction(score)
-                predictions = self.feature_class.get_formatted_prediction().cpu()
-                                        
+                    score = self.model(inputs, attributes[self.camera_length], attributes[self.photon_energy])
+                             
+                    truth = attributes[self.peak].reshape(-1, 1).float().to(self.device)
+                                    
+                predictions = (torch.sigmoid(score) > 0.5).long()
+                
+                self.all_labels.extend(torch.flatten(truth.cpu()))
                 self.all_predictions.extend(torch.flatten(predictions))
 
         # No need to reshape - arrays should already be flat
@@ -115,7 +90,7 @@ class Model_Evaluation:
         plt.show()
 
 
-    def get_confusion_matrix(self) -> np.ndarray:
+    def get_sconfusion_matrix(self) -> np.ndarray:
         """ 
         This function returns the confusion matrix of the testing set.
         """

@@ -44,14 +44,14 @@ cfg = {
     }
 
 
-peak_config = class_config.Peak_Detection_Configuration(myPaths, datasets, device, save_path='../models/peak_model.pt')
+peak_config = class_config.Peak_Detection_Configuration(myPaths, datasets, device, save_path='../models/hitfinder_model_2.pt')
 print(f'weights for peak : {peak_config.get_loss_weights()}')
 
 a = train.TrainModel(cfg, peak_config)
 a.epoch_loop()
 a.save_model()
 
-evaluate_a = evaluate_model.Model_Evaluation(cfg, peak_config)
+evaluate_a = evaluate.Model_Evaluation(cfg, peak_config)
 evaluate_a.load_model()
 evaluate_a.run_model()
 evaluate_a.plot_confusion_matrix()

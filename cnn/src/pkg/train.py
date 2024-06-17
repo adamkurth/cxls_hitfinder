@@ -36,7 +36,12 @@ class TrainModel:
         self.scheduler = cfg['scheduler']
         
         self.feature_class = feature_class
-        self.model = feature_class.get_model().to(self.device)
+        
+        # this line is gluing this project togther rn
+        # self.model = feature_class.get_model().to(self.device)
+        self.model = None
+        self.load_model('/home/eseveret/hitfinder_models/peak_model_1.pt')
+        
         self.criterion = feature_class.get_criterion()
         self.classes = feature_class.get_classes()
         self.feature = feature_class.get_feature()
@@ -64,6 +69,13 @@ class TrainModel:
         # self.fpr = 0
         # self.tpr = 0
         # self.roc_auc = 0
+        
+    def load_model(self, model_state_path) -> None:
+        model_path = model_state_path
+        state_dict = torch.load(model_path)
+        self.model.load_state_dict(state_dict)
+        self.model = self.model.eval() 
+        self.model.to(self.device)
 
     def train(self, epoch:int) -> None:
         
