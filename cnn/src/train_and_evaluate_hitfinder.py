@@ -6,6 +6,7 @@ import torch
 def arguments(parser) -> argparse.ArgumentParser:
     """
     This function is for adding arguments to configure the parameters used for training different models.
+    These parameters are defined the the job sbatch script.
 
     Args:
         parser (argparse.ArgumentParser): The argument parser to which the arguments will be added.
@@ -37,7 +38,11 @@ def arguments(parser) -> argparse.ArgumentParser:
         print('Input needed.')
         logger.info('Input needed.')
 
-def main():
+def main() -> None:
+    """
+    This main function is the flow of logic for the training and evaluation of a given model. Here parameter arugments are assigned to variables.
+    Classes for data management, training, and evaluation are declared and the relavent functions for the process are called following declaration in blocks. 
+    """
     parser = argparse.ArgumentParser(description='Model training arguments.')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)

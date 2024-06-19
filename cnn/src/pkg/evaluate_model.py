@@ -9,10 +9,21 @@ from pkg import *
 from torch.cuda.amp import GradScaler, autocast
 import datetime
 
+# ! Look into an inheritance relationship with the training and data classes.
 
 class ModelEvaluation:
     
-    def __init__(self, cfg: dict, attributes: dict, trained_model: nn.Module):
+    def __init__(self, cfg: dict, attributes: dict, trained_model: nn.Module) -> None:
+        """
+        This constructor breaks out important dictonaries, takes in the trained model, creates a logger object, and creates parameters to store evaluation metrics. 
+
+        Args:
+            cfg (dict): Dictionary containing important information for training including: data loaders, batch size, training device, number of epochs, the optimizer, the scheduler, the criterion, the learning rate, and the model class. 
+            Everything besides the data loaders and device are arguments in the sbatch script.
+            Not all parameters are relevant for evaluation and therefore are not given variables. 
+            attributes (dict): Dictionary containing the names of the metadata contained in the h5 image files. These names could change depending on whom created the metadata, so the specific names are arguments in the sbatch script. 
+            trained_model (nn.Module): This is a trained model taken from the training class. 
+        """
         self.logger = logging.getLogger(__name__)
         
         self.test_loader = cfg['test data']
@@ -32,7 +43,8 @@ class ModelEvaluation:
 
     def run_testing_set(self) -> None:
         """ 
-        Evaluates model post training. 
+        This function runs the trained model in evaluation mode.
+        This function creates arrays of labels and predictions to compare against each other for metrics. 
         """
         
         self.model.eval()
@@ -57,7 +69,7 @@ class ModelEvaluation:
         
     def make_classification_report(self) -> None:
         """
-        This function creates a classification report for the model.
+        This function creates a classification report for the model and prints it.
         """
         
         self.classification_report_dict = classification_report(self.all_labels, self.all_predictions, labels=self.labels, output_dict=True)
@@ -67,6 +79,9 @@ class ModelEvaluation:
     def get_classification_report(self) -> dict:
         """
         This function returns the classification report for the model.
+        
+        Returns:
+            dict: The classification report in the form of a dictionary. 
         """
         return self.classification_report_dict
 
@@ -74,6 +89,7 @@ class ModelEvaluation:
     def plot_confusion_matrix(self, path:str = None) -> None:
         """ 
         This function plots the confusion matrix of the testing set.
+        The values in this matrix are done so that the rows total to 1. 
         """
         
         self.cm = confusion_matrix(self.all_labels, self.all_predictions, labels=self.labels, normalize='true')
@@ -97,5 +113,8 @@ class ModelEvaluation:
     def get_sconfusion_matrix(self) -> np.ndarray:
         """ 
         This function returns the confusion matrix of the testing set.
+        
+        Returns:
+            np.darray: The numpy array of the values in the confusion matrix.
         """
         return self.cm

@@ -11,7 +11,17 @@ import datetime
 
 class TrainModel:
     
-    def __init__(self, cfg: dict, attributes: dict):
+    # ! This class may work better with an inheritance relation with the evaluation class and or the data management class. 
+    
+    def __init__(self, cfg: dict, attributes: dict) -> None:
+        """
+        This constructor breaks up the training configuration infomation dictionary and h5 metadata key dictionary.
+        In addition, a logging object is created and global list are created for storing infomation about the training loss and accuracy. 
+
+        Args:
+            cfg (dict): Dictionary containing important information for training including: data loaders, batch size, training device, number of epochs, the optimizer, the scheduler, the criterion, the learning rate, and the model class. Everything besides the data loaders and device are arguments in the sbatch script.
+            attributes (dict): Dictionary containing the names of the metadata contained in the h5 image files. These names could change depending on whom created the metadata, so the specific names are arguments in the sbatch script. 
+        """
         self.logger = logging.getLogger(__name__)
         
         self.train_loader = cfg['train data']
@@ -37,7 +47,12 @@ class TrainModel:
         
     def make_training_instances(self) -> None:
         """
-        This function takes the strings from the sbatch input and makes them objects.
+        This function takes the strings from the sbatch script and makes them objects.
+        These strings are objects that are needed for the training. Objects declared here are :
+        - the model
+        - the optimizer
+        - the learning rate scheduler
+        - the loss criterion
         """
         # model_class = getattr(m, self.model_arch)
         # return model_class()
@@ -49,7 +64,8 @@ class TrainModel:
     
     def epoch_loop(self) -> None: 
         """
-        This function loops through the number of epochs and trains and tests the model.
+        This function loops through the training and testing functions by the number of epochs iterations.
+        The train and test function are used back to back per epoch to optimize then perfom a second evalution on the perfomance of the model. 
         """
         
         self.logger.info(f'Model training and testing: {self.model.__class__.__name__}')
@@ -115,7 +131,7 @@ class TrainModel:
     def test(self, epoch:int) -> None:
         
         """ 
-        This function test the model and prints the loss and accuracy of the testing sets per epoch.
+        This function test the model in evaluation mode and prints the loss and accuracy of the testing sets per epoch.
         """
         
         running_loss_test, accuracy_test, predictions, total = 0.0, 0.0, 0.0, 0.0
@@ -179,7 +195,7 @@ class TrainModel:
         """
         This function saves the model's state_dict to a specified path. This can be used to load the trained model later.
         Save as .pt file.
-        root: /cnn/models
+
         Args:
             path (str): Path to save the model's state_dict.
         """
@@ -187,4 +203,10 @@ class TrainModel:
         torch.save(self.model.state_dict(), path)
         
     def get_model(self) -> nn.Module:
+        """
+        This function returns the trained model obkect. This is to get the trained model to evaluation without having to load the state dict. 
+
+        Returns:
+            nn.Module: The trained model object. 
+        """
         return self.model
