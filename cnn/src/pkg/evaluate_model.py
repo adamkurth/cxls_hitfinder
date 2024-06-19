@@ -7,17 +7,18 @@ from sklearn.metrics import confusion_matrix, classification_report
 import matplotlib.pyplot as plt
 from pkg import *
 from torch.cuda.amp import GradScaler, autocast
+import datetime
 
 
 class ModelEvaluation:
     
-    def __init__(self, cfg: dict, attributes: dict):
+    def __init__(self, cfg: dict, attributes: dict, trained_model: nn.Module):
         self.logger = logging.getLogger(__name__)
         
         self.test_loader = cfg['test data']
         self.batch_size = cfg['batch size']
         self.device = cfg['device']
-        self.model = cfg['model']
+        self.model = trained_model
         
         self.camera_length = attributes['camera length']
         self.photon_energy = attributes['photon energy']
@@ -85,6 +86,9 @@ class ModelEvaluation:
         plt.xlabel('Predicted Label')
         
         if path != None:
+            now = datetime.datetime.now()
+            formatted_date_time = now.strftime("%m%d%y-%H:%M")
+            path = path + '/' + formatted_date_time + '-' + 'confusion_matrix.png'
             plt.savefig(path)
             
         plt.show()

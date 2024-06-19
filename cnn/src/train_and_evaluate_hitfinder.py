@@ -22,12 +22,12 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-b', '--batch', type=int, help='batch size for training')
     parser.add_argument('-op', '--optimizer', type=str, help='training optimizer function')
     parser.add_argument('-s', '--scheduler', type=str, help='training learning rate scheduler')
-    parser.add_argument('-c', '--criteroin', type=str, help='training loss function')
+    parser.add_argument('-c', '--criterion', type=str, help='training loss function')
     parser.add_argument('-lr', '--learning_rate', type=float, help='training learning rate')
     
     parser.add_argument('-cl', '--camera_length', type=str, help='attribute name for the camera length parameter')
     parser.add_argument('-pe', '--photon_energy', type=str, help='attribute name for the camera length parameter')
-    parser.add_argument('-pk', '--peaks', tyep=str, help='attribute name for is there are peaks present')
+    parser.add_argument('-pk', '--peaks', type=str, help='attribute name for is there are peaks present')
     
     args = parser.parse_args()
     
@@ -39,7 +39,7 @@ def arguments(parser) -> argparse.ArgumentParser:
 
 def main():
     parser = argparse.ArgumentParser(description='Model training arguments.')
-    device = torch.device('cude' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)
     logger.info(device)
     
@@ -89,14 +89,16 @@ def main():
     }
 
     training_manager = train_model.TrainModel(cfg, attributes)
+    training_manager.make_training_instances()
     training_manager.epoch_loop()
     training_manager.plot_loss_accuracy(training_results)
     training_manager.save_model(model_dict_save_path)
+    trained_model = training_manager.get_model()
     
-    evaluation_manager = evaluate_model.ModelEvaluation(cfg, attributes)
+    evaluation_manager = evaluate_model.ModelEvaluation(cfg, attributes, trained_model)
     evaluation_manager.run_testing_set()
     evaluation_manager.make_classification_report()
-    evaluation_manager.plot_confusion_matrix()
+    evaluation_manager.plot_confusion_matrix(training_results)
     
     
     

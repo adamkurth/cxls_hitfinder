@@ -86,9 +86,11 @@ class Binary_Classification_With_Parameters(nn.Module):
         x = F.relu(self.gn2(self.conv2(x)))
         x = x.view(x.size(0), -1) 
         x = F.relu(self.fc1(x))
-        # device = x.device
-        # camera_length = camera_length.to(device).float()
-        # photon_energy = photon_energy.to(device).float()
+        
+        device = x.device
+        camera_length = camera_length.to(device).float()
+        photon_energy = photon_energy.to(device).float()
+        
         params = torch.stack((camera_length, photon_energy), dim=1)
         x = torch.cat((x, params), dim=1)
         x = self.fc2(x)

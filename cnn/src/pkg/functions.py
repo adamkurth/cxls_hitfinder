@@ -66,6 +66,7 @@ def convert2str_single(dataset: Union[str, int]) -> str:
         raise ValueError("Invalid dataset type. Expected str or int.")
 
 def load_h5(file_path:str) -> np.ndarray:
+    print(f'file path : {file_path}')
     with h5.File(file_path, 'r') as file:
         return np.array(file['entry/data/data'])
 

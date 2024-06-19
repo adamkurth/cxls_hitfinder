@@ -25,9 +25,9 @@ datasets = [1,4,5,6,7,8]
 myPaths = path.PathManager(datasets=datasets)
 myProcessor = process.Processor(paths=myPaths, datasets=datasets)
 params = myProcessor.get_parameters()
-f.get_counts(paths=myPaths, datasets=datasets)
+# f.get_counts(paths=myPaths, datasets=datasets)
 
-f.check_attributes(paths=myPaths, datasets=f.convert2str(datasets), dir_type='peak')
+# f.check_attributes(paths=myPaths, datasets=f.convert2str(datasets), dir_type='peak')
 
 transform = None
 myDataManager = data.DatasetManager(paths=myPaths, datasets=datasets, transform=transform)
@@ -49,10 +49,11 @@ print(f'weights for peak : {peak_config.get_loss_weights()}')
 
 a = train.TrainModel(cfg, peak_config)
 a.epoch_loop()
+a.plot_loss_accuracy('/home/eseveret/hitfinder_output_files/train_model_output/transfer_learning_ds2_1.png')
 a.save_model()
 
 evaluate_a = evaluate.Model_Evaluation(cfg, peak_config)
 evaluate_a.load_model()
 evaluate_a.run_model()
-evaluate_a.plot_confusion_matrix()
+evaluate_a.plot_confusion_matrix('/home/eseveret/hitfinder_output_files/train_model_output/transfer_learning_ds2_1.png')
 evaluate_a.make_classification_report()

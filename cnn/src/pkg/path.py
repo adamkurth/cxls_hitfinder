@@ -16,10 +16,12 @@ class PathManager:
             self.root = root_dir  # Directly using the provided root directory
         self.datasets = [str(num).zfill(2) for num in datasets]
         self.images_dir = os.path.join(self.root, 'images')
+        print(f'image dir : {self.images_dir}')
         self.peaks_dir = os.path.join(self.images_dir, 'peaks')
         self.labels_dir = os.path.join(self.images_dir, 'labels')
         self.peaks_water_overlay_dir = os.path.join(self.images_dir, 'peaks_water_overlay')
         self.water_background_dir = os.path.join(self.images_dir, 'water')
+        print(f'water background directory : {self.water_background_dir}')
         self.temp = os.path.join(self.images_dir, 'temp')
         self.total_paths = self.selected_datasets()
         

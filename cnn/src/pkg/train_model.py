@@ -7,6 +7,7 @@ import torch.optim.lr_scheduler as lrs
 import numpy as np
 import matplotlib.pyplot as plt
 from torch.cuda.amp import GradScaler, autocast
+import datetime
 
 class TrainModel:
     
@@ -52,9 +53,9 @@ class TrainModel:
         """
         
         self.logger.info(f'Model training and testing: {self.model.__class__.__name__}')
-        self.logger.info(f'Looking for the feature: {self.feature}')  
+        # self.logger.info(f'Looking for the feature: {self.feature}')  
         print(f'Model testing and validating: {self.model.__class__.__name__}')     
-        print(f'Looking for the feature: {self.feature}')  
+        # print(f'Looking for the feature: {self.feature}')  
         
         for epoch in range(self.epochs):
             self.logger.info('-- epoch '+str(epoch)) 
@@ -167,6 +168,9 @@ class TrainModel:
         plt.legend(['accuracy train','accuracy test','loss train','loss test'])
         
         if path != None:
+            now = datetime.datetime.now()
+            formatted_date_time = now.strftime("%m%d%y-%H:%M")
+            path = path + '/' + formatted_date_time + '-' + 'training_loss_accuracy.png'
             plt.savefig(path)
             
         plt.show()
@@ -181,3 +185,6 @@ class TrainModel:
         """
 
         torch.save(self.model.state_dict(), path)
+        
+    def get_model(self) -> nn.Module:
+        return self.model

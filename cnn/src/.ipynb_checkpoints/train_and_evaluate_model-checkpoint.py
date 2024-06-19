@@ -44,13 +44,16 @@ cfg = {
     }
 
 
-peak_config = eval.Peak_Detection_Configuration(myPaths, datasets, device, save_path='../models/peak_model.pt')
+peak_config = class_config.Peak_Detection_Configuration(myPaths, datasets, device, save_path='../models/hitfinder_model_2.pt')
 print(f'weights for peak : {peak_config.get_loss_weights()}')
 
-a = train_eval.TrainTestModels(cfg, peak_config)
+a = train.TrainModel(cfg, peak_config)
 a.epoch_loop()
-a.plot_loss_accuracy('../models/loss_accuracy_plot.png')
-a.evaluate_model()
-a.plot_confusion_matrix('../models/confusion_matrix.png')
-a.make_classification_report()
+a.plot_loss_accuracy('/home/eseveret/hitfinder_output_files/train_model_output/transfer_learning_ds2_1.png')
 a.save_model()
+
+evaluate_a = evaluate.Model_Evaluation(cfg, peak_config)
+evaluate_a.load_model()
+evaluate_a.run_model()
+evaluate_a.plot_confusion_matrix('/home/eseveret/hitfinder_output_files/train_model_output/transfer_learning_ds2_1.png')
+evaluate_a.make_classification_report()
