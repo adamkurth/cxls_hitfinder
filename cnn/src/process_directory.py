@@ -62,7 +62,7 @@ def validate_and_prepare_directories(base_path:str, force:bool, regenerate:bool)
     proceed_with_processing = False
     
     dirs = ["peaks", "labels", "peaks_water_overlay", "water"]
-    for i in range(1, 10):  # 01 to 09
+    for i in range(1, 10):  # 01 to 09x
         dataset_dir = f"{i:02d}"
         counts = {}
         for dir_name in dirs:

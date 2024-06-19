@@ -1,10 +1,19 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+<<<<<<< HEAD
 #from torchviz import make_dot
 import pkg.models as m
 from pkg.functions import get_counts_weights
 
+=======
+import torch.nn.functional as F
+# from torchviz import make_dot
+import pkg.models as m
+from pkg.functions import get_counts_weights, save_h5
+from scipy.signal import find_peaks
+import numpy as np
+>>>>>>> progress-Everett
 
 class Get_Configuration_Details:
     """
@@ -75,11 +84,20 @@ class Get_Configuration_Details:
     def get_save_path(self) -> str:
         return self._save_path
     
+<<<<<<< HEAD
     def get_model_diagram(self, filename:str, file_path:str, device) -> None:
         x = torch.randn(1, 1, 2163, 2069).to(device)
         vis_graph = make_dot(self._model(x), params=dict(self._model.named_parameters()))
         vis_graph.render(filename=filename, directory=file_path, format='png', view=True)
         # vis_graph.view()  
+=======
+    # def get_model_diagram(self, filename:str, file_path:str, device) -> None:
+    #     x = torch.randn(1, 1, 2163, 2069).to(device)
+    #     self._model = self._model.to(device)
+    #     vis_graph = make_dot(self._model(x), params=dict(self._model.named_parameters()))
+    #     vis_graph.render(filename=filename, directory=file_path, format='png', view=True)
+    #     # vis_graph.view()  
+>>>>>>> progress-Everett
     
     def get_epochs(self) -> int:
         return self._epochs
@@ -89,6 +107,14 @@ class Get_Configuration_Details:
     
     def set_threshold(self, threshold: float) -> None:
         self._threshold = threshold
+<<<<<<< HEAD
+=======
+        
+    def get_optimizer(self) -> optim:
+        return self._optim
+        
+
+>>>>>>> progress-Everett
     
 class Peak_Detection_Configuration(Get_Configuration_Details):
     """
@@ -99,8 +125,13 @@ class Peak_Detection_Configuration(Get_Configuration_Details):
     """
     def __init__(self, paths, datasets, device, save_path=None): 
         super().__init__()
+<<<<<<< HEAD
         # self._model = m.Multi_Class_CNN2(output_channels=1)
         self._model = m.ResNetBinaryClassifier()
+=======
+        # self._model = m.Binary_Classification(output_channels=1)
+        self._model = m.Binary_Classification_With_Parameters()
+>>>>>>> progress-Everett
         self._feature = "peak"
         self._classes = 2
         self._labels = [0,1]
@@ -110,7 +141,12 @@ class Peak_Detection_Configuration(Get_Configuration_Details):
         self._weights = get_counts_weights(paths, datasets, self._classes)
         self._criterion = nn.BCEWithLogitsLoss(pos_weight=self._weights.to(device))
         self._save_path = save_path
+<<<<<<< HEAD
         self._epochs = 10
+=======
+        self._epochs = 30
+        self._optim = optim.Adam
+>>>>>>> progress-Everett
 
 
 class Photon_Energy_Configuration(Get_Configuration_Details):
@@ -123,7 +159,12 @@ class Photon_Energy_Configuration(Get_Configuration_Details):
     def __init__(self, paths, datasets, device, save_path=None): 
         super().__init__()
         # self._model = m.Multi_Class_CNN1()
+<<<<<<< HEAD
         self._model = m.MultiClassCNN()
+=======
+        # self._model = m.MultiClassCNN()
+        self._model = m.Linear()
+>>>>>>> progress-Everett
         self._feature = "photon_energy"
         self._classes = 3
         self._labels = [0,1,2]
@@ -138,6 +179,10 @@ class Photon_Energy_Configuration(Get_Configuration_Details):
         self._criterion = nn.CrossEntropyLoss(weight=self._weights.to(device))
         self._save_path = save_path
         self._epochs = 5
+<<<<<<< HEAD
+=======
+        self._optim = optim.SGD
+>>>>>>> progress-Everett
 
         
         
@@ -150,7 +195,12 @@ class Camera_Length_Configureation(Get_Configuration_Details):
     """
     def __init__(self, paths, datasets, device, save_path=None): 
         super().__init__()
+<<<<<<< HEAD
         self._model = m.MultiClassCNN()
+=======
+        # self._model = m.MultiClassCNN()
+        self._model = m.Linear()
+>>>>>>> progress-Everett
         self._feature = "clen"
         self._classes = 3
         self._labels = [0,1,2]
@@ -164,4 +214,47 @@ class Camera_Length_Configureation(Get_Configuration_Details):
         self._weights = get_counts_weights(paths, datasets, self._classes)
         self._criterion = nn.CrossEntropyLoss(weight=self._weights.to(device))
         self._save_path = save_path
+<<<<<<< HEAD
         self._epochs = 5
+=======
+        self._epochs = 5
+        self._optim = optim.SGD
+        
+class Peak_Finder_Configuration(Get_Configuration_Details):
+    """
+    This class is the specific configureation for the peak location model.
+
+    Args:
+        Get_Configuration_Details (class): Class used for retreiving configuration details.
+    """
+    def __init__(self, paths, datasets, device, save_path=None): 
+        super().__init__()
+        # self._model = m.MultiClassCNN()
+        self._model = m.HeatmapCNN()
+        # self._model = m.DnCNN()
+        self._feature = "peak_location"
+        self._classes = 2
+        self._labels = [0,1]
+        self._attribute_mapping = None
+        self._threshold = 0.5
+        self._learning_rate = 0.00001
+        self._weights = torch.Tensor([100000])
+        # self._criterion = nn.MSELoss()
+        self._criterion = nn.BCEWithLogitsLoss(pos_weight=self._weights.to(device))
+        # self._criterion = FocalLoss()
+        self._save_path = save_path
+        self._epochs = 15
+        self._optim = optim.Adam
+        
+class FocalLoss(nn.Module):
+    def __init__(self, alpha=0.25, gamma=2.0):
+        super(FocalLoss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+
+    def forward(self, inputs, targets):
+        BCE_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction='none')
+        pt = torch.exp(-BCE_loss)  
+        F_loss = self.alpha * (1 - pt) ** self.gamma * BCE_loss
+        return F_loss.mean()
+>>>>>>> progress-Everett

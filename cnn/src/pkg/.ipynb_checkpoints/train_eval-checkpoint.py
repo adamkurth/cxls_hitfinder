@@ -3,11 +3,20 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import logging
+<<<<<<< HEAD
 from sklearn.metrics import confusion_matrix, roc_curve, auc
 import matplotlib.pyplot as plt
 from pkg import *
 from torch.cuda.amp import GradScaler, autocast
 
+=======
+from sklearn.metrics import confusion_matrix, roc_curve, auc, classification_report
+import matplotlib.pyplot as plt
+from pkg import *
+from torch.cuda.amp import GradScaler, autocast
+from skimage.filters import gaussian, sobel
+from scipy.signal import find_peaks
+>>>>>>> progress-Everett
 
 
 """
@@ -30,7 +39,10 @@ class TrainTestModels:
             feature_class: class which holds the feature specific configuration details.
         """
         self.train_loader, self.test_loader = cfg['loader']
+<<<<<<< HEAD
         self.optimizer = cfg['optimizer']
+=======
+>>>>>>> progress-Everett
         self.device = cfg['device']
         self.batch = cfg['batch_size']
         self.scheduler = cfg['scheduler']
@@ -44,6 +56,10 @@ class TrainTestModels:
         self.learning_rate = feature_class.get_learning_rate()
         self.save_path = feature_class.get_save_path()
         self.epochs = feature_class.get_epochs()
+<<<<<<< HEAD
+=======
+        self.optimizer = feature_class.get_optimizer()
+>>>>>>> progress-Everett
         
         self.optimizer = self.optimizer(self.model.parameters(), lr=self.learning_rate)
         self.scheduler = self.scheduler(self.optimizer, mode='min', factor=0.1, patience=3, threshold=0.1)
@@ -53,6 +69,12 @@ class TrainTestModels:
         self.plot_test_accuracy = np.zeros(self.epochs)
         self.plot_test_loss = np.zeros(self.epochs)
         self.cm = np.zeros((self.classes,self.classes), dtype=int)
+<<<<<<< HEAD
+=======
+        self.all_labels = []
+        self.all_predictions = []
+        self.classification_report_dict = {}
+>>>>>>> progress-Everett
         
         self.logger = logging.getLogger(__name__)
         self.scaler = GradScaler()
@@ -71,14 +93,24 @@ class TrainTestModels:
 
         self.model.train()
         for inputs, labels, attributes in self.train_loader:
+<<<<<<< HEAD
             inputs[0] = inputs[0].unsqueeze(1)
             for i in inputs:
                 # inputs, labels = inputs.to(self.device), labels.to(self.device)
                 i = i.to(self.device)
+=======
+            # inputs[0] = inputs[0].unsqueeze(1)
+            # labels = labels.to(self.device)
+            # inputs[0], inputs[1] = inputs[0].to(self.device), inputs[1].to(self.device)
+            
+            model_inputs = inputs[0].unsqueeze(1).to(self.device), inputs[1].to(self.device)
+            for model_input in model_inputs:
+>>>>>>> progress-Everett
 
                 self.optimizer.zero_grad()
                 
                 with autocast():
+<<<<<<< HEAD
                     score = self.model(i)
                     image_attribute = attributes[self.feature]
                     
@@ -92,6 +124,22 @@ class TrainTestModels:
 
                     
                     loss = self.criterion(score, image_attribute)
+=======
+                    
+                    if self.feature == 'peak':
+                        score = self.model(model_input, attributes['clen'], attributes['photon_energy'])
+                    else:
+                        score = self.model(model_input)
+                    
+                    if self.feature != 'peak_location':
+                        image_attribute = attributes[self.feature]
+                        self.feature_class.format_image_attributes(image_attribute)
+                        true_value = self.feature_class.get_formatted_image_attribute().to(self.device)
+                    else:
+                        true_value = labels.to(self.device)
+                    
+                    loss = self.criterion(score, true_value)
+>>>>>>> progress-Everett
 
                 self.scaler.scale(loss).backward()
                 self.scaler.step(self.optimizer)
@@ -102,8 +150,13 @@ class TrainTestModels:
                 self.feature_class.format_prediction(score)
                 predictions = self.feature_class.get_formatted_prediction()
                         
+<<<<<<< HEAD
                 accuracy_train += (predictions == image_attribute.to(self.device)).float().sum()
                 total_predictions += torch.numel(image_attribute)
+=======
+                accuracy_train += (predictions == true_value).float().sum()
+                total_predictions += torch.numel(true_value)
+>>>>>>> progress-Everett
             
         loss_train = running_loss_train / len(self.train_loader)  # Assuming you want to average over all batches
         self.plot_train_loss[epoch] = loss_train
@@ -115,6 +168,16 @@ class TrainTestModels:
         self.logger.info(f'Train accuracy: {accuracy_train}')
         print(f'Train accuracy: {accuracy_train}')
         
+<<<<<<< HEAD
+=======
+        if self.feature == 'peak_location':
+            predicted_peaks, _ = find_peaks(torch.flatten(predictions).cpu().numpy())
+            known_peaks, _ = find_peaks(torch.flatten(true_value).cpu().numpy())
+
+            print(f'learned peaks ({len(predicted_peaks)}) : {predicted_peaks}')
+            print(f'true peaks ({len(known_peaks)}) : {known_peaks}')
+            
+>>>>>>> progress-Everett
         
     def test(self, epoch:int) -> None:
         
@@ -127,6 +190,7 @@ class TrainTestModels:
         self.model.eval()
         with torch.no_grad():
             for inputs, labels, attributes in self.test_loader:
+<<<<<<< HEAD
                 inputs, labels = inputs[1].to(self.device), labels.to(self.device)
 
                 with autocast():
@@ -138,14 +202,42 @@ class TrainTestModels:
                     image_attribute = self.feature_class.get_formatted_image_attribute().to(self.device)
                         
                     loss = self.criterion(score, image_attribute)
+=======
+
+                # inputs[0] = inputs[0].unsqueeze(1)
+                # labels = labels.to(self.device)
+                # inputs[0], inputs[1] = inputs[0].to(self.device), inputs[1].to(self.device)
+                
+                model_input = inputs[1].to(self.device)
+
+                with autocast():
+                    if self.feature == 'peak':
+                        score = self.model(model_input, attributes['clen'], attributes['photon_energy'])
+                    else:
+                        score = self.model(model_input)
+                             
+                    if self.feature != 'peak_location':                           
+                        image_attribute = attributes[self.feature]
+                        self.feature_class.format_image_attributes(image_attribute)
+                        true_value = self.feature_class.get_formatted_image_attribute().to(self.device)
+                    else:
+                        true_value = labels.to(self.device)
+                        
+                    loss = self.criterion(score, true_value)
+>>>>>>> progress-Everett
             
                 running_loss_test += loss.item()  # Convert to Python number with .item()
                 
                 self.feature_class.format_prediction(score)
                 predictions = self.feature_class.get_formatted_prediction()
                     
+<<<<<<< HEAD
                 accuracy_test += (predictions == image_attribute.to(self.device)).float().sum()
                 total += torch.numel(image_attribute)
+=======
+                accuracy_test += (predictions == true_value).float().sum()
+                total += torch.numel(true_value)
+>>>>>>> progress-Everett
 
         loss_test = running_loss_test/self.batch
         self.scheduler.step(loss_test)
@@ -157,7 +249,13 @@ class TrainTestModels:
         self.logger.info(f'Test loss: {loss_test}')
         self.logger.info(f'Test accuracy: {accuracy_test}')
         print(f'Test loss: {loss_test}')
+<<<<<<< HEAD
         print(f'Test accuracy: {accuracy_test}')          
+=======
+        print(f'Test accuracy: {accuracy_test}')      
+        
+
+>>>>>>> progress-Everett
                     
     def plot_loss_accuracy(self, path:str = None) -> None:
         """ 
@@ -178,6 +276,7 @@ class TrainTestModels:
             
         plt.show()
 
+<<<<<<< HEAD
     def plot_confusion_matrix(self, path:str = None) -> None:
         """ 
         This function plots the confusion matrix of the testing set.
@@ -197,24 +296,116 @@ class TrainTestModels:
                 self.feature_class.format_image_attributes(image_attribute)
                 image_attribute = self.feature_class.get_formatted_image_attribute().cpu().numpy()
                 all_labels.extend(image_attribute)
+=======
+    def evaluate_model(self) -> None:
+        """ 
+        Evaluates model post training. 
+        """
+
+        with torch.no_grad():
+            for inputs, labels, attributes in self.test_loader:  # Assuming self.loader[1] is the testing data loader
+                # inputs, labels = inputs[1].to(self.device), labels.to(self.device)
+                # inputs[0] = inputs[0].unsqueeze(1)
+                # labels = labels.to(self.device)
+                # inputs[0], inputs[1] = inputs[0].to(self.device), inputs[1].to(self.device)
+                model_input = inputs[1].to(self.device)
+
+                with autocast():
+                    if self.feature == 'peak':
+                        score = self.model(model_input, attributes['clen'], attributes['photon_energy'])
+                    else:
+                        score = self.model(model_input)
+
+                # Flatten and append labels to all_labels
+                if self.feature != 'peak_location':                           
+                    image_attribute = attributes[self.feature]
+                    self.feature_class.format_image_attributes(image_attribute)
+                    true_value = self.feature_class.get_formatted_image_attribute().to(self.device)
+                else:
+                    true_value = labels.to(self.device)
+                self.all_labels.extend(torch.flatten(true_value.cpu()))
+>>>>>>> progress-Everett
                                 
                 self.feature_class.format_prediction(score)
                 predictions = self.feature_class.get_formatted_prediction().cpu()
                                         
+<<<<<<< HEAD
                 all_predictions.extend(predictions)
 
         # No need to reshape - arrays should already be flat
         all_labels = np.array(all_labels)
         all_predictions = np.array(all_predictions)
+=======
+                self.all_predictions.extend(torch.flatten(predictions))
+
+        # No need to reshape - arrays should already be flat
+        self.all_labels = np.array(self.all_labels)
+        self.all_predictions = np.array(self.all_predictions)
+        
+        """
+        all_image_file_paths = []
+        correctly_classified_image_paths = []
+        incorrectly_classified_image_paths = []
+        all_image_file_paths.extend(paths)
+        # paths for peak_water_overlay will be added to the data loader.
+        prediction_labels_array_comparison = self.all_labels == self.all_predictions
+        
+        for i in range(all_image_file_paths):
+            if prediction_labels_array_comparision[i] == true:
+                correctly_classified_image_paths.extend(all_image_file_paths[i])
+            elif prediction_labels_array_comparision[i] == false:
+                incorrectly_classified_image_paths.extend(all_image_file_paths[i])
+        
+        """
+>>>>>>> progress-Everett
 
         # Compute confusion matrix
         # print(f'-- Labels      : {all_labels}')
         # print(f'-- Predictions : {all_predictions}')
+<<<<<<< HEAD
         self.cm = confusion_matrix(all_labels, all_predictions, labels=self.labels, normalize='true')
 
         # Plotting the confusion matrix
         plt.matshow(self.cm, cmap="Blues")
         plt.title(f'Confusion Matrix for {self.feature} with {self.model.__class__.__name__}')
+=======
+
+        # if all_labels.dtype.kind in 'UO':  # Check if labels are string or object
+        #     all_labels = np.array(all_labels).astype(int)
+        # if all_predictions.dtype.kind in 'UO':  # Check if predictions are string or object
+        #     all_predictions = np.array(all_predictions).astype(int)
+            
+        # unique_labels = np.unique(np.concatenate((all_labels, all_predictions)))
+        # print("Using labels for confusion matrix:", unique_labels)
+        
+
+    def make_classification_report(self) -> None:
+        """
+        This function creates a classification report for the model.
+        """
+        
+        self.classification_report_dict = classification_report(self.all_labels, self.all_predictions, labels=self.labels, output_dict=True)
+        [print(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
+        [self.logger.info(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
+        
+    def get_classification_report(self) -> dict:
+        """
+        This function returns the classification report for the model.
+        """
+        return self.classification_report_dict
+
+        
+    def plot_confusion_matrix(self, path:str = None) -> None:
+        """ 
+        This function plots the confusion matrix of the testing set.
+        """
+        
+        self.cm = confusion_matrix(self.all_labels, self.all_predictions, labels=self.labels, normalize='true')
+
+        # Plotting the confusion matrix
+        plt.matshow(self.cm, cmap="Blues")
+        plt.title(f'CM for {self.feature} {self.model.__class__.__name__}')
+>>>>>>> progress-Everett
         plt.colorbar()
         plt.ylabel('True Label')
         plt.xlabel('Predicted Label')
@@ -237,6 +428,10 @@ class TrainTestModels:
         """
         
         self.logger.info(f'Model training and testing: {self.model.__class__.__name__}')
+<<<<<<< HEAD
+=======
+        self.logger.info(f'Looking for the feature: {self.feature}')  
+>>>>>>> progress-Everett
         print(f'Model testing and validating: {self.model.__class__.__name__}')     
         print(f'Looking for the feature: {self.feature}')  
         
@@ -294,7 +489,13 @@ class TrainTestModels:
         
         with torch.no_grad():
             for inputs, labels, attributes in self.train_loader:
+<<<<<<< HEAD
                 inputs, labels = inputs[1].to(self.device), labels.to(self.device)
+=======
+                # inputs, labels = inputs[1].to(self.device), labels.to(self.device)
+                inputs = inputs[1].to(self.device)
+
+>>>>>>> progress-Everett
                 
                 image_attribute = attributes[self.feature]
                 self.feature_class.format_image_attributes(image_attribute)
@@ -341,4 +542,24 @@ class TrainTestModels:
             plt.savefig(path)
             
         plt.show()
+<<<<<<< HEAD
+=======
+        
+    
+    def filter_image(self, image: torch.Tensor) -> torch.Tensor:
+        """
+        This function filters the image using the Sobel filter.
+        """
+        # print(image.shape)
+        image = image.squeeze(0).squeeze(0).numpy()
+        # print(image.shape)
+        smoothed_image = gaussian(image, sigma=1)
+        # print(smoothed_image.shape)
+        edges = sobel(smoothed_image)
+        # print(edges.shape)
+        image = torch.tensor(edges)
+        # print(image.shape)
+        return image
+
+>>>>>>> progress-Everett
 

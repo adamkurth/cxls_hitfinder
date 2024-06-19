@@ -30,6 +30,7 @@ class Processor:
             dict: A dictionary where keys are dataset identifiers and values are water background paths.
         """
         water_dict = {}
+        print(f'------ water backgrounds before dict : {self.water_backgrounds}')
         for path in self.water_backgrounds:
             # Extract dataset identifier from the path
             try: # this works for mac/linux
@@ -178,7 +179,10 @@ class Processor:
     def process_single_dataset(self, dataset: str, clen: float, photon_energy: int) -> None:
         """Processes a single dataset by applying water background and generating label images."""
         peak_paths = self.paths.get_peak_image_paths(dataset=dataset)
+        print(f'dataset dict : {dataset}')
         water_background_path = self.water_background_dict.get(dataset)
+        print(f'water path : {water_background_path}')
+        print(f'water dict : {self.water_background_dict}')
         self.water_background = f.load_h5(file_path=water_background_path)
         for peak_path in peak_paths:
             # derive a unique basename for each peak image
