@@ -23,6 +23,7 @@ class TrainModel:
             attributes (dict): Dictionary containing the names of the metadata contained in the h5 image files. These names could change depending on whom created the metadata, so the specific names are arguments in the sbatch script. 
         """
         self.logger = logging.getLogger(__name__)
+        self.scaler = GradScaler()
         
         self.train_loader = cfg['train data']
         self.test_loader = cfg['test data']
@@ -57,7 +58,7 @@ class TrainModel:
         # model_class = getattr(m, self.model_arch)
         # return model_class()
         
-        self.model = getattr(m, self.model)()
+        self.model = getattr(m, self.model)().to(self.device)
         self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate)
         self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=0.1, patience=3, threshold=0.1)
         self.criterion = getattr(nn, self.criterion)()
@@ -94,16 +95,16 @@ class TrainModel:
         
         for inputs, attributes in self.train_loader:
         
-            inputs = inputs.unsqueeze(0).unsqueeze(0).to(self.device)
+            inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
+            attributes = {key: value.to(self.device).float() for key, value in attributes.items()}
 
             self.optimizer.zero_grad()
             
-            with autocast():
-                
+            with autocast(enabled=False):
+                print(inputs.shape)
+                self.logger.info(inputs.shape)
                 score = self.model(inputs, attributes[self.camera_length], attributes[self.photon_energy])
-
                 truth = attributes[self.peak].reshape(-1, 1).float().to(self.device)
-                
                 loss = self.criterion(score, truth)
 
             self.scaler.scale(loss).backward()
@@ -140,14 +141,13 @@ class TrainModel:
         with torch.no_grad():
             for inputs, attributes in self.test_loader:
                 
-                inputs = inputs.unsqueeze(0).unsqueeze(0).to(self.device)
+                inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
+                attributes = {key: value.to(self.device, dtype=torch.float32) for key, value in attributes.items()}
 
-                with autocast():
+
+                with autocast(enabled=False):
                     score = self.model(inputs, attributes[self.camera_length], attributes[self.photon_energy])
-                             
-
                     truth = attributes[self.peak].reshape(-1, 1).float().to(self.device)
-                    
                     loss = self.criterion(score, truth)
             
                 running_loss_test += loss.item()  # Convert to Python number with .item()

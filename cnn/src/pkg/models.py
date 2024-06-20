@@ -46,7 +46,32 @@ class Binary_Classification(nn.Module):
         x = self.fc(x)
         return x
     
-    
+class HeatmapCNN(nn.Module):
+    def __init__(self, input_channels=1, output_channels=1, heatmap_size=(2163, 2069)):
+        super(HeatmapCNN, self).__init__()
+        
+        self.heatmap_size = heatmap_size
+        self.conv1 = nn.Conv2d(input_channels, 16, kernel_size=5, stride=1, padding=2)
+        self.bn1 = nn.BatchNorm2d(16)
+        self.pool = nn.MaxPool2d(kernel_size=4, stride=4, padding=0)
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
+        self.bn2 = nn.BatchNorm2d(32)
+        self.ca = ChannelAttention(32)
+        self.sa = SpatialAttention(32)  # Assuming this is defined elsewhere
+        self.heatmap_conv = nn.Conv2d(32, output_channels, kernel_size=3, stride=1, padding=1)
+        self.upsample = nn.Upsample(size=heatmap_size, mode='bilinear', align_corners=True)
+        self.dropout = nn.Dropout(0.5)
+
+    def forward(self, x):
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = self.pool(x)
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = self.dropout(x)
+        x = self.ca(x)
+        x = self.sa(x)
+        x = self.heatmap_conv(x)
+        x = self.upsample(x)
+        return x
     
 class Binary_Classification_With_Parameters(nn.Module):
     def __init__(self, input_channels=1, output_channels=1, input_size=(2163, 2069)):
@@ -111,6 +136,11 @@ class Linear(nn.Module):
         
         return x
 
+
+
+
+
+
 class ChannelAttention(nn.Module):
     def __init__(self, num_channels, reduction_ratio=16):
         super(ChannelAttention, self).__init__()
@@ -151,35 +181,6 @@ class SpatialAttention(nn.Module):
         x = torch.cat([max_out, avg_out], dim=1)
         x = self.sigmoid(self.conv1(x))
         return x * x
-
-
-class HeatmapCNN(nn.Module):
-    def __init__(self, input_channels=1, output_channels=1, heatmap_size=(2163, 2069)):
-        super(HeatmapCNN, self).__init__()
-        
-        self.heatmap_size = heatmap_size
-        self.conv1 = nn.Conv2d(input_channels, 16, kernel_size=5, stride=1, padding=2)
-        self.bn1 = nn.BatchNorm2d(16)
-        self.pool = nn.MaxPool2d(kernel_size=4, stride=4, padding=0)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
-        self.bn2 = nn.BatchNorm2d(32)
-        self.ca = ChannelAttention(32)
-        self.sa = SpatialAttention(32)  # Assuming this is defined elsewhere
-        self.heatmap_conv = nn.Conv2d(32, output_channels, kernel_size=3, stride=1, padding=1)
-        self.upsample = nn.Upsample(size=heatmap_size, mode='bilinear', align_corners=True)
-        self.dropout = nn.Dropout(0.5)
-
-    def forward(self, x):
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = self.pool(x)
-        x = F.relu(self.bn2(self.conv2(x)))
-        x = self.dropout(x)
-        x = self.ca(x)
-        x = self.sa(x)
-        x = self.heatmap_conv(x)
-        x = self.upsample(x)
-        return x
-    
     
 class Binary_Classification_SA_CA_Meta_Data(nn.Module):
     def __init__(self, input_channels=1, output_channels=1, input_size=(2163, 2069)):
@@ -205,29 +206,38 @@ class Binary_Classification_SA_CA_Meta_Data(nn.Module):
         out_height2 = self.calculate_output_dimension(out_height1 // 2, self.kernel_size2, self.stride2, self.padding2) 
         out_width2 = self.calculate_output_dimension(out_width1 // 2, self.kernel_size2, self.stride2, self.padding2)
         
-        self.fc_size_1 = 16 * out_height2 * out_width2
-        self.fc_size_2 = (out_height2 * out_width2) // 23782
+        # self.fc_size_1 = 16 * out_height2 * out_width2
+        self.fc_size_1 = 17580800
+        # self.fc_size_2 = (out_height2 * out_width2) // 23782
+        self.fc_size_2 = 256
         
         self.fc1 = nn.Linear(self.fc_size_1, self.fc_size_2)
         self.fc2 = nn.Linear(self.fc_size_2 + 2, output_channels)
         
-        self.ca = ChannelAttention(32)
-        self.sa = SpatialAttention(32)
+        self.ca = ChannelAttention(8)
+        self.sa = SpatialAttention(16)
 
     def calculate_output_dimension(self, input_dim, kernel_size, stride, padding):
         return ((input_dim + 2 * padding - kernel_size) // stride) + 1
 
     def forward(self, x, camera_length, photon_energy):
+        print(f'Input shape: {x.shape}')
         x = self.pool1(F.relu(self.gn1(self.conv1(x))))
+        print(f'After conv1, gn1, pool1: {x.shape}')
         x = self.ca(x)
+        print(f'After ChannelAttention: {x.shape}')
         x = F.relu(self.gn2(self.conv2(x)))
+        print(f'After conv2, gn2: {x.shape}')
         x = self.sa(x)
-        x = x.view(x.size(0), -1) 
+        print(f'After SpatialAttention: {x.shape}')
+        x = x.view(x.size(0), -1)
+        print(f'After view (flatten): {x.shape}')
         x = F.relu(self.fc1(x))
-        # device = x.device
-        # camera_length = camera_length.to(device).float()
-        # photon_energy = photon_energy.to(device).float()
+        print(f'After fc1: {x.shape}')
         params = torch.stack((camera_length, photon_energy), dim=1)
+        print(f'Params shape: {params.shape}')
         x = torch.cat((x, params), dim=1)
+        print(f'After concatenation: {x.shape}')
         x = self.fc2(x)
+        print(f'After fc2: {x.shape}')
         return x
