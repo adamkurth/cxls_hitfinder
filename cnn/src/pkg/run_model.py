@@ -6,7 +6,17 @@ import os
 
 class RunModel:
     
-    def __init__(self, model_arch: str, model_path: str, save_output_list: str, h5_file_paths: list, device: torch.device):
+    def __init__(self, model_arch: str, model_path: str, save_output_list: str, h5_file_paths: list, device: torch.device) -> None:
+        """
+        Initialize the RunModel class with model architecture, model path, output list path, h5 file paths, and device.
+
+        Args:
+            model_arch (str): The architecture name of the model.
+            model_path (str): The file path to the saved model state dictionary.
+            save_output_list (str): The directory path where the output list files will be saved.
+            h5_file_paths (list): List of h5 file paths to process.
+            device (torch.device): The device (CPU or GPU) on which the model will run.
+        """
         self.logger = logging.getLogger(__name__)
         self.device = device
         
@@ -21,52 +31,53 @@ class RunModel:
         
         self.list_containing_peaks = []
         self.list_not_containing_peaks = []
-        
     
-    def make_model_instance(self):
+    def make_model_instance(self) -> None:
         """
-        This function makes a class instance of the model provided from the models.py
+        Create an instance of the model class specified by the model architecture.
 
         Returns:
-            class instance
+            class instance: An instance of the specified model class.
         """
         try:
             model_class = getattr(m, self.model_arch)
             return model_class()
-        except:
+        except AttributeError:
             print("Model not found.")
             self.logger.info("Model not found.")
             print(self.model_arch)
             self.logger.info(self.model_arch)
-            print(model_class)
-            self.logger.info(model_class)
+            return None
             
     def load_model(self) -> None:
         """
-        This function loads in the state dictionary to the model class. 
+        Load the state dictionary into the model class and prepare it for evaluation.
         """
         model_path = self.model_path
         state_dict = torch.load(model_path)
         self.model.load_state_dict(state_dict)
-        self.model = self.model.eval() 
+        self.model.eval() 
         self.model.to(self.device)
         
-    def classify_data(self, input_data: list, meta_data: list, camera_length_key: str, photon_energy_key: str) -> None: 
+    def classify_data(self, input_data: list, meta_data: list, camera_length_key: str, photon_energy_key: str) -> None:
         """
-        This function takes input data and classifies the data. 
+        Classify the input data using the model and segregate the data based on the classification results.
+
+        Args:
+            input_data (list): List of input data tensors.
+            meta_data (list): List of metadata dictionaries corresponding to the input data.
+            camera_length_key (str): The key for accessing camera length from the metadata.
+            photon_energy_key (str): The key for accessing photon energy from the metadata.
         """
-        # attributes['clen'], attributes['photon_energy']
         if len(input_data) != len(self.h5_file_paths):
-            print('Input data size does not match number of file paths.')
-            self.logger.info('Input data size does not match number of file paths.')
+            print('Input data size does not match the number of file paths.')
+            self.logger.info('Input data size does not match the number of file paths.')
         
         for index in range(len(input_data)):
             input_data[index] = input_data[index].unsqueeze(0).unsqueeze(0).to(self.device)
             
-            camera_length, photon_energy = meta_data[index][camera_length_key], meta_data[index][photon_energy_key]
-            camera_length, photon_energy = torch.Tensor([camera_length]), torch.Tensor([photon_energy])
-            camera_length, photon_energy = camera_length.float(), photon_energy.float()
-            camera_length, photon_energy = camera_length.to(self.device), photon_energy.to(self.device)
+            camera_length = torch.tensor([meta_data[index][camera_length_key]], dtype=torch.float32).to(self.device)
+            photon_energy = torch.tensor([meta_data[index][photon_energy_key]], dtype=torch.float32).to(self.device)
              
             score = self.model(input_data[index], camera_length, photon_energy)
             prediction = (torch.sigmoid(score) > 0.5).long()
@@ -78,17 +89,16 @@ class RunModel:
                 
     def get_classification_results(self) -> tuple:
         """
-        This function returns the results from the model classicication. 
+        Get the classification results from the model.
 
         Returns:
-            tuple: This tuple has two list, one containing images with predicted peaks and one without predicted peaks. 
+            tuple: A tuple containing two lists - one with file paths containing peaks and one without peaks.
         """
-        
         return (self.list_containing_peaks, self.list_not_containing_peaks)
     
     def create_model_output_lst_files(self) -> None:
         """
-        This function creates the lst files of the predictions. 
+        Create .lst files for the classified data based on the model's predictions.
         """
         now = datetime.datetime.now()
         formatted_date_time = now.strftime("%m%d%y-%H:%M")
@@ -103,22 +113,22 @@ class RunModel:
             for item in self.list_containing_peaks:
                 file.write(f"{item}\n")
             
-        print("Created lst file for predicted peak files.")
-        self.logger.info("Created lst file for predicted peak files.")
+        print("Created .lst file for predicted peak files.")
+        self.logger.info("Created .lst file for predicted peak files.")
         
         with open(file_path_no_peaks, 'w') as file:
             for item in self.list_not_containing_peaks:
                 file.write(f"{item}\n")
             
-        print("Created lst file for predicted empty files.")
-        self.logger.info("Created lst file for predicted empty files.")
+        print("Created .lst file for predicted empty files.")
+        self.logger.info("Created .lst file for predicted empty files.")
         
-    
     def output_verification(self) -> None:
         """
-        This function compares the input file path list size two the sum of the two output file path list sizes.
+        Verify that the number of input file paths matches the sum of the output file paths.
+
+        This function compares the size of the input file path list to the sum of the sizes of the two output file path lists and logs the result.
         """
-        
         if len(self.h5_file_paths) == len(self.list_containing_peaks) + len(self.list_not_containing_peaks):
             print("There is the same amount of input files as output files.")
             self.logger.info('There is the same amount of input files as output files.')
@@ -126,4 +136,5 @@ class RunModel:
             print("OUTPUT VERIFICATION FAILED: The input paths do not match the output paths.")
             self.logger.info('OUTPUT VERIFICATION FAILED: The input paths do not match the output paths.')
             
-            print(f'Input H5 files : {len(self.h5_file_paths)}\nOutput peak files : {len(self.list_containing_peaks)}\nOutput empty files : {len(self.list_not_containing_peaks)}')
+            print(f'Input H5 files: {len(self.h5_file_paths)}\nOutput peak files: {len(self.list_containing_peaks)}\nOutput empty files: {len(self.list_not_containing_peaks)}')
+            self.logger.info(f'Input H5 files: {len(self.h5_file_paths)}\nOutput peak files: {len(self.list_containing_peaks)}\nOutput empty files: {len(self.list_not_containing_peaks)}')

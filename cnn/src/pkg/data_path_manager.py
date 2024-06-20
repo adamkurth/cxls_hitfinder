@@ -1,5 +1,6 @@
 import logging
 import h5py as h5
+import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 
@@ -50,8 +51,12 @@ class Paths:
         for file_path in self.h5_files: 
             try:
                 with h5.File(file_path, 'r') as file:
-                    # Load data into tensor
-                    tensor_list.append(torch.Tensor(file['entry/data/data']))
+                    # Convert the HDF5 dataset to a NumPy array
+                    numpy_array = np.array(file['entry/data/data'])
+                    # Convert the NumPy array to a PyTorch tensor
+                    tensor = torch.tensor(numpy_array)
+                    # Append the tensor to the tensor_list
+                    tensor_list.append(tensor)
 
                     # Retrieve attributes
                     attributes = {}
@@ -99,11 +104,11 @@ class Data(Dataset):
             classification_data (list): List of classification data, that being list of pytorch tensors.
             attribute_data (list): List of attribute data, that being list of metadata dictionaries.
         """
-        self.data = classification_data
         self.train_loader = None
         self.test_loader = None
         self.image_data = classification_data
         self.meta_data = attribute_data
+        self.data = list(zip(self.image_data, self.meta_data))
         
     def __len__(self) -> int:
         """
@@ -124,7 +129,7 @@ class Data(Dataset):
         Returns:
             tuple: A tuple containing the image data and the metadata at the given index.
         """
-        return self.image_data[idx], self.meta_data[idx]
+        return self.data[idx]
         
     def split_data(self, batch_size: int) -> None:
         """

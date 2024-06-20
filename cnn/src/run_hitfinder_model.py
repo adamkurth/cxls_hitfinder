@@ -31,6 +31,10 @@ def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
 
 
 def main():
+    """
+    This main function is the flow of logic for running a trained model. Here parameter arugments are assigned to variables.
+    Classes for data management and using the model are declared and the relavent functions for the process are called following declaration in blocks. 
+    """
     parser = argparse.ArgumentParser(description='parameters for running the model')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)
