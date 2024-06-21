@@ -113,9 +113,15 @@ class TrainModel:
 
             running_loss_train += loss.item()
 
-            predictions (torch.sigmoid(score) > 0.5).long()
-                    
-            accuracy_train += (predictions == truth.float().sum())
+            predictions = (torch.sigmoid(score) > 0.5).long()
+            
+            print(f'prediction = {predictions}')
+            self.logger.info(f'prediction = {predictions}')
+            
+            print(f'truth = {truth}')
+            self.logger.info(f'truth = {truth}')
+            
+            accuracy_train += (predictions == truth).float().sum()
             total_predictions += torch.numel(truth)
             
         loss_train = running_loss_train / len(self.train_loader)  
@@ -157,7 +163,7 @@ class TrainModel:
                 accuracy_test += (predictions == truth).float().sum()
                 total += torch.numel(truth)
 
-        loss_test = running_loss_test/self.batch
+        loss_test = running_loss_test/len(self.test_loader)
         self.scheduler.step(loss_test)
         self.plot_test_loss[epoch] = loss_test
 
@@ -180,7 +186,7 @@ class TrainModel:
         plt.grid()
         plt.xlabel('epoch')
         plt.ylabel('loss/accuracy')
-        plt.title(f'Loss and Accuracy for {self.feature} with {self.model.__class__.__name__}')
+        plt.title(f'Loss and Accuracy for with {self.model.__class__.__name__}')
         plt.legend(['accuracy train','accuracy test','loss train','loss test'])
         
         if path != None:

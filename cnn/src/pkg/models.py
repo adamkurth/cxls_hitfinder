@@ -187,19 +187,21 @@ class Binary_Classification_SA_CA_Meta_Data(nn.Module):
         super(Binary_Classification_SA_CA_Meta_Data, self).__init__()
         
         self.kernel_size1 = 10
+        self.conv1_channels = 4
         self.stride1 = 1
         self.padding1 = 1
-        self.kernel_size2 = 3 
+        self.kernel_size2 = 3
+        self.conv2_channels = 8
         self.stride2 = 1
         self.padding2 = 1
         num_groups1 = 4  
         num_groups2 = 4  
 
-        self.conv1 = nn.Conv2d(input_channels, 8, kernel_size=self.kernel_size1, stride=self.stride1, padding=self.padding1)
-        self.gn1 = nn.GroupNorm(num_groups=num_groups1, num_channels=8)
+        self.conv1 = nn.Conv2d(input_channels, self.conv1_channels, kernel_size=self.kernel_size1, stride=self.stride1, padding=self.padding1)
+        self.gn1 = nn.GroupNorm(num_groups=num_groups1, num_channels=self.conv1_channels)
         self.pool1 = nn.MaxPool2d(2, 2) 
-        self.conv2 = nn.Conv2d(8, 16, kernel_size=self.kernel_size2, stride=self.stride2, padding=self.padding2)
-        self.gn2 = nn.GroupNorm(num_groups=num_groups2, num_channels=16)
+        self.conv2 = nn.Conv2d(self.conv1_channels, self.conv2_channels, kernel_size=self.kernel_size2, stride=self.stride2, padding=self.padding2)
+        self.gn2 = nn.GroupNorm(num_groups=num_groups2, num_channels=self.conv2_channels)
 
         out_height1 = self.calculate_output_dimension(input_size[0], self.kernel_size1, self.stride1, self.padding1)
         out_width1 = self.calculate_output_dimension(input_size[1], self.kernel_size1, self.stride1, self.padding1)
@@ -207,15 +209,15 @@ class Binary_Classification_SA_CA_Meta_Data(nn.Module):
         out_width2 = self.calculate_output_dimension(out_width1 // 2, self.kernel_size2, self.stride2, self.padding2)
         
         # self.fc_size_1 = 16 * out_height2 * out_width2
-        self.fc_size_1 = 17580800
+        self.fc_size_1 = 8790400
         # self.fc_size_2 = (out_height2 * out_width2) // 23782
         self.fc_size_2 = 256
         
         self.fc1 = nn.Linear(self.fc_size_1, self.fc_size_2)
         self.fc2 = nn.Linear(self.fc_size_2 + 2, output_channels)
         
-        self.ca = ChannelAttention(8)
-        self.sa = SpatialAttention(16)
+        self.ca = ChannelAttention(self.conv1_channels)
+        self.sa = SpatialAttention(self.conv2_channels)
 
     def calculate_output_dimension(self, input_dim, kernel_size, stride, padding):
         return ((input_dim + 2 * padding - kernel_size) // stride) + 1
@@ -241,3 +243,5 @@ class Binary_Classification_SA_CA_Meta_Data(nn.Module):
         x = self.fc2(x)
         print(f'After fc2: {x.shape}')
         return x
+
+

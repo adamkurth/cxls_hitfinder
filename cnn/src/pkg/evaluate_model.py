@@ -35,7 +35,7 @@ class ModelEvaluation:
         self.photon_energy = attributes['photon energy']
         self.peak = attributes['peak']
         
-        self.cm = np.zeros((self.classes,self.classes), dtype=int)
+        self.cm = None
         self.all_labels = []
         self.all_predictions = []
         self.classification_report_dict = {}
@@ -53,7 +53,7 @@ class ModelEvaluation:
                 
                 inputs = inputs.unsqueeze(0).unsqueeze(0).to(self.device)
 
-                with autocast():
+                with autocast(enabled=False):
                     score = self.model(inputs, attributes[self.camera_length], attributes[self.photon_energy])
                              
                     truth = attributes[self.peak].reshape(-1, 1).float().to(self.device)
@@ -96,7 +96,7 @@ class ModelEvaluation:
 
         # Plotting the confusion matrix
         plt.matshow(self.cm, cmap="Blues")
-        plt.title(f'CM for {self.feature} {self.model.__class__.__name__}')
+        plt.title(f'CM for {self.model.__class__.__name__}')
         plt.colorbar()
         plt.ylabel('True Label')
         plt.xlabel('Predicted Label')
@@ -110,7 +110,7 @@ class ModelEvaluation:
         plt.show()
 
 
-    def get_sconfusion_matrix(self) -> np.ndarray:
+    def get_confusion_matrix(self) -> np.ndarray:
         """ 
         This function returns the confusion matrix of the testing set.
         
