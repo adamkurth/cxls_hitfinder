@@ -51,17 +51,18 @@ class ModelEvaluation:
         with torch.no_grad():
             for inputs, attributes in self.test_loader:
                 
-                inputs = inputs.unsqueeze(0).unsqueeze(0).to(self.device)
+                inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
+                attributes = {key: value.to(self.device, dtype=torch.float32) for key, value in attributes.items()}
+
 
                 with autocast(enabled=False):
                     score = self.model(inputs, attributes[self.camera_length], attributes[self.photon_energy])
-                             
                     truth = attributes[self.peak].reshape(-1, 1).float().to(self.device)
                                     
                 predictions = (torch.sigmoid(score) > 0.5).long()
                 
                 self.all_labels.extend(torch.flatten(truth.cpu()))
-                self.all_predictions.extend(torch.flatten(predictions))
+                self.all_predictions.extend(torch.flatten(predictions.cpu()))
 
         # No need to reshape - arrays should already be flat
         self.all_labels = np.array(self.all_labels)
@@ -72,7 +73,7 @@ class ModelEvaluation:
         This function creates a classification report for the model and prints it.
         """
         
-        self.classification_report_dict = classification_report(self.all_labels, self.all_predictions, labels=self.labels, output_dict=True)
+        self.classification_report_dict = classification_report(self.all_labels, self.all_predictions, output_dict=True)
         [print(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
         [self.logger.info(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
         
@@ -92,7 +93,7 @@ class ModelEvaluation:
         The values in this matrix are done so that the rows total to 1. 
         """
         
-        self.cm = confusion_matrix(self.all_labels, self.all_predictions, labels=self.labels, normalize='true')
+        self.cm = confusion_matrix(self.all_labels, self.all_predictions, normalize='true')
 
         # Plotting the confusion matrix
         plt.matshow(self.cm, cmap="Blues")

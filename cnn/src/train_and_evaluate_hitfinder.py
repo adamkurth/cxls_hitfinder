@@ -30,6 +30,8 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-pe', '--photon_energy', type=str, help='attribute name for the camera length parameter')
     parser.add_argument('-pk', '--peaks', type=str, help='attribute name for is there are peaks present')
     
+    parser.add_argument('-tl', '--transfer_learn', type=str, default='None', help='flie path to state dict file for transfer learning', )
+    
     args = parser.parse_args()
     
     if args:
@@ -65,6 +67,8 @@ def main() -> None:
     photon_energy = args.photon_energy
     peak = args.peaks
     
+    transfer_learning_state_dict = args.transfer_learn
+    
     attributes = {
         'camera length': camera_length,
         'photon energy': photon_energy,
@@ -93,8 +97,9 @@ def main() -> None:
         'model': model_arch
     }
 
-    training_manager = train_model.TrainModel(cfg, attributes)
+    training_manager = train_model.TrainModel(cfg, attributes, transfer_learning_state_dict)
     training_manager.make_training_instances()
+    training_manager.load_model_state_dict()
     training_manager.epoch_loop()
     training_manager.plot_loss_accuracy(training_results)
     training_manager.save_model(model_dict_save_path)

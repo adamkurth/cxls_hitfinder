@@ -13,7 +13,7 @@ class TrainModel:
     
     # ! This class may work better with an inheritance relation with the evaluation class and or the data management class. 
     
-    def __init__(self, cfg: dict, attributes: dict) -> None:
+    def __init__(self, cfg: dict, attributes: dict, transfer_learning_state_dict: str) -> None:
         """
         This constructor breaks up the training configuration infomation dictionary and h5 metadata key dictionary.
         In addition, a logging object is created and global list are created for storing infomation about the training loss and accuracy. 
@@ -45,6 +45,8 @@ class TrainModel:
         self.plot_test_accuracy = np.zeros(self.epochs)
         self.plot_test_loss = np.zeros(self.epochs)
         
+        self.transfer_learning_path = transfer_learning_state_dict
+        
         
     def make_training_instances(self) -> None:
         """
@@ -62,6 +64,16 @@ class TrainModel:
         self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate)
         self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=0.1, patience=3, threshold=0.1)
         self.criterion = getattr(nn, self.criterion)()
+        
+    def load_model_state_dict(self) -> None:
+        """
+        This function loads in the state dict of a model if provided.
+        """
+        if self.transfer_learning_path != 'None':
+            state_dict = torch.load(self.transfer_learning_path)
+            self.model.load_state_dict(state_dict)
+            self.model = self.model.eval() 
+            self.model.to(self.device)
     
     def epoch_loop(self) -> None: 
         """
