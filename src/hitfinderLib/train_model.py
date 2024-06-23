@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torch.cuda.amp import GradScaler, autocast
 import datetime
-import models as m
+from . import models as m
 
 class TrainModel:
     
