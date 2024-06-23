@@ -2,7 +2,6 @@ import logging
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from pkg import *
 import torch.optim.lr_scheduler as lrs
 import numpy as np
 import matplotlib.pyplot as plt

@@ -5,9 +5,8 @@ import torch.optim as optim
 from torchvision import models
 from torchvision.models.resnet import ResNet50_Weights
 from torchvision.models.densenet import DenseNet121_Weights
-import os
 import torch.nn.functional as F
-from scipy.signal import find_peaks
+
 
 class Binary_Classification(nn.Module):
     def __init__(self, input_channels=1, output_channels=3, input_size=(2163, 2069)):
