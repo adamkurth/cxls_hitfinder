@@ -113,8 +113,6 @@ class TrainModel:
             self.optimizer.zero_grad()
             
             with autocast(enabled=False):
-                print(inputs.shape)
-                self.logger.info(inputs.shape)
                 score = self.model(inputs, attributes[self.camera_length], attributes[self.photon_energy])
                 truth = attributes[self.peak].reshape(-1, 1).float().to(self.device)
                 loss = self.criterion(score, truth)
