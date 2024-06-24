@@ -2,6 +2,7 @@ import logging
 import torch
 import datetime
 import os 
+from . import models as m
 
 class RunModel:
     
