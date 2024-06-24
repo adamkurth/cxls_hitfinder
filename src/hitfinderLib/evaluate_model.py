@@ -73,6 +73,8 @@ class ModelEvaluation:
         """
         
         self.classification_report_dict = classification_report(self.all_labels, self.all_predictions, output_dict=True)
+        print('Classification Matrix : ')
+        self.logger.info('Classification Matrix : ')
         [print(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
         [self.logger.info(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
         
