@@ -74,7 +74,7 @@ class RunModel:
             self.logger.info('Input data size does not match the number of file paths.')
         
         for index in range(len(input_data)):
-            input_data[index] = input_data[index].unsqueeze(0).unsqueeze(0).to(self.device)
+            input_data[index] = input_data[index].unsqueeze(0).unsqueeze(0).to(self.device, dtype=torch.float32)
             
             camera_length = torch.tensor([meta_data[index][camera_length_key]], dtype=torch.float32).to(self.device)
             photon_energy = torch.tensor([meta_data[index][photon_energy_key]], dtype=torch.float32).to(self.device)
