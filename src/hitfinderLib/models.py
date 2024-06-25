@@ -1,10 +1,5 @@
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.optim as optim
-from torchvision import models
-from torchvision.models.resnet import ResNet50_Weights
-from torchvision.models.densenet import DenseNet121_Weights
 import torch.nn.functional as F
 
 

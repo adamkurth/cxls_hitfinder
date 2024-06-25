@@ -1,4 +1,3 @@
-import logging
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -22,7 +21,7 @@ class TrainModel:
             cfg (dict): Dictionary containing important information for training including: data loaders, batch size, training device, number of epochs, the optimizer, the scheduler, the criterion, the learning rate, and the model class. Everything besides the data loaders and device are arguments in the sbatch script.
             attributes (dict): Dictionary containing the names of the metadata contained in the h5 image files. These names could change depending on whom created the metadata, so the specific names are arguments in the sbatch script. 
         """
-        self.logger = logging.getLogger(__name__)
+
         self.scaler = GradScaler()
         
         self.train_loader = cfg['train data']
@@ -80,11 +79,8 @@ class TrainModel:
         This function loops through the training and testing functions by the number of epochs iterations.
         The train and test function are used back to back per epoch to optimize then perfom a second evalution on the perfomance of the model. 
         """
-        
-        self.logger.info(f'Model training and testing: {self.model.__class__.__name__}')
-        # self.logger.info(f'Looking for the feature: {self.feature}')  
-        print(f'Model testing and validating: {self.model.__class__.__name__}')     
-        # print(f'Looking for the feature: {self.feature}')  
+         
+        print(f'Model testing and validating: {self.model.__class__.__name__}')       
         
         for epoch in range(self.epochs):
             self.logger.info('-- epoch '+str(epoch)) 
@@ -124,25 +120,17 @@ class TrainModel:
             running_loss_train += loss.item()
 
             predictions = (torch.sigmoid(score) > 0.5).long()
-            
-            # print(f'prediction = {predictions}')
-            # self.logger.info(f'prediction = {predictions}')
-            
-            # print(f'truth = {truth}')
-            # self.logger.info(f'truth = {truth}')
-            
+                      
             accuracy_train += (predictions == truth).float().sum()
             total_predictions += torch.numel(truth)
             
         loss_train = running_loss_train / len(self.train_loader)  
         
         self.plot_train_loss[epoch] = loss_train
-        self.logger.info(f'Train loss: {loss_train}')
         print(f'Train loss: {loss_train}')
 
         accuracy_train /= total_predictions
         self.plot_train_accuracy[epoch] = accuracy_train
-        self.logger.info(f'Train accuracy: {accuracy_train}')
         print(f'Train accuracy: {accuracy_train}')
         
     def test(self, epoch:int) -> None:
@@ -180,8 +168,6 @@ class TrainModel:
         accuracy_test /= total
         self.plot_test_accuracy[epoch] = accuracy_test
 
-        self.logger.info(f'Test loss: {loss_test}')
-        self.logger.info(f'Test accuracy: {accuracy_test}')
         print(f'Test loss: {loss_test}')
         print(f'Test accuracy: {accuracy_test}')   
         

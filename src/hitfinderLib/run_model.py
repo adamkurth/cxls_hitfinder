@@ -1,4 +1,3 @@
-import logging
 import torch
 import datetime
 import os 
@@ -17,7 +16,6 @@ class RunModel:
             h5_file_paths (list): List of h5 file paths to process.
             device (torch.device): The device (CPU or GPU) on which the model will run.
         """
-        self.logger = logging.getLogger(__name__)
         self.device = device
         
         self.model_arch = model_arch
@@ -44,9 +42,7 @@ class RunModel:
             return model_class()
         except AttributeError:
             print("Model not found.")
-            self.logger.info("Model not found.")
             print(self.model_arch)
-            self.logger.info(self.model_arch)
             return None
             
     def load_model(self) -> None:
@@ -71,7 +67,6 @@ class RunModel:
         """
         if len(input_data) != len(self.h5_file_paths):
             print('Input data size does not match the number of file paths.')
-            self.logger.info('Input data size does not match the number of file paths.')
         
         for index in range(len(input_data)):
             input_data[index] = input_data[index].unsqueeze(0).unsqueeze(0).to(self.device, dtype=torch.float32)
@@ -114,14 +109,12 @@ class RunModel:
                 file.write(f"{item}\n")
             
         print("Created .lst file for predicted peak files.")
-        self.logger.info("Created .lst file for predicted peak files.")
         
         with open(file_path_no_peaks, 'w') as file:
             for item in self.list_not_containing_peaks:
                 file.write(f"{item}\n")
             
         print("Created .lst file for predicted empty files.")
-        self.logger.info("Created .lst file for predicted empty files.")
         
     def output_verification(self) -> None:
         """
@@ -131,10 +124,6 @@ class RunModel:
         """
         if len(self.h5_file_paths) == len(self.list_containing_peaks) + len(self.list_not_containing_peaks):
             print("There is the same amount of input files as output files.")
-            self.logger.info('There is the same amount of input files as output files.')
         else:
-            print("OUTPUT VERIFICATION FAILED: The input paths do not match the output paths.")
-            self.logger.info('OUTPUT VERIFICATION FAILED: The input paths do not match the output paths.')
-            
+            print("OUTPUT VERIFICATION FAILED: The input paths do not match the output paths.")           
             print(f'Input H5 files: {len(self.h5_file_paths)}\nOutput peak files: {len(self.list_containing_peaks)}\nOutput empty files: {len(self.list_not_containing_peaks)}')
-            self.logger.info(f'Input H5 files: {len(self.h5_file_paths)}\nOutput peak files: {len(self.list_containing_peaks)}\nOutput empty files: {len(self.list_not_containing_peaks)}')

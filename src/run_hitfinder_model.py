@@ -1,5 +1,4 @@
 import argparse
-import logging
 from hitfinderLib import *
 import torch
 
@@ -15,19 +14,30 @@ def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     Returns:
         argparse.ArgumentParser: The parser with the added arugments.
     """
-    parser.add_argument('-l', '--list', type=str, help='file path to the lst file for the model to use')
-    parser.add_argument('-m', '--model', type=str, help='name of the model architecture')
-    parser.add_argument('-d', '--dict', type=str, help='file path to the model state dict')
-    parser.add_argument('-o', '--output', type=str, help='output file path for the lst files without file names')
-    parser.add_argument('-cl', '--camera_length', type=str, help='attribute name for the camera length parameter')
-    parser.add_argument('-pe', '--photon_energy', type=str, help='attribute name for the camera length parameter')
+    parser.add_argument('-l', '--list', type=str, help='File path to the .lst file containing file paths to the .h5 file to run through the model.')
+    parser.add_argument('-m', '--model', type=str, help='Name of the model architecture class found in models.py that corresponds to the model state dict.')
+    parser.add_argument('-d', '--dict', type=str, help='File path to the model state dict .pt file.')
+    parser.add_argument('-o', '--output', type=str, help='Output file path only for the .lst files after classification.')
     
-    args = parser.parse_args()
-    if args:
+    parser.add_argument('-cl', '--camera_length', type=str, help='Attribute name for the camera length parameter.')
+    parser.add_argument('-pe', '--photon_energy', type=str, help='Attribute name for the photon energy parameter.')
+    
+    try:
+        args = parser.parse_args()
+        print("Parsed arguments:")
+        for arg, value in vars(args).items():
+            print(f"{arg}: {value}")
+            
         return args
-    else:
-        print('Input needed.')
-        logger.info('Input needed.')
+    
+    except argparse.ArgumentError as e:
+        print(f"Argument error: {e}")
+    
+    except argparse.ArgumentTypeError as e:
+        print(f"Argument type error: {e}")
+    
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
 
 
 def main():
@@ -35,10 +45,9 @@ def main():
     This main function is the flow of logic for running a trained model. Here parameter arugments are assigned to variables.
     Classes for data management and using the model are declared and the relavent functions for the process are called following declaration in blocks. 
     """
-    parser = argparse.ArgumentParser(description='parameters for running the model')
+    parser = argparse.ArgumentParser(description='Parameters for running a model.')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(device)
-    logger.info(device)
+    print(f'This model will be running on: {device}')
 
     args = arguments(parser)
     h5_file_list = args.list
@@ -63,5 +72,4 @@ def main():
     process_data.output_verification()
 
 if __name__ == '__main__':
-    logger = logging.getLogger(__name__)
     main()

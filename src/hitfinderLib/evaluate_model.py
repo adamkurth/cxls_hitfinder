@@ -1,11 +1,9 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import numpy as np
-import logging
 from sklearn.metrics import confusion_matrix, classification_report
 import matplotlib.pyplot as plt
-from torch.cuda.amp import GradScaler, autocast
+from torch.cuda.amp import autocast
 import datetime
 
 # ! Look into an inheritance relationship with the training and data classes.
@@ -23,7 +21,6 @@ class ModelEvaluation:
             attributes (dict): Dictionary containing the names of the metadata contained in the h5 image files. These names could change depending on whom created the metadata, so the specific names are arguments in the sbatch script. 
             trained_model (nn.Module): This is a trained model taken from the training class. 
         """
-        self.logger = logging.getLogger(__name__)
         
         self.test_loader = cfg['test data']
         self.batch_size = cfg['batch size']

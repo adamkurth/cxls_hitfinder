@@ -1,5 +1,4 @@
 import argparse
-import logging
 from hitfinderLib import *
 import torch
 
@@ -14,41 +13,50 @@ def arguments(parser) -> argparse.ArgumentParser:
     Returns:
         argparse.ArgumentParser: The parser with the added arugments.
     """
-    parser.add_argument('-l', '--list', type=str, help='file path to the lst file for the model to use')
-    parser.add_argument('-m', '--model', type=str, help='name of the model architecture')
-    parser.add_argument('-o', '--output', type=str, help='output file path for training results')
-    parser.add_argument('-d', '--dict', type=str, help='output state dict for the trained model to me loaded and used later')
+    parser.add_argument('-l', '--list', type=str, help='File path to the .lst file containing file paths to the .h5 file to run through the model.')
+    parser.add_argument('-m', '--model', type=str, help='Name of the model architecture class found in models.py that corresponds to the model state dict.')
+    parser.add_argument('-o', '--output', type=str, help='Output file path only for training confusion matrix and results.')
+    parser.add_argument('-d', '--dict', type=str, help='Output state dict for the trained model that can be used to load the trained model later.')
     
-    parser.add_argument('-e', '--epoch', type=int, help='number of training epochs')
-    parser.add_argument('-b', '--batch', type=int, help='batch size for training')
-    parser.add_argument('-op', '--optimizer', type=str, help='training optimizer function')
-    parser.add_argument('-s', '--scheduler', type=str, help='training learning rate scheduler')
-    parser.add_argument('-c', '--criterion', type=str, help='training loss function')
-    parser.add_argument('-lr', '--learning_rate', type=float, help='training learning rate')
+    parser.add_argument('-e', '--epoch', type=int, help='Number of training epochs.')
+    parser.add_argument('-b', '--batch', type=int, help='Batch size per epoch for training.')
+    parser.add_argument('-op', '--optimizer', type=str, help='Training optimizer function.')
+    parser.add_argument('-s', '--scheduler', type=str, help='Training learning rate scheduler.')
+    parser.add_argument('-c', '--criterion', type=str, help='Training loss function.')
+    parser.add_argument('-lr', '--learning_rate', type=float, help='Training inital learning rate.')
     
-    parser.add_argument('-cl', '--camera_length', type=str, help='attribute name for the camera length parameter')
-    parser.add_argument('-pe', '--photon_energy', type=str, help='attribute name for the camera length parameter')
-    parser.add_argument('-pk', '--peaks', type=str, help='attribute name for is there are peaks present')
+    parser.add_argument('-cl', '--camera_length', type=str, help='Attribute name for the camera length parameter.')
+    parser.add_argument('-pe', '--photon_energy', type=str, help='Attribute name for the photon energy parameter.')
+    parser.add_argument('-pk', '--peaks', type=str, help='Attribute name for is there are peaks present.')
     
-    parser.add_argument('-tl', '--transfer_learn', type=str, default='None', help='flie path to state dict file for transfer learning', )
+    parser.add_argument('-tl', '--transfer_learn', type=str, default='None', help='Flie path to state dict file for transfer learning.' )
     
-    args = parser.parse_args()
-    
-    if args:
+    try:
+        args = parser.parse_args()
+        print("Parsed arguments:")
+        for arg, value in vars(args).items():
+            print(f"{arg}: {value}")
+            
         return args
-    else:
-        print('Input needed.')
-        logger.info('Input needed.')
+    
+    except argparse.ArgumentError as e:
+        print(f"Argument error: {e}")
+    
+    except argparse.ArgumentTypeError as e:
+        print(f"Argument type error: {e}")
+    
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
 
 def main() -> None:
     """
     This main function is the flow of logic for the training and evaluation of a given model. Here parameter arugments are assigned to variables.
     Classes for data management, training, and evaluation are declared and the relavent functions for the process are called following declaration in blocks. 
     """
-    parser = argparse.ArgumentParser(description='Model training arguments.')
+    parser = argparse.ArgumentParser(description='Parameters for training a model.')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(device)
-    logger.info(device)
+    print(f'This model will be training on: {device}')
     
     args = arguments(parser)
     h5_file_list = args.list
@@ -113,5 +121,4 @@ def main() -> None:
     
     
 if __name__ == '__main__':
-    logger = logging.getLogger(__name__)
     main()

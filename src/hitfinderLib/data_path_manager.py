@@ -1,10 +1,8 @@
-import logging
 import h5py as h5
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-logger = logging.getLogger(__name__)
 
 class Paths:
     
@@ -66,13 +64,11 @@ class Paths:
                         except:
                             attributes[attr] = None
                             print(f"Attribute '{attr}' not found in file.")
-                            logger.info(f"Attribute '{attr}' not found in file.")
                     
                     attribute_list.append(attributes)
                     
             except:
                 print("Incorrect file path: ", file_path)
-                logger.info("Incorrect file path: ", file_path)
                     
         return tensor_list, attribute_list
                 
@@ -147,9 +143,7 @@ class Data(Dataset):
         self.test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
         
         print(f"Train size: {len(train_dataset)}")
-        logger.info(f"Train size: {len(train_dataset)}")
         print(f"Test size: {len(test_dataset)}")
-        logger.info(f"Test size: {len(test_dataset)}")
         
     def get_data_loaders(self) -> tuple:
         """
