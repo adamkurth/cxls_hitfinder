@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 from torch.cuda.amp import autocast
 import datetime
 
-# ! Look into an inheritance relationship with the training and data classes.
 
 class ModelEvaluation:
     
@@ -42,38 +41,47 @@ class ModelEvaluation:
         This function runs the trained model in evaluation mode.
         This function creates arrays of labels and predictions to compare against each other for metrics. 
         """
-        
+        print(f'Running evaluation on model: {self.model.__class__.__name__}')
         self.model.eval()
-        with torch.no_grad():
-            for inputs, attributes in self.test_loader:
-                
-                inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
-                attributes = {key: value.to(self.device, dtype=torch.float32) for key, value in attributes.items()}
+        try:
+            with torch.no_grad():
+                for inputs, attributes in self.test_loader:
+                    
+                    inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
+                    attributes = {key: value.to(self.device, dtype=torch.float32) for key, value in attributes.items()}
 
 
-                with autocast(enabled=False):
-                    score = self.model(inputs, attributes[self.camera_length], attributes[self.photon_energy])
-                    truth = attributes[self.peak].reshape(-1, 1).float().to(self.device)
-                                    
-                predictions = (torch.sigmoid(score) > 0.5).long()
-                
-                self.all_labels.extend(torch.flatten(truth.cpu()))
-                self.all_predictions.extend(torch.flatten(predictions.cpu()))
+                    with autocast(enabled=False):
+                        score = self.model(inputs, attributes[self.camera_length], attributes[self.photon_energy])
+                        truth = attributes[self.peak].reshape(-1, 1).float().to(self.device)
+                                        
+                    predictions = (torch.sigmoid(score) > 0.5).long()
+                    
+                    self.all_labels.extend(torch.flatten(truth.cpu()))
+                    self.all_predictions.extend(torch.flatten(predictions.cpu()))
 
-        # No need to reshape - arrays should already be flat
-        self.all_labels = np.array(self.all_labels)
-        self.all_predictions = np.array(self.all_predictions)
+            # No need to reshape - arrays should already be flat
+            self.all_labels = np.array(self.all_labels)
+            self.all_predictions = np.array(self.all_predictions)
+        except RuntimeError as e:
+            print(f"RuntimeError during training: {e}")  
+        except AttributeError as e:
+            print(f"AttributeError during training: {e}")
+        except TypeError as e:
+            print(f"TypeError during training: {e}")    
+        except Exception as e:
+            print(f"An unexpected error occurred during training: {e}")
         
     def make_classification_report(self) -> None:
         """
         This function creates a classification report for the model and prints it.
         """
-        
-        self.classification_report_dict = classification_report(self.all_labels, self.all_predictions, output_dict=True)
-        print('Classification Matrix : ')
-        self.logger.info('Classification Matrix : ')
-        [print(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
-        [self.logger.info(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
+        try:
+            self.classification_report_dict = classification_report(self.all_labels, self.all_predictions, output_dict=True)
+            print('Classification Matrix: ')
+            [print(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
+        except Exception as e:
+            print(f"An error occurred while creating the clasification report: {e}")       
         
     def get_classification_report(self) -> dict:
         """
@@ -91,22 +99,28 @@ class ModelEvaluation:
         The values in this matrix are done so that the rows total to 1. 
         """
         
-        self.cm = confusion_matrix(self.all_labels, self.all_predictions, normalize='true')
-
+        try:
+            self.cm = confusion_matrix(self.all_labels, self.all_predictions, normalize='true')
+        except Exception as e:
+            print(f"An error occurred while creating the confusion matrix: {e}")       
         # Plotting the confusion matrix
-        plt.matshow(self.cm, cmap="Blues")
-        plt.title(f'CM for {self.model.__class__.__name__}')
-        plt.colorbar()
-        plt.ylabel('True Label')
-        plt.xlabel('Predicted Label')
-        
-        if path != None:
-            now = datetime.datetime.now()
-            formatted_date_time = now.strftime("%m%d%y-%H:%M")
-            path = path + '/' + formatted_date_time + '-' + 'confusion_matrix.png'
-            plt.savefig(path)
+        try:
+            plt.matshow(self.cm, cmap="Blues")
+            plt.title(f'CM for {self.model.__class__.__name__}')
+            plt.colorbar()
+            plt.ylabel('True Label')
+            plt.xlabel('Predicted Label')
             
-        plt.show()
+            if path != None:
+                now = datetime.datetime.now()
+                formatted_date_time = now.strftime("%m%d%y-%H:%M")
+                path = path + '/' + formatted_date_time + '-' + 'confusion_matrix.png'
+                plt.savefig(path)
+                
+                print(f'Confustion matrix saved to: {path}')
+        except Exception as e:
+            print(f"An error occurred while plotting confusion matrix: {e}")
+
 
 
     def get_confusion_matrix(self) -> np.ndarray:

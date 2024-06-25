@@ -1,6 +1,7 @@
 import argparse
 from hitfinderLib import *
 import torch
+import datetime
 
 
 def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser: 
@@ -45,6 +46,10 @@ def main():
     This main function is the flow of logic for running a trained model. Here parameter arugments are assigned to variables.
     Classes for data management and using the model are declared and the relavent functions for the process are called following declaration in blocks. 
     """
+    now = datetime.datetime.now()
+    formatted_date_time = now.strftime("%m%d%y-%H:%M")
+    print(f'Starting hitfinder model: {formatted_date_time}')
+    
     parser = argparse.ArgumentParser(description='Parameters for running a model.')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f'This model will be running on: {device}')

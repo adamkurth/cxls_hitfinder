@@ -24,8 +24,14 @@ class Paths:
         Returns:
             list: This is the list of h5 file paths to read data from.
         """
-        with open(self.list_path, 'r') as file:
-            return [line.strip() for line in file]
+        try:
+            with open(self.list_path, 'r') as file:
+                file_paths = [line.strip() for line in file]
+            
+            print(f'Read file paths from {self.list_path}.')
+            return file_paths
+        except Exception as e:
+            print(f"An error occurred while reading from {self.list_path}: {e}")
         
     def get_file_paths(self) -> list:
         """
@@ -61,15 +67,21 @@ class Paths:
                     for attr in file.attrs:
                         try:
                             attributes[attr] = file.attrs.get(attr)
-                        except:
+                        except KeyError:
                             attributes[attr] = None
-                            print(f"Attribute '{attr}' not found in file.")
+                            print(f"Attribute '{attr}' not found in file {file_path}.")
                     
                     attribute_list.append(attributes)
+                
+                print('All .h5 files have been loaded into a list of torch.Tensors.')
                     
-            except:
-                print("Incorrect file path: ", file_path)
-                    
+            except OSError:
+                print(f"Error: Could not open file {file_path}. The file might not exist or be corrupted.")
+            except IOError:
+                print(f"Error: An I/O error occurred while opening file {file_path}.")
+            except Exception as e:
+                print(f"An unexpected error occurred while opening file {file_path}: {e}")
+                        
         return tensor_list, attribute_list
                 
     def get_h5_tensor_list(self) -> list:
@@ -134,16 +146,34 @@ class Data(Dataset):
         Args:
             batch_size (int): The size of the batches to be used by the data loaders.
         """
-        num_items = len(self.data)
-        num_train = int(0.8 * num_items)
-        num_test = num_items - num_train
+        try:
+            num_items = len(self.data)
+            if num_items == 0:
+                raise ValueError("The dataset is empty.")
+            
+            num_train = int(0.8 * num_items)
+            num_test = num_items - num_train
 
-        train_dataset, test_dataset = torch.utils.data.random_split(self.data, [num_train, num_test])
-        self.train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
-        self.test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
-        
-        print(f"Train size: {len(train_dataset)}")
-        print(f"Test size: {len(test_dataset)}")
+            try:
+                train_dataset, test_dataset = torch.utils.data.random_split(self.data, [num_train, num_test])
+            except Exception as e:
+                print(f"An error occurred while splitting the dataset: {e}")
+                return
+
+            try:
+                self.train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
+                self.test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
+            except Exception as e:
+                print(f"An error occurred while creating data loaders: {e}")
+                return
+            
+            print(f"Train size: {len(train_dataset)}")
+            print(f"Test size: {len(test_dataset)}")
+
+        except ValueError as e:
+            print(f"ValueError: {e}")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
         
     def get_data_loaders(self) -> tuple:
         """
