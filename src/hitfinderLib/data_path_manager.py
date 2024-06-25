@@ -72,16 +72,16 @@ class Paths:
                             print(f"Attribute '{attr}' not found in file {file_path}.")
                     
                     attribute_list.append(attributes)
-                
-                print('All .h5 files have been loaded into a list of torch.Tensors.')
                     
             except OSError:
-                print(f"Error: Could not open file {file_path}. The file might not exist or be corrupted.")
-            except IOError:
-                print(f"Error: An I/O error occurred while opening file {file_path}.")
+                if isinstance(e, IOError):
+                    print(f"Error: An I/O error occurred while opening file {file_path}.")
+                else:
+                    print(f"Error: Could not open file {file_path}. The file might not exist or be corrupted.")
             except Exception as e:
                 print(f"An unexpected error occurred while opening file {file_path}: {e}")
-                        
+        
+        print('All .h5 files have been loaded into a list of torch.Tensors.')               
         return tensor_list, attribute_list
                 
     def get_h5_tensor_list(self) -> list:
