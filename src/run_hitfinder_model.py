@@ -22,6 +22,7 @@ def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     
     parser.add_argument('-cl', '--camera_length', type=str, help='Attribute name for the camera length parameter.')
     parser.add_argument('-pe', '--photon_energy', type=str, help='Attribute name for the photon energy parameter.')
+    parser.add_argument('-am', '--attribute_manager', type=bool, help='True or false value for if the input data is using the attribute manager to store data, if false provide h5ls paths instead of keys.')
     
     try:
         args = parser.parse_args()
@@ -62,8 +63,12 @@ def main():
     
     camera_length = args.camera_length
     photon_energy = args.photon_energy
+    peaks = None
+    attribute_manager = args.attribute_manager
     
     data_manager = data_path_manager.Paths(h5_file_list)
+    data_manager.read_file_paths()
+    data_manager.load_h5_data(attribute_manager, camera_length, photon_energy, peaks)
     
     h5_file_paths = data_manager.get_file_paths()
     h5_tensor_list = data_manager.get_h5_tensor_list()

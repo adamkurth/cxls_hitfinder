@@ -82,16 +82,19 @@ class RunModel:
             camera_length_key (str): The key for accessing camera length from the metadata.
             photon_energy_key (str): The key for accessing photon energy from the metadata.
         """
+        print('Starting classification ...')
         try:
             if len(input_data) != len(self.h5_file_paths):
                 print('Input data size does not match the number of file paths.')
-                return
-
+                # return
+            photon_energy_key = photon_energy_key.split('/')[-1]
+            camera_length_key = camera_length_key.split('/')[-1]
+            print(len(input_data))
             for index in range(len(input_data)):
                 try:
                     # Prepare input data
                     input_data[index] = input_data[index].unsqueeze(0).unsqueeze(0).to(self.device, dtype=torch.float32)
-                    
+
                     # Prepare metadata
                     camera_length = torch.tensor([meta_data[index][camera_length_key]], dtype=torch.float32).to(self.device)
                     photon_energy = torch.tensor([meta_data[index][photon_energy_key]], dtype=torch.float32).to(self.device)

@@ -2,6 +2,7 @@ import h5py as h5
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
+from typing import Optional
 
 
 class Paths:
@@ -14,10 +15,10 @@ class Paths:
             list_path (list): This is the file path to an lst file which holds the file paths to h5 files to read. 
         """
         self.list_path = list_path
-        self.h5_files = self.read_file_paths()
-        self.h5_tensor_list, self.h5_attr_list = self.load_h5_data()
+        self.h5_files = []
+        self.h5_tensor_list, self.h5_attr_list = [], []
         
-    def read_file_paths(self) -> list:
+    def read_file_paths(self) -> None:
         """
         Read the file names from the lst file and put it in a list of strings. 
         
@@ -26,10 +27,9 @@ class Paths:
         """
         try:
             with open(self.list_path, 'r') as file:
-                file_paths = [line.strip() for line in file]
+                self.h5_files = [line.strip() for line in file]
             
             print(f'Read file paths from {self.list_path}.')
-            return file_paths
         except Exception as e:
             print(f"An error occurred while reading from {self.list_path}: {e}")
         
@@ -42,47 +42,58 @@ class Paths:
         """
         return self.h5_files
     
-    def load_h5_data(self) -> tuple:
+    def load_h5_data(self, attribute_manager: bool, camera_length: str, photon_energy: str, peaks: Optional[str]=None) -> None:
         """
         This function takes the list of h5 files and loads them into a PyTorch tensor and pulls the metadata.
         
         Returns:
             tuple: This tuple contains two list, one list being the full of image tensors and one list being full of metadata dictionaries. 
         """
-        tensor_list = []
-        attribute_list = []
 
         for file_path in self.h5_files: 
             try:
+                file_path = file_path.strip().replace('*', '')
                 with h5.File(file_path, 'r') as file:
+                    print(f'Reading file {file_path}')
                     # Convert the HDF5 dataset to a NumPy array
                     numpy_array = np.array(file['entry/data/data'])
                     # Convert the NumPy array to a PyTorch tensor
                     tensor = torch.tensor(numpy_array)
                     # Append the tensor to the tensor_list
-                    tensor_list.append(tensor)
+                    self.h5_tensor_list.append(tensor)
 
                     # Retrieve attributes
                     attributes = {}
-                    for attr in file.attrs:
+                    
+                    if attribute_manager: 
+                        for attr in file.attrs:
+                            try:
+                                attributes[attr] = file.attrs.get(attr)
+                            except KeyError:
+                                attributes[attr] = None
+                                print(f"Attribute '{attr}' not found in file {file_path}.")
+                        
+                            self.h5_attr_list.append(attributes)
+                    
+                    else:
                         try:
-                            attributes[attr] = file.attrs.get(attr)
+                            if peaks != None:
+                                attributes['hit'] = file[peaks][()]
+                            attributes['Detector-Distance_mm'] = file[camera_length][()]
+                            attributes['X-ray-Energy_eV'] = file[photon_energy][()]
+                            
                         except KeyError:
                             attributes[attr] = None
                             print(f"Attribute '{attr}' not found in file {file_path}.")
-                    
-                    attribute_list.append(attributes)
-                    
+                        self.h5_attr_list.append(attributes)
+                        
             except OSError:
-                if isinstance(e, IOError):
-                    print(f"Error: An I/O error occurred while opening file {file_path}.")
-                else:
-                    print(f"Error: Could not open file {file_path}. The file might not exist or be corrupted.")
+                print(f"Error: An I/O error occurred while opening file {file_path}")
             except Exception as e:
                 print(f"An unexpected error occurred while opening file {file_path}: {e}")
         
-        print('All .h5 files have been loaded into a list of torch.Tensors.')               
-        return tensor_list, attribute_list
+        print('.h5 files have been loaded into a list of torch.Tensors.') 
+        print(f'Number of tensors: {len(self.h5_tensor_list)}\nNumber of tensors with attributes: {len(self.h5_attr_list)}')              
                 
     def get_h5_tensor_list(self) -> list:
         """
@@ -101,6 +112,9 @@ class Paths:
             list: This is the list of h5 file attributes.
         """
         return self.h5_attr_list
+
+
+######################################################################################
 
 class Data(Dataset):
     
