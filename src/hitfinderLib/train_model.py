@@ -33,8 +33,8 @@ class TrainModel:
         self.learning_rate = cfg['learning rate']
         self.model = cfg['model']
         
-        self.camera_length = attributes['camera length']
-        self.photon_energy = attributes['photon energy']
+        self.camera_length = attributes['camera length'].split('/')[-1]
+        self.photon_energy = attributes['photon energy'].split('/')[-1]
         self.peak = attributes['peak']
         
         self.plot_train_accuracy = np.zeros(self.epochs)
@@ -115,8 +115,9 @@ class TrainModel:
         
         for epoch in range(self.epochs):
             print('-- epoch '+str(epoch)) 
-
+            print('Training ...')
             self.train(epoch)
+            print('Evaluating ...')
             self.test(epoch)
             
             print(f"-- learning rate : {self.scheduler.get_last_lr()}")
