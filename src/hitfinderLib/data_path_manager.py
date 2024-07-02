@@ -21,9 +21,6 @@ class Paths:
     def read_file_paths(self) -> None:
         """
         Read the file names from the lst file and put it in a list of strings. 
-        
-        Returns:
-            list: This is the list of h5 file paths to read data from.
         """
         try:
             with open(self.list_path, 'r') as file:
@@ -44,10 +41,14 @@ class Paths:
     
     def load_h5_data(self, attribute_manager: bool, camera_length: str, photon_energy: str, peaks: Optional[str]=None) -> None:
         """
-        This function takes the list of h5 files and loads them into a PyTorch tensor and pulls the metadata.
-        
-        Returns:
-            tuple: This tuple contains two list, one list being the full of image tensors and one list being full of metadata dictionaries. 
+        This function takes in a list of h5 file file paths and loads in the images as tensors and puts the metadata into dictionaries. 
+        There are two ways for the metadata to be taken out, one method uses to attribute manager class from h5py and the other finds metadata in a given file location.
+
+        Args:
+            attribute_manager (bool): Tells this function if the attribute manager is being used.
+            camera_length (str): This is either the dictionary key or internal h5 file path for the camera length parameter.
+            photon_energy (str): This is either the dictionary key or the internal h5 file path for the photon energy parameter.
+            peaks (Optional[str], optional): This is either the dictionary key or internal h5 file path for the peak parameter. Defaults to None because it is only used for training.
         """
 
         for file_path in self.h5_files: 
@@ -72,12 +73,10 @@ class Paths:
                             except KeyError:
                                 attributes[attr] = None
                                 print(f"Attribute '{attr}' not found in file {file_path}.")
-                        
-                            self.h5_attr_list.append(attributes)
                     
                     else:
                         try:
-                            if peaks != None:
+                            if peaks is not None:
                                 attributes['hit'] = file[peaks][()]
                             attributes['Detector-Distance_mm'] = file[camera_length][()]
                             attributes['X-ray-Energy_eV'] = file[photon_energy][()]
@@ -85,7 +84,8 @@ class Paths:
                         except KeyError:
                             attributes[attr] = None
                             print(f"Attribute '{attr}' not found in file {file_path}.")
-                        self.h5_attr_list.append(attributes)
+                            
+                    self.h5_attr_list.append(attributes)
                         
             except OSError:
                 print(f"Error: An I/O error occurred while opening file {file_path}")

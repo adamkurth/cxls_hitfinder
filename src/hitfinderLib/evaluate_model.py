@@ -26,9 +26,9 @@ class ModelEvaluation:
         self.device = cfg['device']
         self.model = trained_model
         
-        self.camera_length = attributes['camera length']
-        self.photon_energy = attributes['photon energy']
-        self.peak = attributes['peak']
+        self.camera_length = attributes['camera length'].split('/')[-1]
+        self.photon_energy = attributes['photon energy'].split('/')[-1]
+        self.peak = attributes['peak'].split('/')[-1]
         
         self.cm = None
         self.all_labels = []
@@ -50,13 +50,11 @@ class ModelEvaluation:
                     inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
                     attributes = {key: value.to(self.device, dtype=torch.float32) for key, value in attributes.items()}
 
-
                     with autocast(enabled=False):
                         score = self.model(inputs, attributes[self.camera_length], attributes[self.photon_energy])
                         truth = attributes[self.peak].reshape(-1, 1).float().to(self.device)
-                                        
+                                    
                     predictions = (torch.sigmoid(score) > 0.5).long()
-                    
                     self.all_labels.extend(torch.flatten(truth.cpu()))
                     self.all_predictions.extend(torch.flatten(predictions.cpu()))
 
@@ -70,13 +68,14 @@ class ModelEvaluation:
         except TypeError as e:
             print(f"TypeError during training: {e}")    
         except Exception as e:
-            print(f"An unexpected error occurred during training: {e}")
+            print(f"An unexpected error occurred during evaluation: {e}")
         
     def make_classification_report(self) -> None:
         """
         This function creates a classification report for the model and prints it.
         """
         try:
+            print('Creating classification report...')
             self.classification_report_dict = classification_report(self.all_labels, self.all_predictions, output_dict=True)
             print('Classification Matrix: ')
             [print(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
@@ -100,6 +99,7 @@ class ModelEvaluation:
         """
         
         try:
+            print('Creating confusion matrix...')
             self.cm = confusion_matrix(self.all_labels, self.all_predictions, normalize='true')
         except Exception as e:
             print(f"An error occurred while creating the confusion matrix: {e}")       

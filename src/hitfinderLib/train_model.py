@@ -35,7 +35,7 @@ class TrainModel:
         
         self.camera_length = attributes['camera length'].split('/')[-1]
         self.photon_energy = attributes['photon energy'].split('/')[-1]
-        self.peak = attributes['peak']
+        self.peak = attributes['peak'].split('/')[-1]
         
         self.plot_train_accuracy = np.zeros(self.epochs)
         self.plot_train_loss = np.zeros(self.epochs)
@@ -121,6 +121,7 @@ class TrainModel:
             self.test(epoch)
             
             print(f"-- learning rate : {self.scheduler.get_last_lr()}")
+
             
     def train(self, epoch:int) -> None:
         
