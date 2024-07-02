@@ -98,8 +98,8 @@ def main() -> None:
     h5_attribute_list = path_manager.get_h5_attribute_list()
     
     data_manager = data_path_manager.Data(h5_tensor_list, h5_attribute_list)
-    data_manager.split_data(batch_size)
-    train_loader, test_loader = data_manager.get_data_loaders()
+    data_manager.split_training_data(batch_size)
+    train_loader, test_loader = data_manager.get_training_data_loaders()
     
     cfg = {
         'train data': train_loader,

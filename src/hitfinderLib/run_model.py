@@ -2,6 +2,7 @@ import torch
 import datetime
 import os 
 from . import models as m
+from . import utils as u
 
 class RunModel:
     
@@ -56,8 +57,7 @@ class RunModel:
         Load the state dictionary into the model class and prepare it for evaluation.
         """
         try:
-            model_path = self.model_path
-            state_dict = torch.load(model_path)
+            state_dict = torch.load(self.model_path)
             self.model.load_state_dict(state_dict)
             self.model.eval() 
             self.model.to(self.device)

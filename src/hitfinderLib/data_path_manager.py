@@ -62,6 +62,7 @@ class Paths:
                     # Convert the NumPy array to a PyTorch tensor
                     tensor = torch.tensor(numpy_array)
                     # Append the tensor to the tensor_list
+                    
                     self.h5_tensor_list.append(tensor)
 
                     # Retrieve attributes
@@ -129,6 +130,7 @@ class Data(Dataset):
         """
         self.train_loader = None
         self.test_loader = None
+        self.inference_loader = None
         self.image_data = classification_data
         self.meta_data = attribute_data
         self.data = list(zip(self.image_data, self.meta_data))
@@ -154,7 +156,7 @@ class Data(Dataset):
         """
         return self.data[idx]
         
-    def split_data(self, batch_size: int) -> None:
+    def split_training_data(self, batch_size: int) -> None:
         """
         Split the data into training and testing datasets and create data loaders for them.
 
@@ -190,7 +192,7 @@ class Data(Dataset):
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
         
-    def get_data_loaders(self) -> tuple:
+    def get_training_data_loaders(self) -> tuple:
         """
         Get the training and testing data loaders.
 
@@ -198,3 +200,36 @@ class Data(Dataset):
             tuple: A tuple containing the training and testing data loaders.
         """
         return self.train_loader, self.test_loader
+    
+    def inference_data_loader(self, batch_size) -> None: 
+        """
+        Puts the inference data into a dataloader for batch processing.
+
+        Args:
+            batch_size (int): The size of the batches to be used by the data loaders.
+        """
+        try:
+            num_items = len(self.data)
+            if num_items == 0:
+                raise ValueError("The dataset is empty.")
+            
+
+            try:
+                self.inference_loader = DataLoader(self.data, batch_size=batch_size, shuffle=False, pin_memory=True)
+            except Exception as e:
+                print(f"An error occurred while creating data loaders: {e}")
+                return
+
+        except ValueError as e:
+            print(f"ValueError: {e}")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            
+    def get_inference_data_loader(self) -> DataLoader:
+        """
+        This function returns the inference data loader.
+
+        Returns:
+            DataLoader: The data loader for putting through the trained model. 
+        """
+        return self.inference_loader
