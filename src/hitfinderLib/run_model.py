@@ -89,7 +89,7 @@ class RunModel:
                 # return
             photon_energy_key = photon_energy_key.split('/')[-1]
             camera_length_key = camera_length_key.split('/')[-1]
-            print(len(input_data))
+
             for index in range(len(input_data)):
                 try:
                     # Prepare input data

@@ -1,4 +1,5 @@
 import h5py as h5
+import hdf5plugin
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
