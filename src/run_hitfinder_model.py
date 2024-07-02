@@ -22,7 +22,7 @@ def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     
     parser.add_argument('-cl', '--camera_length', type=str, help='Attribute name for the camera length parameter.')
     parser.add_argument('-pe', '--photon_energy', type=str, help='Attribute name for the photon energy parameter.')
-    parser.add_argument('-am', '--attribute_manager', action='store_true', help='True or false value for if the input data is using the attribute manager to store data, if false provide h5ls paths instead of keys.')
+    parser.add_argument('-am', '--attribute_manager', type=str, help='True or false value for if the input data is using the attribute manager to store data, if false provide h5ls paths instead of keys.')
     
     try:
         args = parser.parse_args()

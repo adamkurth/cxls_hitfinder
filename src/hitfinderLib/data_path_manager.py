@@ -40,7 +40,7 @@ class Paths:
         """
         return self.h5_files
     
-    def load_h5_data(self, attribute_manager: bool, camera_length: str, photon_energy: str, peaks: Optional[str]=None) -> None:
+    def load_h5_data(self, attribute_manager: str, camera_length: str, photon_energy: str, peaks: Optional[str]=None) -> None:
         """
         This function takes in a list of h5 file file paths and loads in the images as tensors and puts the metadata into dictionaries. 
         There are two ways for the metadata to be taken out, one method uses to attribute manager class from h5py and the other finds metadata in a given file location.
@@ -67,7 +67,7 @@ class Paths:
                     # Retrieve attributes
                     attributes = {}
                     
-                    if attribute_manager: 
+                    if attribute_manager == 'True' or attribute_manager == 'true': 
                         for attr in file.attrs:
                             try:
                                 attributes[attr] = file.attrs.get(attr)

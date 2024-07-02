@@ -31,7 +31,7 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-pk', '--peaks', type=str, help='Attribute name for is there are peaks present.')
     
     parser.add_argument('-tl', '--transfer_learn', type=str, default='None', help='Flie path to state dict file for transfer learning.' )
-    parser.add_argument('-am', '--attribute_manager', action='store_true', help='True or false value for if the input data is using the attribute manager to store data, if false provide h5ls paths instead of keys.')
+    parser.add_argument('-am', '--attribute_manager', type=str, help='True or false value for if the input data is using the attribute manager to store data, if false provide h5ls paths instead of keys.')
     
     try:
         args = parser.parse_args()
