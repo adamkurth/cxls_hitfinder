@@ -134,7 +134,7 @@ class TrainModel:
         self.model.train()
         
         try:
-            for inputs, attributes in self.train_loader:
+            for inputs, attributes, _ in self.train_loader:
                 inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
                 attributes = {key: value.to(self.device).float() for key, value in attributes.items()}
 
@@ -185,7 +185,7 @@ class TrainModel:
         self.model.eval()
         try:
             with torch.no_grad():
-                for inputs, attributes in self.test_loader:
+                for inputs, attributes, _ in self.test_loader:
                     inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
                     attributes = {key: value.to(self.device, dtype=torch.float32) for key, value in attributes.items()}
                     

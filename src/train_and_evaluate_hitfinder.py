@@ -96,8 +96,9 @@ def main() -> None:
 
     h5_tensor_list = path_manager.get_h5_tensor_list()
     h5_attribute_list = path_manager.get_h5_attribute_list()
+    h5_file_paths = path_manager.get_file_paths()
     
-    data_manager = data_path_manager.Data(h5_tensor_list, h5_attribute_list)
+    data_manager = data_path_manager.Data(h5_tensor_list, h5_attribute_list, h5_file_paths)
     data_manager.split_training_data(batch_size)
     train_loader, test_loader = data_manager.get_training_data_loaders()
     
