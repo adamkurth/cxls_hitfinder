@@ -7,9 +7,8 @@ import matplotlib.pyplot as plt
 from torch.cuda.amp import GradScaler, autocast
 import datetime
 from . import models as m
-from . import utils
 
-class TrainModel(utils.CommonFunctions):
+class TrainModel:
     
     def __init__(self, cfg: dict, attributes: dict, transfer_learning_state_dict: str) -> None:
         """
@@ -20,7 +19,6 @@ class TrainModel(utils.CommonFunctions):
             cfg (dict): Dictionary containing important information for training including: data loaders, batch size, training device, number of epochs, the optimizer, the scheduler, the criterion, the learning rate, and the model class. Everything besides the data loaders and device are arguments in the sbatch script.
             attributes (dict): Dictionary containing the names of the metadata contained in the h5 image files. These names could change depending on whom created the metadata, so the specific names are arguments in the sbatch script. 
         """
-        super().__init__()
 
         self.scaler = GradScaler()
         

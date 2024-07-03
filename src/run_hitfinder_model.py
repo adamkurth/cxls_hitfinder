@@ -23,6 +23,7 @@ def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument('-cl', '--camera_length', type=str, help='Attribute name for the camera length parameter.')
     parser.add_argument('-pe', '--photon_energy', type=str, help='Attribute name for the photon energy parameter.')
     parser.add_argument('-am', '--attribute_manager', type=str, help='True or false value for if the input data is using the attribute manager to store data, if false provide h5ls paths instead of keys.')
+    parser.add_argument('-b', '--batch', type=int, help='Batch size for data running through the model.')
     
     try:
         args = parser.parse_args()
@@ -65,19 +66,40 @@ def main():
     photon_energy = args.photon_energy
     peaks = None
     attribute_manager = args.attribute_manager
+    batch_size = args.batch
     
-    data_manager = data_path_manager.Paths(h5_file_list)
-    data_manager.read_file_paths()
-    data_manager.load_h5_data(attribute_manager, camera_length, photon_energy, peaks)
+    attributes = {
+        'camera length': camera_length,
+        'photon energy': photon_energy,
+        'peak': peaks
+    } 
     
-    h5_file_paths = data_manager.get_file_paths()
-    h5_tensor_list = data_manager.get_h5_tensor_list()
-    h5_attribute_list = data_manager.get_h5_attribute_list()
+    path_manager = data_path_manager.Paths(h5_file_list)
+    path_manager.read_file_paths()
+    path_manager.load_h5_data(attribute_manager, camera_length, photon_energy, peaks)
     
-    process_data = run_model.RunModel(model_arch, model_path, save_output_list, h5_file_paths, device)
+    h5_file_paths = path_manager.get_file_paths()
+    h5_tensor_list = path_manager.get_h5_tensor_list()
+    h5_attribute_list = path_manager.get_h5_attribute_list()
+    
+    data_manager = data_path_manager.Data(h5_tensor_list, h5_attribute_list, h5_file_paths)
+    data_manager.inference_data_loader(batch_size)
+    data_loader = data_manager.get_inference_data_loader()
+    
+    cfg = {
+        'model': model_arch,
+        'model_path': model_path,
+        'save_output_list': save_output_list,
+        'device': device,
+        'data_loader': data_loader,
+        'h5_file_paths': h5_file_paths
+    }
+
+    
+    process_data = run_model.RunModel(cfg, attributes)
     process_data.make_model_instance()
     process_data.load_model()
-    process_data.classify_data(h5_tensor_list, h5_attribute_list, camera_length, photon_energy) 
+    process_data.classify_data() 
     process_data.create_model_output_lst_files()
     process_data.output_verification()
 

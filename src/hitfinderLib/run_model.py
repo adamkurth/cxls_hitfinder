@@ -6,30 +6,29 @@ from . import utils as u
 
 class RunModel:
     
-    def __init__(self, model_arch: str, model_path: str, save_output_list: str, h5_file_paths: list, device: torch.device) -> None:
+    def __init__(self, cfg: dict, attributes: dict) -> None:
         """
         Initialize the RunModel class with model architecture, model path, output list path, h5 file paths, and device.
 
         Args:
-            model_arch (str): The architecture name of the model.
-            model_path (str): The file path to the saved model state dictionary.
-            save_output_list (str): The directory path where the output list files will be saved.
-            h5_file_paths (list): List of h5 file paths to process.
-            device (torch.device): The device (CPU or GPU) on which the model will run.
+            cfg (dict): Dictionary containing important information for training including: data loaders, batch size, training device, number of epochs, the optimizer, the scheduler, the criterion, the learning rate, and the model class. Everything besides the data loaders and device are arguments in the sbatch script.
+            attributes (dict): Dictionary containing the names of the metadata contained in the h5 image files. These names could change depending on whom created the metadata, so the specific names are arguments in the sbatch script. 
         """
-        self.device = device
+        self.device = cfg['device']
+        self.model_arch = cfg['model']
+        self.model_path = cfg['model_path']
+        self.save_output_list = cfg['save_output_list']
+        self.data_loader = cfg['data_loader']
+        self.h5_file_paths = cfg['h5_file_paths']
         
-        self.model_arch = model_arch
-        self.model_path = model_path
-        self.save_output_list = save_output_list
-        self.h5_file_paths = h5_file_paths
-        
-        self.model = self.make_model_instance()
-        
-        self.load_model()
+        self.camera_length = attributes['camera length'].split('/')[-1]
+        self.photon_energy = attributes['photon energy'].split('/')[-1]
+        # self.peak = attributes['peak'].split('/')[-1]
         
         self.list_containing_peaks = []
         self.list_not_containing_peaks = []
+        
+        self.model = None
     
     def make_model_instance(self) -> None:
         """
@@ -39,18 +38,14 @@ class RunModel:
             class instance: An instance of the specified model class.
         """
         try:
-            model_class = getattr(m, self.model_arch)
-            print(f'Model object has been created: {model_class.__name__}')
-            return model_class()
+            self.model = getattr(m, self.model_arch)()
+            print(f'Model object has been created: {self.model.__name__}')
         except AttributeError:
             print(f"Error: Model '{self.model_arch}' not found in the module.")
-            return None
         except TypeError:
             print(f"Error: '{self.model_arch}' found in module is not callable.")
-            return None
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
-            return None
             
     def load_model(self) -> None:
         """
@@ -72,49 +67,29 @@ class RunModel:
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
         
-    def classify_data(self, input_data: list, meta_data: list, camera_length_key: str, photon_energy_key: str) -> None:
+    def classify_data(self) -> None:
         """
         Classify the input data using the model and segregate the data based on the classification results.
-
-        Args:
-            input_data (list): List of input data tensors.
-            meta_data (list): List of metadata dictionaries corresponding to the input data.
-            camera_length_key (str): The key for accessing camera length from the metadata.
-            photon_energy_key (str): The key for accessing photon energy from the metadata.
         """
         print('Starting classification ...')
         try:
-            if len(input_data) != len(self.h5_file_paths):
-                print('Input data size does not match the number of file paths.')
-                # return
-            photon_energy_key = photon_energy_key.split('/')[-1]
-            camera_length_key = camera_length_key.split('/')[-1]
-
-            for index in range(len(input_data)):
-                try:
-                    # Prepare input data
-                    input_data[index] = input_data[index].unsqueeze(0).unsqueeze(0).to(self.device, dtype=torch.float32)
-
-                    # Prepare metadata
-                    camera_length = torch.tensor([meta_data[index][camera_length_key]], dtype=torch.float32).to(self.device)
-                    photon_energy = torch.tensor([meta_data[index][photon_energy_key]], dtype=torch.float32).to(self.device)
+            with torch.no_grad():
+                for inputs, attributes, paths in self.data_loader:
+                    inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
+                    attributes = {key: value.to(self.device, dtype=torch.float32) for key, value in attributes.items()}
 
                     # Model prediction
-                    score = self.model(input_data[index], camera_length, photon_energy)
+                    score = self.model(inputs, attributes[self.camera_length], attributes[self.photon_energy])
                     prediction = (torch.sigmoid(score) > 0.5).long()
+                    
+                    assert len(prediction) == len(paths), "Prediction and paths length mismatch."
 
                     # Segregate data based on prediction
-                    if prediction == 1:
-                        self.list_containing_peaks.append(self.h5_file_paths[index])
-                    elif prediction == 0:
-                        self.list_not_containing_peaks.append(self.h5_file_paths[index])
-
-                except KeyError as e:
-                    print(f"KeyError: Missing key in metadata at index {index} - {e}")
-                except RuntimeError as e:
-                    print(f"RuntimeError: A runtime error occurred at index {index} - {e}")
-                except Exception as e:
-                    print(f"An unexpected error occurred at index {index} - {e}")
+                    for pred, path in zip(prediction, paths):
+                        if pred.item() == 1:
+                            self.list_containing_peaks.append(path)
+                        elif pred.item() == 0:
+                            self.list_not_containing_peaks.append(path)
 
         except Exception as e:
             print(f"An unexpected error occurred while classifying data: {e}")
