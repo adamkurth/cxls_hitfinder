@@ -3,7 +3,8 @@ import hdf5plugin
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
-from typing import Optional
+from queue import Queue
+import concurrent.futures 
 
 
 class Paths:
@@ -16,22 +17,25 @@ class Paths:
             list_path (list): This is the file path to an lst file which holds the file paths to h5 files to read. 
         """
         self.list_path = list_path
-        self.h5_files = []
-        self.h5_tensor_list, self.h5_attr_list = [], []
+        self.h5_files = Queue()
+        self.h5_tensor_list, self.h5_attr_list, self.h5_file_list = [], [], []
         
     def read_file_paths(self) -> None:
         """
-        Read the file names from the lst file and put it in a list of strings. 
+        Read the file names from the lst file and put it in a list or queue of strings. 
+        Due to the size of the multievent files, the queue is used to process the files concurrently and load each file as its own dataloader.
         """
         try:
             with open(self.list_path, 'r') as file:
-                self.h5_files = [line.strip() for line in file]
+                for line in file:
+                    self.h5_files.put(line.strip())
             
             print(f'Read file paths from {self.list_path}.')
         except Exception as e:
             print(f"An error occurred while reading from {self.list_path}: {e}")
+
         
-    def get_file_paths(self) -> list:
+    def get_file_path_queue(self) -> list:
         """
         Return the list of file path strings. 
         
@@ -40,62 +44,128 @@ class Paths:
         """
         return self.h5_files
     
-    def load_h5_data(self, attribute_manager: str, camera_length: str, photon_energy: str, peaks: Optional[str]=None) -> None:
+    def process_files(self, attribute_manager: str, attributes: dict, multievent: str) -> None:
+        """
+        This function serves as a wrapper for the functions that load the h5 data into tensors and metadata dictionaries.
+        The multievent files are large enough to be processed concurrently, so this function will call the concurrent function if the multievent flag is set to true. 
+
+        Args:
+            attribute_manager (str): This is a string boolean value that tells the function if the attribute manager class from h5py is being used.
+            attributes (dict): This is a dictionary of the metadata attributes to be found in the h5 files.
+            multievent (str): This is a string boolean value that tells the function if the input .h5 files are multievent or not.
+        """
+        
+        self.h5_tensor_list, self.h5_attr_list, self.h5_file_list = [], [], []
+        
+        if multievent == 'True' or multievent == 'true':
+            self.h5_file_list.append(self.h5_files.get())
+            
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(self.load_h5_data_concurrent, attribute_manager, attributes)
+                try:
+                    future.result()
+                except Exception as exc:
+                    print(f'File generated an exception: {exc}')
+        else: 
+            for i in range(1000):
+                try:
+                    self.h5_file_list.append(self.h5_files.get())
+                except:
+                    break
+            self.load_h5_data(attribute_manager, attributes)
+    
+    def load_h5_data(self, attribute_manager: str, attributes: dict) -> None:
         """
         This function takes in a list of h5 file file paths and loads in the images as tensors and puts the metadata into dictionaries. 
         There are two ways for the metadata to be taken out, one method uses to attribute manager class from h5py and the other finds metadata in a given file location.
 
         Args:
-            attribute_manager (bool): Tells this function if the attribute manager is being used.
-            camera_length (str): This is either the dictionary key or internal h5 file path for the camera length parameter.
-            photon_energy (str): This is either the dictionary key or the internal h5 file path for the photon energy parameter.
-            peaks (Optional[str], optional): This is either the dictionary key or internal h5 file path for the peak parameter. Defaults to None because it is only used for training.
+            attribute_manager (str): Tells this function if the attribute manager is being used.
+            attributes (dict): This is a dictionary of the metadata attributes to be found in the h5 files.\
         """
 
-        for file_path in self.h5_files: 
+        for file_path in self.h5_file_list: 
             try:
                 file_path = file_path.strip().replace('*', '')
                 with h5.File(file_path, 'r') as file:
                     print(f'Reading file {file_path}')
-                    # Convert the HDF5 dataset to a NumPy array
-                    numpy_array = np.array(file['entry/data/data'])
-                    # Convert the NumPy array to a PyTorch tensor
+                    numpy_array = np.array(file['entry/data/data']).astype(np.float32)
                     tensor = torch.tensor(numpy_array)
-                    # Append the tensor to the tensor_list
-                    
                     self.h5_tensor_list.append(tensor)
 
-                    # Retrieve attributes
-                    attributes = {}
-                    
-                    if attribute_manager == 'True' or attribute_manager == 'true': 
-                        for attr in file.attrs:
-                            try:
-                                attributes[attr] = file.attrs.get(attr)
-                            except KeyError:
-                                attributes[attr] = None
-                                print(f"Attribute '{attr}' not found in file {file_path}.")
-                    
-                    else:
-                        try:
-                            if peaks is not None:
-                                attributes['hit'] = file[peaks][()]
-                            attributes['Detector-Distance_mm'] = file[camera_length][()]
-                            attributes['X-ray-Energy_eV'] = file[photon_energy][()]
-                            
-                        except KeyError:
-                            attributes[attr] = None
-                            print(f"Attribute '{attr}' not found in file {file_path}.")
-                            
-                    self.h5_attr_list.append(attributes)
+                    self.get_metadata_attributes(attribute_manager, attributes, file, file_path)
                         
             except OSError:
                 print(f"Error: An I/O error occurred while opening file {file_path}")
             except Exception as e:
                 print(f"An unexpected error occurred while opening file {file_path}: {e}")
-        
         print('.h5 files have been loaded into a list of torch.Tensors.') 
-        print(f'Number of tensors: {len(self.h5_tensor_list)}\nNumber of tensors with attributes: {len(self.h5_attr_list)}')              
+        print(f'Number of tensors: {len(self.h5_tensor_list)}\nNumber of tensors with attributes: {len(self.h5_attr_list)}')  
+    
+    def load_h5_data_concurrent(self, attribute_manager: str, attributes: dict) -> None:      
+        """
+        This function takes in a list of h5 file file paths and loads in the images as tensors and puts the metadata into dictionaries. 
+        There are two ways for the metadata to be taken out, one method uses to attribute manager class from h5py and the other finds metadata in a given file location.
+        This function will load the large multieven files concurrently.
+
+        Args:
+            attribute_manager (str): Tells this function if the attribute manager is being used.
+            attributes (dict): This is a dictionary of the metadata attributes to be found in the h5 files.
+        """
+        try:
+            file_path = self.h5_file_list[0].strip().replace('*', '')
+            with h5.File(file_path, 'r') as file:
+                print(f'Reading file {file_path}')
+                numpy_array = np.array(file['entry/data/data']).astype(np.float32)
+                tensor = torch.tensor(numpy_array)
+                self.h5_tensor_list.append(tensor)
+
+                self.get_metadata_attributes(attribute_manager, attributes, file, file_path)
+                    
+        except OSError:
+            print(f"Error: An I/O error occurred while opening file {file_path}")
+        except Exception as e:
+            print(f"An unexpected error occurred while opening file {file_path}: {e}")
+        
+    
+    def get_metadata_attributes(self, attribute_manager: str, attributes: dict, file: h5.File, file_path: str) -> None: 
+        """
+        This function takes in a h5 file and extracts the metadata attributes from the file.
+        This is only supposed to be used with load_h5_data function, and will not work independently.
+
+        Args:
+            attribute_manager (str): String boolean value if the attribute manager class from h5py is being used.
+            attributes (dict): This is a dictionary of the metadata attributes to be found in the h5 files.
+            file (h5.File): This is the h5 file object to extract metadata from.
+            file_path (str): This is the file path to the h5 file.
+        """
+        
+        camera_length = attributes['camera length']
+        photon_energy = attributes['photon energy']
+        peaks = attributes['peak']
+        
+        attributes = {}
+        
+        if attribute_manager == 'True' or attribute_manager == 'true': 
+            for attr in file.attrs:
+                try:
+                    attributes[attr] = file.attrs.get(attr)
+                except KeyError:
+                    attributes[attr] = None
+                    print(f"Attribute '{attr}' not found in file {file_path}.")
+        
+        else:
+            try:
+                if peaks is not None:
+                    attributes['hit'] = file[peaks][()]
+                attributes['Detector-Distance_mm'] = file[camera_length][()]
+                attributes['X-ray-Energy_eV'] = file[photon_energy][()]
+                
+            except KeyError:
+                attributes[attr] = None
+                print(f"Attribute '{attr}' not found in file {file_path}.")
+                
+        self.h5_attr_list.append(attributes)     
                 
     def get_h5_tensor_list(self) -> list:
         """
@@ -114,19 +184,30 @@ class Paths:
             list: This is the list of h5 file attributes.
         """
         return self.h5_attr_list
+    
+    def get_h5_file_paths(self) -> list:
+        """
+        Return the list of h5 file paths.
+
+        Returns:
+            list: This is the list of h5 file paths.
+        """
+        return self.h5_file_list
 
 
 ######################################################################################
 
 class Data(Dataset):
     
-    def __init__(self, classification_data: list, attribute_data: list, h5_file_path: list) -> None:
+    def __init__(self, classification_data: list, attribute_data: list, h5_file_path: list, multievent: str) -> None:
         """
         Initialize the Data object with classification and attribute data.
 
         Args:
             classification_data (list): List of classification data, that being list of pytorch tensors.
             attribute_data (list): List of attribute data, that being list of metadata dictionaries.
+            h5_file_path (list): List of h5 file paths.
+            multievent (str): String boolean value if the input .h5 files are multievent or not.
         """
         self.train_loader = None
         self.test_loader = None
@@ -134,7 +215,8 @@ class Data(Dataset):
         self.image_data = classification_data
         self.meta_data = attribute_data
         self.file_paths = h5_file_path
-        self.data = list(zip(self.image_data, self.meta_data, self.file_paths))
+        self.data = list(zip(self.image_data, self.meta_data))
+        self.multievent = multievent
         
     def __len__(self) -> int:
         """
@@ -155,7 +237,10 @@ class Data(Dataset):
         Returns:
             tuple: A tuple containing the image data and the metadata at the given index.
         """
-        return self.data[idx]
+        if self.multievent == 'True' or self.multievent == 'true':
+            return self.data[idx], self.file_paths[0] + ', event' + str(idx)
+        else:
+            return self.data[idx], self.file_paths[idx]
         
     def split_training_data(self, batch_size: int) -> None:
         """
@@ -234,3 +319,7 @@ class Data(Dataset):
             DataLoader: The data loader for putting through the trained model. 
         """
         return self.inference_loader
+
+
+
+# ! Temperary file for testing the new code for multievent files

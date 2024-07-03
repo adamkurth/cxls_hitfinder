@@ -2,6 +2,7 @@ import argparse
 from hitfinderLib import *
 import torch
 import datetime
+from queue import Queue
 
 
 def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser: 
@@ -24,6 +25,7 @@ def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument('-pe', '--photon_energy', type=str, help='Attribute name for the photon energy parameter.')
     parser.add_argument('-am', '--attribute_manager', type=str, help='True or false value for if the input data is using the attribute manager to store data, if false provide h5ls paths instead of keys.')
     parser.add_argument('-b', '--batch', type=int, help='Batch size for data running through the model.')
+    parser.add_argument('-me', '-multievent', type=str, help='True or false value for if the input .h5 files are multievent or not.')
     
     try:
         args = parser.parse_args()
@@ -67,6 +69,7 @@ def main():
     peaks = None
     attribute_manager = args.attribute_manager
     batch_size = args.batch
+    multievent = args.multievent
     
     attributes = {
         'camera length': camera_length,
@@ -74,34 +77,39 @@ def main():
         'peak': peaks
     } 
     
-    path_manager = data_path_manager.Paths(h5_file_list)
-    path_manager.read_file_paths()
-    path_manager.load_h5_data(attribute_manager, camera_length, photon_energy, peaks)
-    
-    h5_file_paths = path_manager.get_file_paths()
-    h5_tensor_list = path_manager.get_h5_tensor_list()
-    h5_attribute_list = path_manager.get_h5_attribute_list()
-    
-    data_manager = data_path_manager.Data(h5_tensor_list, h5_attribute_list, h5_file_paths)
-    data_manager.inference_data_loader(batch_size)
-    data_loader = data_manager.get_inference_data_loader()
-    
     cfg = {
         'model': model_arch,
         'model_path': model_path,
         'save_output_list': save_output_list,
         'device': device,
-        'data_loader': data_loader,
-        'h5_file_paths': h5_file_paths
     }
-
+    
+    path_manager = data_path_manager.Paths(h5_file_list)
+    path_manager.read_file_paths()
+    h5_file_path_queue = path_manager.get_file_path_queue()
+    
+    queue_size = h5_file_path_queue.qsize()
     
     process_data = run_model.RunModel(cfg, attributes)
     process_data.make_model_instance()
     process_data.load_model()
-    process_data.classify_data() 
+    
+    while not h5_file_path_queue.empty():
+        path_manager.process_files(attribute_manager, attributes, multievent)
+        
+        h5_file_paths = path_manager.get_h5_file_paths()
+        h5_tensor_list = path_manager.get_h5_tensor_list()
+        h5_attribute_list = path_manager.get_h5_attribute_list()
+        
+        data_manager = data_path_manager.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, multievent)
+        data_manager.inference_data_loader(batch_size)
+        data_loader = data_manager.get_inference_data_loader()
+        
+        process_data.classify_data(data_loader) 
+        
+        
     process_data.create_model_output_lst_files()
-    process_data.output_verification()
+    process_data.output_verification(queue_size)
 
 if __name__ == '__main__':
     main()

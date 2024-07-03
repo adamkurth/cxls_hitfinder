@@ -18,8 +18,6 @@ class RunModel:
         self.model_arch = cfg['model']
         self.model_path = cfg['model_path']
         self.save_output_list = cfg['save_output_list']
-        self.data_loader = cfg['data_loader']
-        self.h5_file_paths = cfg['h5_file_paths']
         
         self.camera_length = attributes['camera length'].split('/')[-1]
         self.photon_energy = attributes['photon energy'].split('/')[-1]
@@ -67,14 +65,14 @@ class RunModel:
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
         
-    def classify_data(self) -> None:
+    def classify_data(self, data_loader) -> None:
         """
         Classify the input data using the model and segregate the data based on the classification results.
         """
         print('Starting classification ...')
         try:
             with torch.no_grad():
-                for inputs, attributes, paths in self.data_loader:
+                for inputs, attributes, paths in data_loader:
                     inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
                     attributes = {key: value.to(self.device, dtype=torch.float32) for key, value in attributes.items()}
 
@@ -136,14 +134,17 @@ class RunModel:
         except Exception as e:
             print(f"An unexpected error occurred while creating .lst files: {e}")
         
-    def output_verification(self) -> None:
+    def output_verification(self, size: int) -> None:
         """
         Verify that the number of input file paths matches the sum of the output file paths.
 
         This function compares the size of the input file path list to the sum of the sizes of the two output file path lists and logs the result.
+        
+        Args:
+            size (int): The size of the input file path queue.
         """
-        if len(self.h5_file_paths) == len(self.list_containing_peaks) + len(self.list_not_containing_peaks):
+        if len(size) == len(self.list_containing_peaks) + len(self.list_not_containing_peaks):
             print("There is the same amount of input files as output files.")
         else:
             print("OUTPUT VERIFICATION FAILED: The input paths do not match the output paths.")           
-            print(f'Input H5 files: {len(self.h5_file_paths)}\nOutput peak files: {len(self.list_containing_peaks)}\nOutput empty files: {len(self.list_not_containing_peaks)}')
+            print(f'Input H5 files: {len(self.size)}\nOutput peak files: {len(self.list_containing_peaks)}\nOutput empty files: {len(self.list_not_containing_peaks)}')

@@ -92,7 +92,7 @@ def main() -> None:
     
     path_manager = data_path_manager.Paths(h5_file_list)
     path_manager.read_file_paths()
-    path_manager.load_h5_data(attribute_manager, camera_length, photon_energy, peaks)
+    path_manager.load_h5_data(attribute_manager, attributes)
 
     h5_tensor_list = path_manager.get_h5_tensor_list()
     h5_attribute_list = path_manager.get_h5_attribute_list()

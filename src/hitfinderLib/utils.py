@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 from . import train_model
 from . import run_model
@@ -36,4 +37,33 @@ class CommonFunctions:
 
 class SpecialCaseFunctions:
     
-    pass
+    def __init__(self) -> None:
+        pass
+    
+    def reshape_input_data(self, data_array: np.ndarray) -> np.ndarray:
+        """
+        This function reshapes the input data array to the correct dimensions for the model.
+        
+        Args:
+            data_array (np.ndarray): The input data array to be reshaped.
+        
+        Returns:
+            np.ndarray: The reshaped input data array.
+        """
+        crop_height = 2163
+        crop_width = 2069
+        
+        batch_size, height, width  = data_array.shape
+        
+        # Calculate the center of the images
+        center_y, center_x = height // 2, width // 2
+        
+        # Calculate the start and end indices for the crop
+        start_y = center_y - crop_height // 2
+        end_y = start_y + crop_height
+        start_x = center_x - crop_width // 2
+        end_x = start_x + crop_width
+        
+        data_array = data_array[:, start_y:end_y, start_x:end_x]
+        
+        return data_array
