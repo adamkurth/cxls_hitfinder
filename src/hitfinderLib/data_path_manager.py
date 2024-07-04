@@ -61,7 +61,7 @@ class Paths:
             self.h5_file_list.append(self.h5_files.get())
             
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(self.load_h5_data_concurrent, attribute_manager, attributes)
+                future = executor.submit(self.load_h5_data, attribute_manager, attributes)
                 try:
                     future.result()
                 except Exception as exc:
@@ -102,31 +102,6 @@ class Paths:
                 print(f"An unexpected error occurred while opening file {file_path}: {e}")
         print('.h5 files have been loaded into a list of torch.Tensors.') 
         print(f'Number of tensors: {len(self.h5_tensor_list)}\nNumber of tensors with attributes: {len(self.h5_attr_list)}')  
-    
-    def load_h5_data_concurrent(self, attribute_manager: str, attributes: dict) -> None:      
-        """
-        This function takes in a list of h5 file file paths and loads in the images as tensors and puts the metadata into dictionaries. 
-        There are two ways for the metadata to be taken out, one method uses to attribute manager class from h5py and the other finds metadata in a given file location.
-        This function will load the large multieven files concurrently.
-
-        Args:
-            attribute_manager (str): Tells this function if the attribute manager is being used.
-            attributes (dict): This is a dictionary of the metadata attributes to be found in the h5 files.
-        """
-        try:
-            file_path = self.h5_file_list[0].strip().replace('*', '')
-            with h5.File(file_path, 'r') as file:
-                print(f'Reading file {file_path}')
-                numpy_array = np.array(file['entry/data/data']).astype(np.float32)
-                tensor = torch.tensor(numpy_array)
-                self.h5_tensor_list.append(tensor)
-
-                self.get_metadata_attributes(attribute_manager, attributes, file, file_path)
-                    
-        except OSError:
-            print(f"Error: An I/O error occurred while opening file {file_path}")
-        except Exception as e:
-            print(f"An unexpected error occurred while opening file {file_path}: {e}")
         
     
     def get_metadata_attributes(self, attribute_manager: str, attributes: dict, file: h5.File, file_path: str) -> None: 
