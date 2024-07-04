@@ -1,8 +1,10 @@
 import torch
 import datetime
 import os 
-from . import models as m
+from . import models
 from . import utils as u
+import inspect
+import importlib    
 
 class RunModel:
     
@@ -36,10 +38,11 @@ class RunModel:
             class instance: An instance of the specified model class.
         """
         try:
-            self.model = getattr(m, self.model_arch)()
+            self.model = getattr(models, self.model_arch)()
             print(f'Model object has been created: {self.model.__name__}')
         except AttributeError:
             print(f"Error: Model '{self.model_arch}' not found in the module.")
+            print(f'Available models: {inspect.getmembers(models, inspect.isclass)}')
         except TypeError:
             print(f"Error: '{self.model_arch}' found in module is not callable.")
         except Exception as e:
@@ -73,6 +76,7 @@ class RunModel:
         try:
             with torch.no_grad():
                 for inputs, attributes, paths in data_loader:
+                
                     inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
                     attributes = {key: value.to(self.device, dtype=torch.float32) for key, value in attributes.items()}
 
@@ -119,7 +123,7 @@ class RunModel:
                 with open(file_path_peaks, 'w') as file:
                     for item in self.list_containing_peaks:
                         file.write(f"{item}\n")
-                print("Created .lst file for predicted peak files.")
+                print(f"Created .lst file for predicted peak files. There are {len(self.list_containing_peaks)} files containing peaks.")
             except Exception as e:
                 print(f"An error occurred while writing to {file_path_peaks}: {e}")
 
@@ -127,7 +131,7 @@ class RunModel:
                 with open(file_path_no_peaks, 'w') as file:
                     for item in self.list_not_containing_peaks:
                         file.write(f"{item}\n")
-                print("Created .lst file for predicted empty files.")
+                print(f"Created .lst file for predicted empty files. There are {len(self.list_not_containing_peaks)} files without peaks.")
             except Exception as e:
                 print(f"An error occurred while writing to {file_path_no_peaks}: {e}")
 
@@ -143,8 +147,8 @@ class RunModel:
         Args:
             size (int): The size of the input file path queue.
         """
-        if len(size) == len(self.list_containing_peaks) + len(self.list_not_containing_peaks):
+        if size == len(self.list_containing_peaks) + len(self.list_not_containing_peaks):
             print("There is the same amount of input files as output files.")
         else:
             print("OUTPUT VERIFICATION FAILED: The input paths do not match the output paths.")           
-            print(f'Input H5 files: {len(self.size)}\nOutput peak files: {len(self.list_containing_peaks)}\nOutput empty files: {len(self.list_not_containing_peaks)}')
+            print(f'Input H5 files: {size}\nOutput peak files: {len(self.list_containing_peaks)}\nOutput empty files: {len(self.list_not_containing_peaks)}')

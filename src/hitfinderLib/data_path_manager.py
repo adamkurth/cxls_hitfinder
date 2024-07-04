@@ -67,13 +67,14 @@ class Paths:
                 except Exception as exc:
                     print(f'File generated an exception: {exc}')
         else: 
-            for i in range(1000):
+            for _ in range(1000):
                 try:
                     self.h5_file_list.append(self.h5_files.get())
                 except:
                     break
             self.load_h5_data(attribute_manager, attributes)
     
+    #! Combine the two load_h5_data functions into one function, and move the for loop into the process files function.
     def load_h5_data(self, attribute_manager: str, attributes: dict) -> None:
         """
         This function takes in a list of h5 file file paths and loads in the images as tensors and puts the metadata into dictionaries. 
@@ -194,7 +195,8 @@ class Paths:
         """
         return self.h5_file_list
 
-
+######################################################################################
+######################################################################################
 ######################################################################################
 
 class Data(Dataset):
@@ -215,7 +217,7 @@ class Data(Dataset):
         self.image_data = classification_data
         self.meta_data = attribute_data
         self.file_paths = h5_file_path
-        self.data = list(zip(self.image_data, self.meta_data))
+        self.data = list(zip(self.image_data, self.meta_data, self.file_paths))
         self.multievent = multievent
         
     def __len__(self) -> int:
@@ -225,7 +227,7 @@ class Data(Dataset):
         Returns:
             int: Number of samples in the dataset.
         """
-        return len(self.data)
+        return len(self.image_data)
     
     def __getitem__(self, idx: int) -> tuple:
         """
@@ -237,10 +239,13 @@ class Data(Dataset):
         Returns:
             tuple: A tuple containing the image data and the metadata at the given index.
         """
-        if self.multievent == 'True' or self.multievent == 'true':
-            return self.data[idx], self.file_paths[0] + ', event' + str(idx)
-        else:
-            return self.data[idx], self.file_paths[idx]
+        try:
+            if self.multievent == 'True' or self.multievent == 'true':
+                return self.image_data[idx], self.meta_data[idx], self.file_paths[0] + ', event' + str(idx)
+            elif self.multievent == 'False' or self.multievent == 'false':
+                return self.data[idx]
+        except Exception as e:
+            print(f"An unexpected error occurred while getting item at index {idx}: {e}")
         
     def split_training_data(self, batch_size: int) -> None:
         """
@@ -321,5 +326,3 @@ class Data(Dataset):
         return self.inference_loader
 
 
-
-# ! Temperary file for testing the new code for multievent files
