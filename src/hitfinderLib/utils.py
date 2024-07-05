@@ -40,6 +40,7 @@ class SpecialCaseFunctions:
     def __init__(self) -> None:
         pass
     
+    @staticmethod
     def reshape_input_data(self, data_array: np.ndarray) -> np.ndarray:
         """
         This function reshapes the input data array to the correct dimensions for the model.

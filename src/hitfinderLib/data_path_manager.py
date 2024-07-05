@@ -5,6 +5,8 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 from queue import Queue
 import concurrent.futures 
+from . import utils
+from utils import SpecialCaseFunctions
 
 
 class Paths:
@@ -74,7 +76,6 @@ class Paths:
                     break
             self.load_h5_data(attribute_manager, attributes)
     
-    #! Combine the two load_h5_data functions into one function, and move the for loop into the process files function.
     def load_h5_data(self, attribute_manager: str, attributes: dict) -> None:
         """
         This function takes in a list of h5 file file paths and loads in the images as tensors and puts the metadata into dictionaries. 
@@ -91,6 +92,8 @@ class Paths:
                 with h5.File(file_path, 'r') as file:
                     print(f'Reading file {file_path}')
                     numpy_array = np.array(file['entry/data/data']).astype(np.float32)
+                    if numpy_array.shape[-2:] != (2163, 2069):
+                        numpy_array = SpecialCaseFunctions.reshape_input_data(numpy_array)
                     tensor = torch.tensor(numpy_array)
                     self.h5_tensor_list.append(tensor)
 
