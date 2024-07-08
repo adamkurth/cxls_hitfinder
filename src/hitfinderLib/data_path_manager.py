@@ -5,8 +5,9 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 from queue import Queue
 import concurrent.futures 
-from . import utils
-from utils import SpecialCaseFunctions
+# from . import utils
+# from utils import SpecialCaseFunctions
+from .utils import SpecialCaseFunctions
 
 
 class Paths:
@@ -30,6 +31,9 @@ class Paths:
         try:
             with open(self.list_path, 'r') as file:
                 for line in file:
+                    if line.strip() == '' or line.strip() == '\n': 
+                        continue
+                    print(f'Adding to queue: {line.strip()}')
                     self.h5_files.put(line.strip())
             
             print(f'Read file paths from {self.list_path}.')
@@ -57,9 +61,11 @@ class Paths:
             multievent (str): This is a string boolean value that tells the function if the input .h5 files are multievent or not.
         """
         
+        print('Processing .h5 files...')
         self.h5_tensor_list, self.h5_attr_list, self.h5_file_list = [], [], []
         
         if multievent == 'True' or multievent == 'true':
+            print('Processing multievent files...')
             self.h5_file_list.append(self.h5_files.get())
             
             with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -69,10 +75,11 @@ class Paths:
                 except Exception as exc:
                     print(f'File generated an exception: {exc}')
         else: 
+            print('Processing single event files...')
             for _ in range(1000):
-                try:
+                while not self.h5_files.empty():
                     self.h5_file_list.append(self.h5_files.get())
-                except:
+                else:
                     break
             self.load_h5_data(attribute_manager, attributes)
     
@@ -83,7 +90,7 @@ class Paths:
 
         Args:
             attribute_manager (str): Tells this function if the attribute manager is being used.
-            attributes (dict): This is a dictionary of the metadata attributes to be found in the h5 files.\
+            attributes (dict): This is a dictionary of the metadata attributes to be found in the h5 files.
         """
 
         for file_path in self.h5_file_list: 

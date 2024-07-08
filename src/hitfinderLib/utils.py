@@ -67,4 +67,6 @@ class SpecialCaseFunctions:
         
         data_array = data_array[:, start_y:end_y, start_x:end_x]
         
+        print(f'Reshaped input data array from {height}, {width} to {crop_width}, {crop_height}.')
+        
         return data_array
