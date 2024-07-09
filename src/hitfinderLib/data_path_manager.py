@@ -151,8 +151,8 @@ class Paths:
                         if peaks is not None:
                             attributes['hit'] = master[peaks][()]
                             #converting units here is a temporary fix until a way to handle units is developed
-                        attributes['Detector-Distance_mm'] = master[camera_length][()]
-                        attributes['X-ray-Energy_eV'] = SpecialCaseFunctions.incident_photon_wavelength_to_energy(master[photon_energy][()])
+                        attributes['detector_distance'] = master[camera_length][()]
+                        attributes['incident_wavelength'] = SpecialCaseFunctions.incident_photon_wavelength_to_energy(master[photon_energy][()])
                         
                     except KeyError:
                         print(f"Attributes not found in file {file_path}.")
@@ -248,7 +248,7 @@ class Data(Dataset):
         """
         try:
             if self.multievent == 'True' or self.multievent == 'true':
-                return self.image_data[idx], self.meta_data[idx], self.file_paths[0] + ', event' + str(idx)
+                return self.image_data[idx].unsqueeze(0), self.meta_data[idx], self.file_paths[0] + ', event: ' + str(idx)
             elif self.multievent == 'False' or self.multievent == 'false':
                 return self.data[idx]
         except Exception as e:
@@ -306,14 +306,16 @@ class Data(Dataset):
         Args:
             batch_size (int): The size of the batches to be used by the data loaders.
         """
+        print('Making data loader...')
         try:
             num_items = len(self.data)
             if num_items == 0:
                 raise ValueError("The dataset is empty.")
             
-
+            print(f'batch size: {batch_size}')
             try:
                 self.inference_loader = DataLoader(self.data, batch_size=batch_size, shuffle=False, pin_memory=True)
+                print('Data loader created.')
             except Exception as e:
                 print(f"An error occurred while creating data loaders: {e}")
                 return
