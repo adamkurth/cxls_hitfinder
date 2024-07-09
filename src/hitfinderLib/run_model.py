@@ -72,7 +72,7 @@ class RunModel:
         """
         Classify the input data using the model and segregate the data based on the classification results.
         """
-        print('Starting classification ...')
+        print('Starting classification...')
         try:
             with torch.no_grad():
                 for inputs, attributes, paths in data_loader:
@@ -90,8 +90,10 @@ class RunModel:
                     for pred, path in zip(prediction, paths):
                         if pred.item() == 1:
                             self.list_containing_peaks.append(path)
+                            print(f'Classified as containing peaks: {path}')
                         elif pred.item() == 0:
                             self.list_not_containing_peaks.append(path)
+                            print(f'Classified as not containing peaks: {path}')
 
         except Exception as e:
             print(f"An unexpected error occurred while classifying data: {e}")
@@ -111,10 +113,12 @@ class RunModel:
         """
         try:
             now = datetime.datetime.now()
-            formatted_date_time = now.strftime("%m%d%y-%H:%M")
-            
+            formatted_date_time = now.strftime("%m%d%y-%H%M")
+            print(f'Formatted date and time: {formatted_date_time}')
             filename_peaks = f"found_peaks-{formatted_date_time}.lst"
+            print(f'Filename peaks: {filename_peaks}')
             file_path_peaks = os.path.join(self.save_output_list, filename_peaks)
+            print(f'File path peaks: {file_path_peaks}')
             
             filename_no_peaks = f"no_peaks-{formatted_date_time}.lst"
             file_path_no_peaks = os.path.join(self.save_output_list, filename_no_peaks)
