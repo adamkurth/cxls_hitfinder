@@ -5,14 +5,13 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 from queue import Queue
 import concurrent.futures 
-# from . import utils
-# from utils import SpecialCaseFunctions
+from typing import Optional
 from .utils import SpecialCaseFunctions
 
 
 class Paths:
     
-    def __init__(self, list_path: list) -> None:
+    def __init__(self, list_path: list, attribute_manager: str, attributes: dict, multievent: str, master_file: Optional[str]=None) -> None:
         """
         This constructor takes in an lst file file path and runs it through the functions in this class.
 
@@ -20,6 +19,11 @@ class Paths:
             list_path (list): This is the file path to an lst file which holds the file paths to h5 files to read. 
         """
         self.list_path = list_path
+        self.attribute_manager = attribute_manager
+        self.attributes = attributes
+        self.multievent = multievent
+        self.master_file = master_file
+        
         self.h5_files = Queue()
         self.h5_tensor_list, self.h5_attr_list, self.h5_file_list = [], [], []
         
@@ -50,7 +54,7 @@ class Paths:
         """
         return self.h5_files
     
-    def process_files(self, attribute_manager: str, attributes: dict, multievent: str) -> None:
+    def process_files(self) -> None:
         """
         This function serves as a wrapper for the functions that load the h5 data into tensors and metadata dictionaries.
         The multievent files are large enough to be processed concurrently, so this function will call the concurrent function if the multievent flag is set to true. 
@@ -64,12 +68,12 @@ class Paths:
         print('Processing .h5 files...')
         self.h5_tensor_list, self.h5_attr_list, self.h5_file_list = [], [], []
         
-        if multievent == 'True' or multievent == 'true':
+        if self.multievent == 'True' or self.multievent == 'true':
             print('Processing multievent files...')
             self.h5_file_list.append(self.h5_files.get())
             
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(self.load_h5_data, attribute_manager, attributes)
+                future = executor.submit(self.load_h5_data)
                 try:
                     future.result()
                 except Exception as exc:
@@ -81,9 +85,9 @@ class Paths:
                     self.h5_file_list.append(self.h5_files.get())
                 else:
                     break
-            self.load_h5_data(attribute_manager, attributes)
+            self.load_h5_data()
     
-    def load_h5_data(self, attribute_manager: str, attributes: dict) -> None:
+    def load_h5_data(self) -> None:
         """
         This function takes in a list of h5 file file paths and loads in the images as tensors and puts the metadata into dictionaries. 
         There are two ways for the metadata to be taken out, one method uses to attribute manager class from h5py and the other finds metadata in a given file location.
@@ -104,7 +108,7 @@ class Paths:
                     tensor = torch.tensor(numpy_array)
                     self.h5_tensor_list.append(tensor)
 
-                    self.get_metadata_attributes(attribute_manager, attributes, file, file_path)
+                    self.get_metadata_attributes(file, file_path)
                         
             except OSError:
                 print(f"Error: An I/O error occurred while opening file {file_path}")
@@ -114,7 +118,7 @@ class Paths:
         print(f'Number of tensors: {len(self.h5_tensor_list)}\nNumber of tensors with attributes: {len(self.h5_attr_list)}')  
         
     
-    def get_metadata_attributes(self, attribute_manager: str, attributes: dict, file: h5.File, file_path: str) -> None: 
+    def get_metadata_attributes(self, file: h5.File, file_path: str) -> None: 
         """
         This function takes in a h5 file and extracts the metadata attributes from the file.
         This is only supposed to be used with load_h5_data function, and will not work independently.
@@ -126,13 +130,13 @@ class Paths:
             file_path (str): This is the file path to the h5 file.
         """
         
-        camera_length = attributes['camera length']
-        photon_energy = attributes['photon energy']
-        peaks = attributes['peak']
+        camera_length = self.attributes['camera length']
+        photon_energy = self.attributes['photon energy']
+        peaks = self.attributes['peak']
         
         attributes = {}
         
-        if attribute_manager == 'True' or attribute_manager == 'true': 
+        if self.attribute_manager == 'True' or self.attribute_manager == 'true': 
             for attr in file.attrs:
                 try:
                     attributes[attr] = file.attrs.get(attr)
@@ -140,6 +144,24 @@ class Paths:
                     attributes[attr] = None
                     print(f"Attribute '{attr}' not found in file {file_path}.")
         
+        elif self.master_file is not None:
+            try:
+                with h5.File(self.master_file, 'r') as master:
+                    try:
+                        if peaks is not None:
+                            attributes['hit'] = master[peaks][()]
+                            #converting units here is a temporary fix until a way to handle units is developed
+                        attributes['Detector-Distance_mm'] = master[camera_length][()]
+                        attributes['X-ray-Energy_eV'] = SpecialCaseFunctions.incident_photon_wavelength_to_energy(master[photon_energy][()])
+                        
+                    except KeyError:
+                        print(f"Attributes not found in file {file_path}.")
+
+            except OSError:
+                print(f"Error: An I/O error occurred while opening file {file_path}")
+            except Exception as e:
+                print(f"An unexpected error occurred while opening file {file_path}: {e}")        
+                
         else:
             try:
                 if peaks is not None:
@@ -149,7 +171,7 @@ class Paths:
                 
             except KeyError:
                 attributes[attr] = None
-                print(f"Attribute '{attr}' not found in file {file_path}.")
+                print(f"Attributes not found in file {file_path}.")
                 
         self.h5_attr_list.append(attributes)     
                 

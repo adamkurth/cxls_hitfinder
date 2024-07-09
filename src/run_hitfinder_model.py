@@ -26,6 +26,7 @@ def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument('-am', '--attribute_manager', type=str, help='True or false value for if the input data is using the attribute manager to store data, if false provide h5ls paths instead of keys.')
     parser.add_argument('-b', '--batch', type=int, help='Batch size for data running through the model.')
     parser.add_argument('-me', '--multievent', type=str, help='True or false value for if the input .h5 files are multievent or not.')
+    parser.add_argument('-mf', '--master_file', type=str, default=None, help='File path to the master file containing the .lst files.')
     
     try:
         args = parser.parse_args()
@@ -70,6 +71,7 @@ def main():
     attribute_manager = args.attribute_manager
     batch_size = args.batch
     multievent = args.multievent
+    master_file = args.master_file
     
     attributes = {
         'camera length': camera_length,
@@ -84,7 +86,7 @@ def main():
         'device': device,
     }
     
-    path_manager = data_path_manager.Paths(h5_file_list)
+    path_manager = data_path_manager.Paths(h5_file_list, attribute_manager, attributes, multievent, master_file)
     path_manager.read_file_paths()
     h5_file_path_queue = path_manager.get_file_path_queue()
     
@@ -95,7 +97,7 @@ def main():
     process_data.load_model()
     
     while not h5_file_path_queue.empty():
-        path_manager.process_files(attribute_manager, attributes, multievent)
+        path_manager.process_files()
         
         h5_file_paths = path_manager.get_h5_file_paths()
         h5_tensor_list = path_manager.get_h5_tensor_list()

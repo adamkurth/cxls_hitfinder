@@ -79,9 +79,10 @@ class RunModel:
                 
                     inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
                     attributes = {key: value.to(self.device, dtype=torch.float32) for key, value in attributes.items()}
-
+                    print(f'Attributes: {attributes}')
                     # Model prediction
                     score = self.model(inputs, attributes[self.camera_length], attributes[self.photon_energy])
+                    print(f'Score: {score}')
                     prediction = (torch.sigmoid(score) > 0.5).long()
                     
                     assert len(prediction) == len(paths), "Prediction and paths length mismatch."
