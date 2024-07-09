@@ -39,7 +39,7 @@ class RunModel:
         """
         try:
             self.model = getattr(models, self.model_arch)()
-            print(f'Model object has been created: {self.model.__name__}')
+            print(f'Model object has been created: {self.model.__class__.__name__}')
         except AttributeError:
             print(f"Error: Model '{self.model_arch}' not found in the module.")
             print(f'Available models: {inspect.getmembers(models, inspect.isclass)}')
