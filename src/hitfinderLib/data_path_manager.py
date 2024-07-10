@@ -78,6 +78,11 @@ class Paths:
                     future.result()
                 except Exception as exc:
                     print(f'File generated an exception: {exc}')
+                    
+            base_file_name = self.h5_file_list[0]
+            self.h5_file_list =[]
+            for i in range(len(self.h5_tensor_list)):
+                self.h5_file_list.append(base_file_name + ' - event: ' + str(1+i) + '/' + str(len(self.h5_tensor_list)))
         else: 
             print('Processing single event files...')
             for _ in range(1000):
@@ -110,6 +115,7 @@ class Paths:
                         tensor = [*torch.split(tensor, 1, 0)]
                         self.h5_tensor_list.extend(tensor)
                     else:
+                        tensor = tensor.unsqueeze(0)
                         self.h5_tensor_list.append(tensor)
 
                     self.get_metadata_attributes(file, file_path)
@@ -147,6 +153,8 @@ class Paths:
                 except KeyError:
                     attributes[attr] = None
                     print(f"Attribute '{attr}' not found in file {file_path}.")
+                    
+            self.h5_attr_list.append(attributes) 
         
         elif self.master_file is not None:
             try:
@@ -157,6 +165,9 @@ class Paths:
                             #converting units here is a temporary fix until a way to handle units is developed
                         attributes['detector_distance'] = master[camera_length][()]
                         attributes['incident_wavelength'] = SpecialCaseFunctions.incident_photon_wavelength_to_energy(master[photon_energy][()])
+                        
+                        for _ in range(len(self.h5_tensor_list)):
+                            self.h5_attr_list.append(attributes)
                         
                     except KeyError:
                         print(f"Attributes not found in file {file_path}.")
@@ -177,7 +188,9 @@ class Paths:
                 attributes[attr] = None
                 print(f"Attributes not found in file {file_path}.")
                 
-        self.h5_attr_list.append(attributes)     
+            self.h5_attr_list.append(attributes) 
+                
+    
                 
     def get_h5_tensor_list(self) -> list:
         """
@@ -251,10 +264,7 @@ class Data(Dataset):
             tuple: A tuple containing the image data and the metadata at the given index.
         """
         try:
-            if self.multievent == 'True' or self.multievent == 'true':
-                return self.image_data[idx].unsqueeze(0), self.meta_data[idx], self.file_paths[0] + ', event: ' + str(idx)
-            elif self.multievent == 'False' or self.multievent == 'false':
-                return self.data[idx]
+            return self.data[idx]
         except Exception as e:
             print(f"An unexpected error occurred while getting item at index {idx}: {e}")
         
@@ -316,7 +326,6 @@ class Data(Dataset):
             if num_items == 0:
                 raise ValueError("The dataset is empty.")
             
-            print(f'batch size: {batch_size}')
             try:
                 self.inference_loader = DataLoader(self.data, batch_size=batch_size, shuffle=False, pin_memory=True)
                 print('Data loader created.')
