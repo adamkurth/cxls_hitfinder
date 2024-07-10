@@ -104,12 +104,16 @@ class Paths:
                     print(f'Reading file {file_path}')
                     numpy_array = np.array(file['entry/data/data']).astype(np.float32)
                     if numpy_array.shape[-2:] != (2163, 2069):
-                        numpy_array = SpecialCaseFunctions.reshape_input_data(numpy_array)
+                        numpy_array = SpecialCaseFunctions.reshape_input_data(numpy_array)                      
                     tensor = torch.tensor(numpy_array)
-                    self.h5_tensor_list.append(tensor)
+                    if tensor.dim() > 2:
+                        tensor = [*torch.split(tensor, 1, 0)]
+                        self.h5_tensor_list.extend(tensor)
+                    else:
+                        self.h5_tensor_list.append(tensor)
 
                     self.get_metadata_attributes(file, file_path)
-                        
+                         
             except OSError:
                 print(f"Error: An I/O error occurred while opening file {file_path}")
             except Exception as e:
