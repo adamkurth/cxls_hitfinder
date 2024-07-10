@@ -21,9 +21,10 @@ class RunModel:
         self.model_path = cfg['model_path']
         self.save_output_list = cfg['save_output_list']
         
-        self.camera_length = attributes['camera length'].split('/')[-1]
-        self.photon_energy = attributes['photon energy'].split('/')[-1]
-        # self.peak = attributes['peak'].split('/')[-1]
+        # self.camera_length = attributes['camera length'].split('/')[-1]
+        # self.photon_energy = attributes['photon energy'].split('/')[-1]
+        self.camera_length = 'camera length'
+        self.photon_energy = 'photon energy'
         
         self.list_containing_peaks = []
         self.list_not_containing_peaks = []

@@ -23,7 +23,6 @@ def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     
     parser.add_argument('-cl', '--camera_length', type=str, help='Attribute name for the camera length parameter.')
     parser.add_argument('-pe', '--photon_energy', type=str, help='Attribute name for the photon energy parameter.')
-    parser.add_argument('-am', '--attribute_manager', type=str, help='True or false value for if the input data is using the attribute manager to store data, if false provide h5ls paths instead of keys.')
     parser.add_argument('-b', '--batch', type=int, help='Batch size for data running through the model.')
     parser.add_argument('-me', '--multievent', type=str, help='True or false value for if the input .h5 files are multievent or not.')
     parser.add_argument('-mf', '--master_file', type=str, default=None, help='File path to the master file containing the .lst files.')
@@ -68,7 +67,6 @@ def main():
     camera_length = args.camera_length
     photon_energy = args.photon_energy
     peaks = None
-    attribute_manager = args.attribute_manager
     batch_size = args.batch
     multievent = args.multievent
     master_file = args.master_file
@@ -86,7 +84,12 @@ def main():
         'device': device,
     }
     
-    path_manager = data_path_manager.Paths(h5_file_list, attribute_manager, attributes, multievent, master_file)
+    # path_manager = data_path_manager.Paths(h5_file_list, attributes, multievent, master_file)
+    if multievent == 'True' or multievent == 'true':
+        path_manager = load_data_paths.PathsMultiEvent(h5_file_list,  attributes,  master_file)
+    else:
+        path_manager = load_data_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
+    
     path_manager.read_file_paths()
     h5_file_path_queue = path_manager.get_file_path_queue()
     

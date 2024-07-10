@@ -118,7 +118,7 @@ class Paths:
                         tensor = tensor.unsqueeze(0)
                         self.h5_tensor_list.append(tensor)
 
-                    self.get_metadata_attributes(file, file_path)
+                    self.read_metadata_attributes(file, file_path)
                          
             except OSError:
                 print(f"Error: An I/O error occurred while opening file {file_path}")
@@ -128,14 +128,12 @@ class Paths:
         print(f'Number of tensors: {len(self.h5_tensor_list)}\nNumber of tensors with attributes: {len(self.h5_attr_list)}')  
         
     
-    def get_metadata_attributes(self, file: h5.File, file_path: str) -> None: 
+    def read_metadata_attributes(self, file: h5.File, file_path: str) -> None: 
         """
         This function takes in a h5 file and extracts the metadata attributes from the file.
         This is only supposed to be used with load_h5_data function, and will not work independently.
 
         Args:
-            attribute_manager (str): String boolean value if the attribute manager class from h5py is being used.
-            attributes (dict): This is a dictionary of the metadata attributes to be found in the h5 files.
             file (h5.File): This is the h5 file object to extract metadata from.
             file_path (str): This is the file path to the h5 file.
         """
