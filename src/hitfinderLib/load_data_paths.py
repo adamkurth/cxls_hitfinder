@@ -29,9 +29,11 @@ class Paths(ABC):
         self._h5_files = Queue()
         self._h5_tensor_list, self._h5_attr_list, self._h5_file_list = [], [], []
         
-        self._dummy_tensor = None
-        self._dummy_path = None
-        self._dummy_file = None
+        self._loaded_h5_tensor = None
+        self._h5_file_path = None
+        self._open_h5_file = None
+        self._attribute_holding = {}
+        self._number_of_events = 1
         
     @abstractmethod
     def read_file_paths(self) -> None:
@@ -80,18 +82,18 @@ class Paths(ABC):
         try:
             eiger_4m_image_size = (2163, 2069)
             
-            file_path = self._dummy_path.strip().replace('*', '')
+            file_path = self._h5_file_path.strip().replace('*', '')
 
             print(f'Reading file {file_path}')
-            self._dummy_file = h5.File(file_path, 'r')
+            self._open_h5_file = h5.File(file_path, 'r')
             
-            numpy_array = np.array(self._dummy_file['entry/data/data']).astype(np.float32)
+            numpy_array = np.array(self._open_h5_file['entry/data/data']).astype(np.float32)
             if numpy_array.shape[-2:] != eiger_4m_image_size:
                 numpy_array = SpecialCaseFunctions.reshape_input_data(numpy_array)                      
-            self._dummy_tensor = torch.tensor(numpy_array)
+            self._loaded_h5_tensor = torch.tensor(numpy_array)
             
             self.read_metadata_attributes()
-            self._dummy_file.close()
+            self._open_h5_file.close()
                     
         except OSError:
             print(f"Error: An I/O error occurred while opening file {file_path}")
@@ -108,49 +110,81 @@ class Paths(ABC):
             file (h5.File): This is the h5 file object to extract metadata from.
             file_path (str): This is the file path to the h5 file.
         """
+        print('Retrieving metadata attributes...')
         if len(self._master_dict) != 0:
             return
-        
-        local_attributes = {}
-        camera_length = self._attributes['camera length']
-        photon_energy = self._attributes['photon energy']
-        peak = self._attributes['peak']
-        print(f'master file is: {self._master_file}')
-        print(self._master_file == None)
+
+        self._attribute_holding = {}
+
         if self._master_file is not None:
-            print('---------------------------------------------------------------------------------')
-            self._dummy_path = self._master_file
-            try:
-                self._dummy_file = h5.File(self._master_file, 'r')
-            except OSError:
-                print(f"Error: An I/O error occurred while opening file {self._master_file}")
-            except Exception as e:
-                print(f"An unexpected error occurred while opening file master file: {e}")          
-                
-        elif len(self._dummy_file.attrs.keys()) != 0:
-            print('Reading attributes from attribute manager.')
-            try:
-                for key in self._dummy_file.attrs.keys():
-                    local_attributes[key] = self._dummy_file.attrs[key]
-                return
-            except KeyError:
-                print(f"ERROR: Attribute not found in file: {self._dummy_path}.")
+            self.load_master_file()
                 
         try:
-            if peak is not None:
-                local_attributes['peak'] = self._dummy_file[peak][()]
-            local_attributes['camera length'] = self._dummy_file[camera_length][()]
-            local_attributes['photon energy'] = self._dummy_file[photon_energy][()]
+            if len(self._open_h5_file.attrs.keys()) != 0:
+                self.read_attribute_manager()
+        except:
+            pass
         
+        try:
+            if len(self._attribute_holding) == 0:
+                self.read_attributes_from_file()
+    
         except KeyError:
-            print(f"ERROR: Attribute not found in master file: {self._dummy_file}.")
+            print(f"ERROR: Attribute not found in file: {self._open_h5_file}.")
         
         
         if self._master_file is not None:
-            self._master_dict = local_attributes
+            self._master_dict = self._attribute_holding
         else:
-            self._h5_attr_list.append(local_attributes)
+            self._h5_attr_list.append(self._attribute_holding)
 
+    @abstractmethod
+    def load_master_file(self) -> None:
+        """
+        This function loads in the master file and sets the file path to the master file.
+        """
+        self._h5_file_path = self._master_file
+        try:
+            self._open_h5_file = h5.File(self._master_file, 'r')
+        except OSError:
+            print(f"Error: An I/O error occurred while opening file {self._master_file}")
+        except Exception as e:
+            print(f"An unexpected error occurred while opening file master file: {e}") 
+            
+    @abstractmethod
+    def populate_attributes_from_master_dict(self) -> None:
+        """
+        This function populates the attribute list with the master dictionary.
+        """
+        for i in range(self._number_of_events):
+            self._h5_attr_list.append(self._master_dict)
+            
+    @abstractmethod
+    def read_attribute_manager(self) -> None:
+        """
+        This function reads the attributes from the attribute manager in the h5 file.
+        """
+        print('Reading attributes from attribute manager.')
+        try:
+            for attr in self._open_h5_file.attrs:
+                self._attribute_holding[attr] = self._open_h5_file.attrs.get(attr)
+        except KeyError:
+            print(f"ERROR: Attribute not found in file: {self._h5_file_path}.")
+            \
+    @abstractmethod
+    def read_attributes_from_file(self) -> None:
+        """
+        This function reads the attributes from the h5 file.
+        """
+        camera_length = self._attributes['clen']
+        photon_energy = self._attributes['photon_energy']
+        peak = self._attributes['peak']
+        
+        if peak is not None:
+            self._attribute_holding['peak'] = self._open_h5_file[peak][()]
+        self._attribute_holding['clen'] = self._open_h5_file[camera_length][()]
+        self._attribute_holding['photon_energy'] = self._open_h5_file[photon_energy][()]
+                
     @abstractmethod
     def get_h5_tensor_list(self) -> list:
         """
@@ -181,6 +215,16 @@ class Paths(ABC):
         """
         return self._h5_file_list
     
+    @abstractmethod
+    def get_event_count(self) -> int:
+        """
+        Return the number of events in the multievent files.
+
+        Returns:
+            int: This is the number of events in the multievent files.
+        """
+        return self._number_of_events
+    
 ###########################################################
     
 class PathsSingleEvent(Paths):
@@ -207,7 +251,7 @@ class PathsSingleEvent(Paths):
                 break
 
         for file in self._h5_file_list:
-            self._dummy_path = file
+            self._h5_file_path = file
             self.load_h5_data()
             
         print('.h5 files have been loaded into a list of torch.Tensors.') 
@@ -217,16 +261,29 @@ class PathsSingleEvent(Paths):
         super().load_h5_data()
         
         try:
-            tensor = self._dummy_tensor.unsqueeze(0)
+            tensor = self._loaded_h5_tensor.unsqueeze(0)
             self._h5_tensor_list.append(tensor)
             
-        except Exception as e:
-            print(f"An unexpected error occurred while loading data: {e}")
+            if self._master_file is not None:
+                self.populate_attributes_from_master_dict()
             
-        self.read_metadata_attributes()    
+        except Exception as e:
+            print(f"An unexpected error occurred while loading data: {e}")  
         
     def read_metadata_attributes(self) -> None:
         super().read_metadata_attributes()
+        
+    def load_master_file(self) -> None:
+        super().load_master_file()
+        
+    def populate_attributes_from_master_dict(self) -> None:
+        super().populate_attributes_from_master_dict()
+        
+    def read_attribute_manager(self) -> None:
+        super().read_attribute_manager()
+        
+    def read_attributes_from_file(self) -> None:
+        super().read_attributes_from_file()
         
     def get_h5_tensor_list(self) -> list:
         return super().get_h5_tensor_list()
@@ -236,6 +293,9 @@ class PathsSingleEvent(Paths):
     
     def get_h5_file_paths(self) -> list:
         return super().get_h5_file_paths()
+    
+    def get_event_count(self) -> int:
+        return super().get_event_count()
     
 ###########################################################
 
@@ -256,7 +316,7 @@ class PathsMultiEvent(Paths):
         print('Processing  multievent files...')
         
         base_file_name = self._h5_files.get()
-        self._dummy_path = base_file_name
+        self._h5_file_path = base_file_name
         
         with concurrent.futures.ThreadPoolExecutor() as executor:
             future = executor.submit(self.load_h5_data)
@@ -276,16 +336,30 @@ class PathsMultiEvent(Paths):
         super().load_h5_data()
         
         try:
-            tensor = [*torch.split(self._dummy_tensor, 1, dim=0)]
+            tensor = [*torch.split(self._loaded_h5_tensor, 1, dim=0)]
             self._h5_tensor_list.extend(tensor)
+            self._number_of_events = len(tensor)
+            
+            if self._master_file is not None:
+                self.populate_attributes_from_master_dict()
             
         except Exception as e:
             print(f"An unexpected error occurred while loading data: {e}")
-            
-        self.read_metadata_attributes()  
         
     def read_metadata_attributes(self) -> None:
         super().read_metadata_attributes()
+        
+    def load_master_file(self) -> None:
+        super().load_master_file()
+        
+    def populate_attributes_from_master_dict(self) -> None:
+        super().populate_attributes_from_master_dict()
+        
+    def read_attribute_manager(self) -> None:
+        super().read_attribute_manager()
+        
+    def read_attributes_from_file(self) -> None:
+        super().read_attributes_from_file()
         
     def get_h5_tensor_list(self) -> list:
         return super().get_h5_tensor_list()
@@ -295,3 +369,6 @@ class PathsMultiEvent(Paths):
     
     def get_h5_file_paths(self) -> list:
         return super().get_h5_file_paths()
+    
+    def get_event_count(self) -> int:
+        return super().get_event_count()

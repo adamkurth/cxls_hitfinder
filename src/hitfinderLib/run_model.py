@@ -21,10 +21,8 @@ class RunModel:
         self.model_path = cfg['model_path']
         self.save_output_list = cfg['save_output_list']
         
-        # self.camera_length = attributes['camera length'].split('/')[-1]
-        # self.photon_energy = attributes['photon energy'].split('/')[-1]
-        self.camera_length = 'camera length'
-        self.photon_energy = 'photon energy'
+        self.camera_length = 'clen'
+        self.photon_energy = 'photon_energy'
         
         self.list_containing_peaks = []
         self.list_not_containing_peaks = []
@@ -142,7 +140,7 @@ class RunModel:
         except Exception as e:
             print(f"An unexpected error occurred while creating .lst files: {e}")
         
-    def output_verification(self, size: int) -> None:
+    def output_verification(self, size: int, events: int) -> None:
         """
         Verify that the number of input file paths matches the sum of the output file paths.
 
@@ -151,7 +149,7 @@ class RunModel:
         Args:
             size (int): The size of the input file path queue.
         """
-        if size == len(self.list_containing_peaks) + len(self.list_not_containing_peaks):
+        if size == len(self.list_containing_peaks) // events + len(self.list_not_containing_peaks) // events:
             print("There is the same amount of input files as output files.")
         else:
             print("OUTPUT VERIFICATION FAILED: The input paths do not match the output paths.")           

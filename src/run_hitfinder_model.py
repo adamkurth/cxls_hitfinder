@@ -69,11 +69,14 @@ def main():
     peaks = None
     batch_size = args.batch
     multievent = args.multievent
+    
     master_file = args.master_file
+    if master_file == 'None' or master_file == 'none':
+        master_file = None
     
     attributes = {
-        'camera length': camera_length,
-        'photon energy': photon_energy,
+        'clen': camera_length,
+        'photon_energy': photon_energy,
         'peak': peaks
     } 
     
@@ -105,6 +108,7 @@ def main():
         h5_file_paths = path_manager.get_h5_file_paths()
         h5_tensor_list = path_manager.get_h5_tensor_list()
         h5_attribute_list = path_manager.get_h5_attribute_list()
+        events = path_manager.get_event_count()
         
         data_manager = data_path_manager.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, multievent)
         data_manager.inference_data_loader(batch_size)
@@ -114,7 +118,7 @@ def main():
         
         
     process_data.create_model_output_lst_files()
-    process_data.output_verification(queue_size)
+    process_data.output_verification(queue_size, events)
 
 if __name__ == '__main__':
     main()
