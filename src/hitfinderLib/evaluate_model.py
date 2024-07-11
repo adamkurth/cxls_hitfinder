@@ -5,11 +5,13 @@ from sklearn.metrics import confusion_matrix, classification_report
 import matplotlib.pyplot as plt
 from torch.cuda.amp import autocast
 import datetime
+from torch.utils.data import DataLoader
 
+from . import conf
 
 class ModelEvaluation:
     
-    def __init__(self, cfg: dict, attributes: dict, trained_model: nn.Module) -> None:
+    def __init__(self, cfg: dict, attributes: dict, trained_model: nn.Module, testing_data: DataLoader) -> None:
         """
         This constructor breaks out important dictonaries, takes in the trained model, creates a logger object, and creates parameters to store evaluation metrics. 
 
@@ -21,14 +23,14 @@ class ModelEvaluation:
             trained_model (nn.Module): This is a trained model taken from the training class. 
         """
         
-        self.test_loader = cfg['test data']
+        self.test_loader = testing_data
         self.batch_size = cfg['batch size']
         self.device = cfg['device']
         self.model = trained_model
         
-        self.camera_length = attributes['camera length'].split('/')[-1]
-        self.photon_energy = attributes['photon energy'].split('/')[-1]
-        self.peak = attributes['peak'].split('/')[-1]
+        self.camera_length = conf.camera_length_key
+        self.photon_energy = conf.photon_energy_key
+        self.peak = conf.present_peaks_key
         
         self.cm = None
         self.all_labels = []
@@ -45,9 +47,10 @@ class ModelEvaluation:
         self.model.eval()
         try:
             with torch.no_grad():
-                for inputs, attributes in self.test_loader:
+                for inputs, attributes, _ in self.test_loader:
                     
-                    inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
+                    # inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
+                    inputs = inputs.to(self.device, dtype=torch.float32)
                     attributes = {key: value.to(self.device, dtype=torch.float32) for key, value in attributes.items()}
 
                     with autocast(enabled=False):
@@ -57,7 +60,7 @@ class ModelEvaluation:
                     predictions = (torch.sigmoid(score) > 0.5).long()
                     self.all_labels.extend(torch.flatten(truth.cpu()))
                     self.all_predictions.extend(torch.flatten(predictions.cpu()))
-
+                    
             # No need to reshape - arrays should already be flat
             self.all_labels = np.array(self.all_labels)
             self.all_predictions = np.array(self.all_predictions)
@@ -113,7 +116,7 @@ class ModelEvaluation:
             
             if path != None:
                 now = datetime.datetime.now()
-                formatted_date_time = now.strftime("%m%d%y-%H:%M")
+                formatted_date_time = now.strftime("%m%d%y-%H%M")
                 path = path + '/' + formatted_date_time + '-' + 'confusion_matrix.png'
                 plt.savefig(path)
                 

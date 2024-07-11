@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader, Dataset
 
 class Data(Dataset):
     
-    def __init__(self, classification_data: list, attribute_data: list, h5_file_path: list, multievent: str) -> None:
+    def __init__(self, classification_data: list, attribute_data: list, h5_file_path: list) -> None:
         """
         Initialize the Data object with classification and attribute data.
 
@@ -21,7 +21,6 @@ class Data(Dataset):
         self.meta_data = attribute_data
         self.file_paths = h5_file_path
         self.data = list(zip(self.image_data, self.meta_data, self.file_paths))
-        self.multievent = multievent
         
     def __len__(self) -> int:
         """

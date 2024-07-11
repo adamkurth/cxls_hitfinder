@@ -110,7 +110,7 @@ def main():
         h5_attribute_list = path_manager.get_h5_attribute_list()
         events = path_manager.get_event_count()
         
-        data_manager = prep_loaded_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, multievent)
+        data_manager = prep_loaded_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths)
         data_manager.inference_data_loader(batch_size)
         data_loader = data_manager.get_inference_data_loader()
         

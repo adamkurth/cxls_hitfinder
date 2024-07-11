@@ -6,7 +6,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torch.cuda.amp import GradScaler, autocast
 import datetime
+from torch.utils.data import DataLoader
+
 from . import models as m
+from . import conf
 
 class TrainModel:
     
@@ -22,8 +25,14 @@ class TrainModel:
 
         self.scaler = GradScaler()
         
-        self.train_loader = cfg['train data']
-        self.test_loader = cfg['test data']
+        self.camera_length = conf.camera_length_key
+        self.photon_energy = conf.photon_energy_key
+        self.peak = conf.present_peaks_key
+        
+        self.model_path = transfer_learning_state_dict
+
+        self.train_loader = None
+        self.test_loader = None
         self.batch_size = cfg['batch size']
         self.device = cfg['device']
         self.epochs = cfg['epochs']
@@ -33,17 +42,22 @@ class TrainModel:
         self.learning_rate = cfg['learning rate']
         self.model = cfg['model']
         
-        self.camera_length = attributes['camera length'].split('/')[-1]
-        self.photon_energy = attributes['photon energy'].split('/')[-1]
-        self.peak = attributes['peak'].split('/')[-1]
-        
         self.plot_train_accuracy = np.zeros(self.epochs)
         self.plot_train_loss = np.zeros(self.epochs)
         self.plot_test_accuracy = np.zeros(self.epochs)
         self.plot_test_loss = np.zeros(self.epochs)
         
-        self.model_path = transfer_learning_state_dict
-        
+    def assign_new_data(self, train: DataLoader, test: DataLoader) -> None:
+        """
+        This function assigns new data loaders.
+
+        Args:
+            train (DataLoader): The training data loader.
+            test (DataLoader): The testing data loader.
+
+        """
+        self.train_loader = train
+        self.test_loader = test
         
     def make_training_instances(self) -> None:
         """
@@ -120,7 +134,7 @@ class TrainModel:
             print('Evaluating ...')
             self.test(epoch)
             
-            print(f"-- learning rate : {self.scheduler.get_last_lr()}")
+            # print(f"-- learning rate : {self.scheduler.get_last_lr()}")
 
             
     def train(self, epoch:int) -> None:
@@ -135,7 +149,8 @@ class TrainModel:
         
         try:
             for inputs, attributes, _ in self.train_loader:
-                inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
+                # inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
+                inputs = inputs.to(self.device, dtype=torch.float32)
                 attributes = {key: value.to(self.device).float() for key, value in attributes.items()}
 
                 self.optimizer.zero_grad()
@@ -152,7 +167,7 @@ class TrainModel:
                 running_loss_train += loss.item()
 
                 predictions = (torch.sigmoid(score) > 0.5).long()
-                          
+
                 accuracy_train += (predictions == truth).float().sum()
                 total_predictions += torch.numel(truth)
             
@@ -186,7 +201,8 @@ class TrainModel:
         try:
             with torch.no_grad():
                 for inputs, attributes, _ in self.test_loader:
-                    inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
+                    # inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
+                    inputs = inputs.to(self.device, dtype=torch.float32)
                     attributes = {key: value.to(self.device, dtype=torch.float32) for key, value in attributes.items()}
                     
                     with autocast(enabled=False):
@@ -236,7 +252,7 @@ class TrainModel:
 
             if path is not None:
                 now = datetime.datetime.now()
-                formatted_date_time = now.strftime("%m%d%y-%H:%M")
+                formatted_date_time = now.strftime("%m%d%y-%H%M")
                 path = path + '/' + formatted_date_time + '-' + 'training_loss_accuracy.png'
                 plt.savefig(path)
                 

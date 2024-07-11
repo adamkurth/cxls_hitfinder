@@ -2,6 +2,7 @@ import argparse
 from hitfinderLib import *
 import torch
 import datetime
+from queue import Queue
 
 def arguments(parser) -> argparse.ArgumentParser:
     """
@@ -31,7 +32,7 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-pk', '--peaks', type=str, help='Attribute name for is there are peaks present.')
     
     parser.add_argument('-tl', '--transfer_learn', type=str, default='None', help='Flie path to state dict file for transfer learning.' )
-    parser.add_argument('-am', '--attribute_manager', type=str, help='True or false value for if the input data is using the attribute manager to store data, if false provide h5ls paths instead of keys.')
+
     
     try:
         args = parser.parse_args()
@@ -81,8 +82,10 @@ def main() -> None:
     photon_energy = args.photon_energy
     peaks = args.peaks
     
+    #temperary holding
+    master_file = None
+    
     transfer_learning_state_dict = args.transfer_learn
-    attribute_manager = args.attribute_manager
     
     attributes = {
         'camera length': camera_length,
@@ -90,21 +93,12 @@ def main() -> None:
         'peak': peaks
     }
     
-    path_manager = data_path_manager.Paths(h5_file_list)
+    path_manager = load_data_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
     path_manager.read_file_paths()
-    path_manager.load_h5_data(attribute_manager, attributes)
-
-    h5_tensor_list = path_manager.get_h5_tensor_list()
-    h5_attribute_list = path_manager.get_h5_attribute_list()
-    h5_file_paths = path_manager.get_file_paths()
-    
-    data_manager = data_path_manager.Data(h5_tensor_list, h5_attribute_list, h5_file_paths)
-    data_manager.split_training_data(batch_size)
-    train_loader, test_loader = data_manager.get_training_data_loaders()
+    h5_file_path_queue = path_manager.get_file_path_queue()
+    queue_size = h5_file_path_queue.qsize()
     
     cfg = {
-        'train data': train_loader,
-        'test data': test_loader,
         'batch size': batch_size,
         'device': device,
         'epochs': num_epoch,
@@ -114,16 +108,30 @@ def main() -> None:
         'learning rate': learning_rate,
         'model': model_arch
     }
-
+    
     training_manager = train_model.TrainModel(cfg, attributes, transfer_learning_state_dict)
     training_manager.make_training_instances()
     training_manager.load_model_state_dict()
+
+    path_manager.process_files()
+
+    h5_tensor_list = path_manager.get_h5_tensor_list()
+    h5_attribute_list = path_manager.get_h5_attribute_list()
+    h5_file_paths = path_manager.get_h5_file_paths()
+    events = path_manager.get_event_count()
+    
+    data_manager = prep_loaded_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths)
+    data_manager.split_training_data(batch_size)
+    train_loader, test_loader = data_manager.get_training_data_loaders()
+    
+    training_manager.assign_new_data(train_loader, test_loader)
+
     training_manager.epoch_loop()
     training_manager.plot_loss_accuracy(training_results)
     training_manager.save_model(model_dict_save_path)
     trained_model = training_manager.get_model()
     
-    evaluation_manager = evaluate_model.ModelEvaluation(cfg, attributes, trained_model)
+    evaluation_manager = evaluate_model.ModelEvaluation(cfg, attributes, trained_model, test_loader)
     evaluation_manager.run_testing_set()
     evaluation_manager.make_classification_report()
     evaluation_manager.plot_confusion_matrix(training_results)

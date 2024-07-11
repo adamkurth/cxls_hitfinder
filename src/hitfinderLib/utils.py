@@ -31,7 +31,7 @@ class CommonFunctions:
                 print(f"Error: The file '{self.transfer_learning_path}' is not a valid PyTorch model file.")
             except RuntimeError as e:
                 print(f"Error: There was an issue loading the state dictionary into the model: {e}")
-            except Exception as e:
+            except Exception as e: 
                 print(f"An unexpected error occurred: {e}")
         else:
             print(f'There is no model state dict to load into: {self.model.__class__.__name__}')
