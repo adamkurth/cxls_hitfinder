@@ -2,7 +2,6 @@ import h5py as h5
 import hdf5plugin
 import numpy as np
 import torch
-from torch.utils.data import DataLoader, Dataset
 from queue import Queue
 import concurrent.futures 
 from typing import Optional
@@ -170,7 +169,7 @@ class Paths(ABC):
                 self._attribute_holding[attr] = self._open_h5_file.attrs.get(attr)
         except KeyError:
             print(f"ERROR: Attribute not found in file: {self._h5_file_path}.")
-            \
+            
     @abstractmethod
     def read_attributes_from_file(self) -> None:
         """
