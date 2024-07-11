@@ -5,8 +5,10 @@ import torch
 from queue import Queue
 import concurrent.futures 
 from typing import Optional
-from .utils import SpecialCaseFunctions
 from abc import ABC, abstractmethod
+
+from .utils import SpecialCaseFunctions
+from . import conf
 
 class Paths(ABC):
     
@@ -79,7 +81,7 @@ class Paths(ABC):
         """
 
         try:
-            eiger_4m_image_size = (2163, 2069)
+            eiger_4m_image_size = conf.eiger_4m_image_size
             
             file_path = self._h5_file_path.strip().replace('*', '')
 
@@ -175,14 +177,14 @@ class Paths(ABC):
         """
         This function reads the attributes from the h5 file.
         """
-        camera_length = self._attributes['clen']
-        photon_energy = self._attributes['photon_energy']
-        peak = self._attributes['peak']
+        camera_length = self._attributes[conf.camera_length_key]
+        photon_energy = self._attributes[conf.photon_energy_key]
+        peak = self._attributes[conf.present_peaks_key]
         
         if peak is not None:
-            self._attribute_holding['peak'] = self._open_h5_file[peak][()]
-        self._attribute_holding['clen'] = self._open_h5_file[camera_length][()]
-        self._attribute_holding['photon_energy'] = self._open_h5_file[photon_energy][()]
+            self._attribute_holding[conf.present_peaks_key] = self._open_h5_file[peak][()]
+        self._attribute_holding[conf.camera_length_key] = self._open_h5_file[camera_length][()]
+        self._attribute_holding[conf.photon_energy_key] = self._open_h5_file[photon_energy][()]
                 
     @abstractmethod
     def get_h5_tensor_list(self) -> list:
@@ -242,7 +244,7 @@ class PathsSingleEvent(Paths):
         
         print('Processing single event files...')
         
-        number_of_files_to_load = 1000
+        number_of_files_to_load = conf.single_event_data_loader_size
         for _ in range(number_of_files_to_load):
             while not self._h5_files.empty():
                 self._h5_file_list.append(self._h5_files.get())

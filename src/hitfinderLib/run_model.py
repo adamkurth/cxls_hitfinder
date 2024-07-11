@@ -3,8 +3,10 @@ import datetime
 import os 
 from . import models
 from . import utils as u
+from . import conf
 import inspect
 import importlib    
+
 
 class RunModel:
     
@@ -21,8 +23,8 @@ class RunModel:
         self.model_path = cfg['model_path']
         self.save_output_list = cfg['save_output_list']
         
-        self.camera_length = 'clen'
-        self.photon_energy = 'photon_energy'
+        self.camera_length = conf.camera_length_key
+        self.photon_energy = conf.photon_energy_key
         
         self.list_containing_peaks = []
         self.list_not_containing_peaks = []

@@ -4,6 +4,7 @@ from scipy.constants import h, c, e
 
 from . import train_model
 from . import run_model
+from . import conf
 
 class CommonFunctions:
     
@@ -52,8 +53,7 @@ class SpecialCaseFunctions:
         Returns:
             np.ndarray: The reshaped input data array.
         """
-        crop_height = 2163
-        crop_width = 2069
+        crop_height, crop_width = conf.eiger_4m_image_size
         
         batch_size, height, width  = data_array.shape
         
