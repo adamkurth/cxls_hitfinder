@@ -80,7 +80,6 @@ class RunModel:
                 
                     inputs = inputs.to(self.device, dtype=torch.float32)
                     attributes = {key: value.to(self.device, dtype=torch.float32) for key, value in attributes.items()}
-                    
                     score = self.model(inputs, attributes[self.camera_length], attributes[self.photon_energy])
                     prediction = (torch.sigmoid(score) > 0.5).long()
                     
