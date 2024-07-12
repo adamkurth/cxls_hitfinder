@@ -113,21 +113,22 @@ def main() -> None:
     training_manager.make_training_instances()
     training_manager.load_model_state_dict()
 
-    path_manager.process_files()
+    while not h5_file_path_queue.empty():
+        path_manager.process_files()
 
-    h5_tensor_list = path_manager.get_h5_tensor_list()
-    h5_attribute_list = path_manager.get_h5_attribute_list()
-    h5_file_paths = path_manager.get_h5_file_paths()
-    events = path_manager.get_event_count()
-    
-    data_manager = prep_loaded_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths)
-    data_manager.split_training_data(batch_size)
-    train_loader, test_loader = data_manager.get_training_data_loaders()
-    
-    training_manager.assign_new_data(train_loader, test_loader)
+        h5_tensor_list = path_manager.get_h5_tensor_list()
+        h5_attribute_list = path_manager.get_h5_attribute_list()
+        h5_file_paths = path_manager.get_h5_file_paths()
+        
+        data_manager = prep_loaded_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths)
+        data_manager.split_training_data(batch_size)
+        train_loader, test_loader = data_manager.get_training_data_loaders()
+        
+        training_manager.assign_new_data(train_loader, test_loader)
 
-    training_manager.epoch_loop()
-    training_manager.plot_loss_accuracy(training_results)
+        training_manager.epoch_loop()
+        training_manager.plot_loss_accuracy(training_results)
+        
     training_manager.save_model(model_dict_save_path)
     trained_model = training_manager.get_model()
     
