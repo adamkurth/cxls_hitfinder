@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import DataLoader, Dataset
-from torchvision import transforms
+from torchvision.tranforms import v2
 from . import conf
 
 
@@ -61,8 +61,10 @@ class Data(Dataset):
         """
         If the transfom flag is true, this function creates the global variable for the transform for image data. 
         """
-        self.transforms = transforms.Compose([
-            transforms.Resize(conf.eiger_4m_image_size)
+        self.transforms = v2.Compose([
+            v2.toPILImage(),
+            v2.Resize(conf.eiger_4m_image_size),
+            v2.ToTensor(),
         ])
             
         
