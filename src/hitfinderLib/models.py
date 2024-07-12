@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.models
+
 
 
 class Binary_Classification(nn.Module):
@@ -239,3 +241,30 @@ class Binary_Classification_SA_CA_Meta_Data(nn.Module):
         return x
 
 
+class Binary_Classification_DenseNet(nn.Module):
+    def __init__(self):
+        super(Binary_Classification_DenseNet, self).__init__()
+        self.densenet = torchvision.models.densenet121(pretrained=True)
+        num_features = self.densenet.classifier.in_features
+        self.densenet.classifier = nn.Identity()  # Remove the original classifier
+        
+        self.fc1 = nn.Linear(num_features + 2, 512)
+        self.fc2 = nn.Linear(512, 128)
+        self.fc3 = nn.Linear(128, 1)
+
+    def forward(self, x, camera_length, photon_energy):
+        # Extract features from the densenet
+        features = self.densenet.features(x)
+        x = F.relu(features, inplace=True)
+        x = F.adaptive_avg_pool2d(x, (1, 1)).view(features.size(0), -1)
+        
+        # Concatenate additional parameters
+        params = torch.stack((camera_length, photon_energy), dim=1)
+        x = torch.cat((x, params), dim=1)
+        
+        # Pass through the modified classifier
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = torch.sigmoid(self.fc3(x))
+        
+        return x

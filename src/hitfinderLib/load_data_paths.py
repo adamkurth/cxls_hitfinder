@@ -80,16 +80,14 @@ class Paths(ABC):
         There are two ways for the metadata to be taken out, one method uses to attribute manager class from h5py and the other finds metadata in a given file location.
         """
 
-        try:
-            eiger_4m_image_size = conf.eiger_4m_image_size
-            
+        try:            
             file_path = self._h5_file_path.strip().replace('*', '')
 
             print(f'Reading file {file_path}')
             self._open_h5_file = h5.File(file_path, 'r')
             
             numpy_array = np.array(self._open_h5_file['entry/data/data']).astype(np.float32)
-            if numpy_array.shape[-2:] != eiger_4m_image_size:
+            if numpy_array.shape[-2:] != conf.eiger_4m_image_size:
                 numpy_array = SpecialCaseFunctions.reshape_input_data(numpy_array)                      
             self._loaded_h5_tensor = torch.tensor(numpy_array)
             

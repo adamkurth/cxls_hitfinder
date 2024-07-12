@@ -1,10 +1,12 @@
 import torch
 from torch.utils.data import DataLoader, Dataset
+from torchvision import transforms
+from . import conf
 
 
 class Data(Dataset):
     
-    def __init__(self, classification_data: list, attribute_data: list, h5_file_path: list) -> None:
+    def __init__(self, classification_data: list, attribute_data: list, h5_file_path: list, use_transform: bool) -> None:
         """
         Initialize the Data object with classification and attribute data.
 
@@ -21,6 +23,11 @@ class Data(Dataset):
         self.meta_data = attribute_data
         self.file_paths = h5_file_path
         self.data = list(zip(self.image_data, self.meta_data, self.file_paths))
+        
+        self.use_transform = use_transform
+        self.transforms = None
+        if self.use_transform:
+            self.make_transform()
         
     def __len__(self) -> int:
         """
@@ -42,9 +49,23 @@ class Data(Dataset):
             tuple: A tuple containing the image data and the metadata at the given index.
         """
         try:
-            return self.data[idx]
+            if self.use_transform:
+                image = self.transforms(self.image_data[idx])
+                return image, self.meta_data[idx], self.file_paths[idx]
+            else:
+                return self.data[idx]
         except Exception as e:
             print(f"An unexpected error occurred while getting item at index {idx}: {e}")
+            
+    def make_transform(self) -> None:
+        """
+        If the transfom flag is true, this function creates the global variable for the transform for image data. 
+        """
+        self.transforms = transforms.Compose([
+            transforms.Resize(conf.eiger_4m_image_size)
+        ])
+            
+        
         
     def split_training_data(self, batch_size: int) -> None:
         """

@@ -87,6 +87,8 @@ def main() -> None:
     
     transfer_learning_state_dict = args.transfer_learn
     
+    transform = False
+    
     attributes = {
         'camera length': camera_length,
         'photon energy': photon_energy,
@@ -120,7 +122,7 @@ def main() -> None:
         h5_attribute_list = path_manager.get_h5_attribute_list()
         h5_file_paths = path_manager.get_h5_file_paths()
         
-        data_manager = prep_loaded_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths)
+        data_manager = prep_loaded_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, transform)
         data_manager.split_training_data(batch_size)
         train_loader, test_loader = data_manager.get_training_data_loaders()
         
