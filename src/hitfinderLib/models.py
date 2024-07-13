@@ -245,6 +245,12 @@ class Binary_Classification_DenseNet(nn.Module):
     def __init__(self):
         super(Binary_Classification_DenseNet, self).__init__()
         self.densenet = torchvision.models.densenet121(pretrained=True)
+        
+        # Modify the first convolutional layer to accept 1-channel input instead of 3
+        self.densenet.features.conv0 = nn.Conv2d(
+            1, 64, kernel_size=7, stride=2, padding=3, bias=False
+        )
+        
         num_features = self.densenet.classifier.in_features
         self.densenet.classifier = nn.Identity()  # Remove the original classifier
         
@@ -253,7 +259,7 @@ class Binary_Classification_DenseNet(nn.Module):
         self.fc3 = nn.Linear(128, 1)
 
     def forward(self, x, camera_length, photon_energy):
-        # Extract features from the densenet
+        # Extract features from the DenseNet
         features = self.densenet.features(x)
         x = F.relu(features, inplace=True)
         x = F.adaptive_avg_pool2d(x, (1, 1)).view(features.size(0), -1)
