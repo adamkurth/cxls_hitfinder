@@ -1,4 +1,4 @@
-# CXLS Hitfinder 
+# NO LONGER USED BY ASU CXFEL LABS: see The_CXLS_ML_Hitfinder
 
 The goal is this project is to lay the foundations for developing data analysis techniques for the CXLS using deep neural networks. 
 The hitfinder convolutional neural netwrok (CNN) takes in diffraction pattern HDF5 images and determines what images have Bragg peak signal in them. 
